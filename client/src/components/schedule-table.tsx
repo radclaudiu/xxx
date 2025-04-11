@@ -14,6 +14,7 @@ import {
 import { Edit, Save, Clock, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import ExportsModal from "@/components/exports-modal";
 
 interface ScheduleTableProps {
   employees: Employee[];
@@ -464,7 +465,7 @@ export default function ScheduleTable({
     <div className="space-y-4">
       {/* Control buttons */}
       <div className="flex justify-between flex-wrap gap-3 mb-2">
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-4 flex-wrap gap-y-2">
           {/* Control de tamaño de celdas */}
           <div className="flex items-center space-x-2">
             <span className="text-sm font-medium">Tamaño de celdas: {cellSize}px</span>
@@ -558,17 +559,28 @@ export default function ScheduleTable({
               </Select>
             </div>
           </div>
+          
+          {/* Botón de Exportaciones */}
+          <div className="flex items-center">
+            <ExportsModal 
+              employees={employees} 
+              shifts={shifts} 
+              currentDate={date} 
+            />
+          </div>
         </div>
         
-        {hasSelections && (
-          <Button
-            className="bg-green-600 hover:bg-green-700 text-white"
-            onClick={handleSaveSelections}
-          >
-            <Save className="h-4 w-4 mr-2" />
-            Guardar Turnos Seleccionados
-          </Button>
-        )}
+        <div className="flex items-center">
+          {hasSelections && (
+            <Button
+              className="bg-green-600 hover:bg-green-700 text-white"
+              onClick={handleSaveSelections}
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Guardar Turnos Seleccionados
+            </Button>
+          )}
+        </div>
       </div>
       
       {/* Schedule table */}
@@ -949,19 +961,20 @@ export default function ScheduleTable({
                           });
                           
                           // Ahora, contar las horas en selecciones actuales (no guardadas) para todos los empleados
-                          for (const [employeeId, selectedTimes] of selectedCellsByEmployee.entries()) {
+                          // Convertir Map.entries() a Array para iterar de manera compatible con todas las versiones de TypeScript
+                          Array.from(selectedCellsByEmployee.entries()).forEach(([employeeId, selectedTimes]) => {
                             if (selectedTimes.size > 0) {
                               // Convertir a array y ordenar por tiempo
                               const sortedTimes = Array.from(selectedTimes).sort((a, b) => {
-                                return convertTimeToMinutes(a) - convertTimeToMinutes(b);
+                                return convertTimeToMinutes(a as string) - convertTimeToMinutes(b as string);
                               });
                               
                               // Agrupar tiempos consecutivos
-                              let currentGroup: string[] = [sortedTimes[0]];
+                              let currentGroup: string[] = [sortedTimes[0] as string];
                               
                               for (let i = 1; i < sortedTimes.length; i++) {
                                 const prevTime = currentGroup[currentGroup.length - 1];
-                                const currTime = sortedTimes[i];
+                                const currTime = sortedTimes[i] as string;
                                 
                                 // Verificar si los tiempos son consecutivos
                                 const prevIndex = timeSlots.indexOf(prevTime);
@@ -999,7 +1012,7 @@ export default function ScheduleTable({
                                 totalDailyHours += calculateHoursBetween(startTime, endTime);
                               }
                             }
-                          }
+                          });
                           
                           return (
                             <span className="text-xl font-bold text-blue-700">{formatHours(totalDailyHours)}</span>
@@ -1058,22 +1071,23 @@ export default function ScheduleTable({
                     });
                     
                     // Contar selecciones actuales no guardadas
-                    selectedCellsByEmployee.forEach((selectedTimes, employeeId) => {
+                    // Usar Array.from para compatibilidad con versiones anteriores de TypeScript
+                    Array.from(selectedCellsByEmployee.entries()).forEach(([employeeId, selectedTimes]) => {
                       if (selectedTimes.size === 0) return;
                       
                       // Convertir tiempos seleccionados a array y ordenar
                       const sortedTimes = Array.from(selectedTimes).sort((a, b) => {
-                        return convertTimeToMinutes(a) - convertTimeToMinutes(b);
+                        return convertTimeToMinutes(a as string) - convertTimeToMinutes(b as string);
                       });
                       
                       if (sortedTimes.length === 0) return;
                       
                       // Agrupar tiempos consecutivos
-                      let currentGroup: string[] = [sortedTimes[0]];
+                      let currentGroup: string[] = [sortedTimes[0] as string];
                       
                       for (let i = 1; i < sortedTimes.length; i++) {
                         const prevTime = currentGroup[currentGroup.length - 1];
-                        const currTime = sortedTimes[i];
+                        const currTime = sortedTimes[i] as string;
                         
                         // Verificar si los tiempos son consecutivos
                         const prevIndex = timeSlots.indexOf(prevTime);
