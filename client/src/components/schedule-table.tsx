@@ -380,13 +380,13 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                     zIndex: 20,
                     backgroundColor: 'white',
                     boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-                    minWidth: '30px', // Celdas mucho más pequeñas para intervalos de 15 min
+                    minWidth: "22px", // Celdas aún más pequeñas para intervalos de 15 min
                     borderLeft: time.endsWith(':00') ? '1px solid #BDBDBD' : '1px dashed #E0E0E0'
                   }}
                 >
                   {/* Mostrar texto solo para horas completas (XX:00) */}
                   {time.endsWith(':00') ? (
-                    <div className="text-[0.65rem] font-normal tracking-tighter">{time.split(':')[0]}h</div>
+                    <div className="text-[0.6rem] font-semibold tracking-tighter">{time.split(':')[0]}h</div>
                   ) : null}
                 </th>
               ))}
@@ -431,8 +431,8 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                         time.endsWith(':00') ? 'hour-marker' : ''
                       }`}
                       style={{
-                        minWidth: '30px', // Celdas mucho más pequeñas para intervalos de 15 min
-                        height: '20px', // Altura aún más reducida
+                        minWidth: "22px", // Celdas aún más pequeñas para intervalos de 15 min
+                        height: "18px", // Altura mínima para celdas compactas
                         backgroundColor: isSelected ? 'rgba(76, 175, 80, 0.4)' : 
                                         isAssigned ? 'rgba(25, 118, 210, 0.2)' : 
                                         'transparent',
@@ -454,7 +454,7 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                     >
                       {isSelected && !isAssigned && (
                         <div className="flex justify-center items-center h-full">
-                          <div className="w-2 h-2 bg-green-500 rounded-sm"></div>
+                          <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
                         </div>
                       )}
                       {isFirstCell && shift && (
