@@ -843,6 +843,18 @@ export default function ScheduleTable({
                 </div>
               </td>
               
+              {/* Celda para la columna de horas disponibles en la fila de horas diarias */}
+              <td 
+                className="border-b border-r border-neutral-200 p-0 bg-blue-50"
+                style={{
+                  height: `${cellSize}px`,
+                  width: `${cellSize * 2}px`,
+                  boxSizing: "border-box",
+                  borderLeft: '2px solid #AAA'
+                }}
+              >
+              </td>
+              
               {/* Una celda por cada intervalo de tiempo */}
               {timeSlots.map((time) => {
                 // Para esta fila, necesitamos mostrar las horas diarias para cada empleado
@@ -968,6 +980,18 @@ export default function ScheduleTable({
                     <DollarSign className="h-3 w-3 text-green-600" />
                     <div className="text-[0.5rem] font-semibold text-green-700">Análisis Financiero</div>
                   </div>
+                </td>
+                
+                {/* Celda para la columna de horas disponibles en la fila de análisis financiero */}
+                <td 
+                  className="border-b border-r border-neutral-200 p-0 bg-green-50"
+                  style={{
+                    height: `${cellSize}px`,
+                    width: `${cellSize * 2}px`,
+                    boxSizing: "border-box",
+                    borderLeft: '2px solid #AAA'
+                  }}
+                >
                 </td>
                 
                 <td 
