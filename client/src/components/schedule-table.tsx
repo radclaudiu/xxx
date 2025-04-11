@@ -381,10 +381,12 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
       
       {/* Schedule table */}
       <div 
-        className="overflow-x-auto border border-neutral-200 rounded select-none"
+        className="overflow-x-auto border border-neutral-200 rounded select-none w-full"
         style={{ 
           touchAction: "manipulation", // Permite gestos como pellizcar para zoom pero bloquea paneos
-          WebkitOverflowScrolling: "touch" // Mejorar el desplazamiento suave
+          WebkitOverflowScrolling: "touch", // Mejorar el desplazamiento suave
+          width: "100%",
+          maxWidth: "100vw"
         }}
         onTouchMove={handleTouchMove}
         onTouchStart={(e) => {
@@ -393,7 +395,7 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
             e.stopPropagation();
           }
         }}>
-        <table className="w-full border-collapse table-fixed">
+        <table className="w-full border-collapse table-fixed" style={{ minWidth: "100%" }}>
           {/* Table Header - Estructura de dos filas */}
           <thead>
             {/* Primera fila: Horas agrupadas */}

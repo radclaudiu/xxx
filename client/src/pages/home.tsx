@@ -155,7 +155,7 @@ export default function Home() {
     <div className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="bg-primary text-white p-4 shadow-md">
-        <div className="container mx-auto flex justify-between items-center">
+        <div className="w-full px-2 flex justify-between items-center">
           <h1 className="text-xl font-bold">Sistema de Turnos de Trabajo</h1>
           <div className="flex items-center gap-2">
             <Button 
@@ -180,7 +180,7 @@ export default function Home() {
       
       {/* Main Content */}
       <main className="flex-grow p-4">
-        <div className="container mx-auto bg-white rounded-lg shadow-md p-4">
+        <div className="w-full bg-white rounded-lg shadow-md p-4">
           {/* Controls */}
           <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
             <div className="flex items-center gap-2">
