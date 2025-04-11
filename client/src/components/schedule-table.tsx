@@ -38,6 +38,8 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
   const [isDragging, setIsDragging] = useState(false);
   const [startTime, setStartTime] = useState<string | null>(null);
   const [activeEmployee, setActiveEmployee] = useState<Employee | null>(null);
+  // Estado para forzar re-renderizado cuando cambian las selecciones en tiempo real
+  const [updateCounter, setUpdateCounter] = useState(0);
   const mouseDownRef = useRef(false);
   
   // Function to check if a cell should be marked as assigned
@@ -117,6 +119,8 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
     }
     
     setSelectedCellsByEmployee(newSelectedCellsByEmployee);
+    // Incrementar contador para forzar actualización inmediata de la UI
+    setUpdateCounter(prev => prev + 1);
   };
   
   // Handler for starting an interaction (mouse or touch)
@@ -196,6 +200,8 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
         }
         
         setSelectedCellsByEmployee(newSelectedCellsByEmployee);
+        // Incrementar contador para forzar actualización inmediata de la UI
+        setUpdateCounter(prev => prev + 1);
       }
     }
   };
@@ -319,6 +325,8 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
       
       // Clear selections after saving
       setSelectedCellsByEmployee(new Map());
+      // Incrementar contador para forzar actualización inmediata de la UI
+      setUpdateCounter(prev => prev + 1);
     }
   };
   
