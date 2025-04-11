@@ -236,7 +236,7 @@ export default function Home() {
       
       {/* Footer */}
       <footer className="bg-neutral-100 py-3 text-neutral-500 text-center text-sm">
-        <div className="container mx-auto">
+        <div className="w-full px-2">
           Sistema de Turnos de Trabajo &copy; {new Date().getFullYear()}
         </div>
       </footer>
