@@ -134,8 +134,14 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
   
   // Touch start handler
   const handleTouchStart = (e: React.TouchEvent, employee: Employee, time: string) => {
-    // Prevent default to stop text selection behavior
+    // Prevent default to stop text selection behavior and scrolling
     e.preventDefault();
+    e.stopPropagation();
+    
+    // Asegurarnos que no se desplaza la tabla al hacer el gesto de arrastre
+    const touchEvent = e.nativeEvent;
+    touchEvent.stopPropagation();
+    
     handleInteractionStart(employee, time);
   };
   
@@ -190,6 +196,10 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
   
   // Touch move handler
   const handleTouchMove = (e: React.TouchEvent) => {
+    // Always prevent default to stop scrolling during any touch movement
+    // This effectively prevents the table from scrolling when the user is dragging
+    e.preventDefault();
+    
     if (!isDragging || !activeEmployee) return;
     
     // Get touch position
@@ -210,9 +220,6 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
         }
       }
     }
-    
-    // Prevent default to stop scrolling, zooming and text selection
-    e.preventDefault();
   };
   
   // Check if a cell is selected
@@ -321,7 +328,12 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
       {/* Schedule table */}
       <div 
         className="overflow-x-auto border border-neutral-200 rounded select-none"
-        onTouchMove={handleTouchMove}>
+        style={{ 
+          touchAction: "none",  // Esto es clave para prevenir el scroll durante el arrastre
+          WebkitOverflowScrolling: "touch" // Mejorar el desplazamiento suave
+        }}
+        onTouchMove={handleTouchMove}
+        onTouchStart={(e) => e.stopPropagation()}>
         <table className="w-full border-collapse table-fixed">
           {/* Table Header */}
           <thead>
@@ -409,7 +421,9 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                         WebkitUserSelect: 'none',  // Safari
                         MozUserSelect: 'none',     // Firefox
                         msUserSelect: 'none',      // IE/Edge
-                        userSelect: 'none'         // Standard
+                        userSelect: 'none',        // Standard
+                        touchAction: 'none',       // Prevenir desplazamiento en celdas
+                        WebkitTapHighlightColor: 'transparent' // Quitar resaltado al tocar
                       }}
                       onMouseDown={() => handleMouseDown(employee, time)}
                       onMouseEnter={() => handleMouseEnter(employee, time)}
