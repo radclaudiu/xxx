@@ -406,7 +406,9 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                     backgroundColor: 'white',
                     boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
                     height: `${cellSize}px`,
-                    lineHeight: `${cellSize}px`
+                    lineHeight: `${cellSize}px`,
+                    minWidth: "120px",
+                    width: "120px"
                   }}>
                 <span className="text-xs font-semibold">Empleados</span>
               </th>
@@ -450,7 +452,9 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                     backgroundColor: 'white',
                     boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
                     height: `${cellSize}px`,
-                    lineHeight: `${cellSize}px`
+                    lineHeight: `${cellSize}px`,
+                    minWidth: "120px",
+                    width: "120px"
                   }}>
               </th>
               
@@ -501,10 +505,12 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                     backgroundColor: 'white',
                     boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
                     height: `${cellSize}px`,
-                    lineHeight: `${cellSize}px`
+                    lineHeight: `${cellSize}px`,
+                    minWidth: "120px",
+                    width: "120px"
                   }}
                 >
-                  <div className="flex justify-between items-center px-1" style={{height: `${cellSize}px`, width: "120px", overflow: "hidden"}}>
+                  <div className="flex justify-between items-center px-1" style={{height: `${cellSize}px`, width: "100%", overflow: "hidden"}}>
                     <span className="truncate text-xs">{employee.name}</span>
                     <button className="text-neutral-400 hover:text-neutral-600 ml-1 p-0">
                       <Edit className="h-3 w-3" />
@@ -582,7 +588,9 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                   backgroundColor: '#F3F4F6',
                   boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
                   height: `${cellSize}px`,
-                  lineHeight: `${cellSize}px`
+                  lineHeight: `${cellSize}px`,
+                  minWidth: "120px",
+                  width: "120px"
                 }}
               >
                 <div className="flex justify-center items-center h-full">
