@@ -83,3 +83,28 @@ export function formatTime(time: string): string {
   const [hours, minutes] = time.split(':');
   return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
 }
+
+// Calculate hours between two times (returns decimal hours)
+export function calculateHoursBetween(startTime: string, endTime: string): number {
+  const startMinutes = convertTimeToMinutes(startTime);
+  const endMinutes = convertTimeToMinutes(endTime);
+  
+  // Calculate difference in minutes
+  let diff = endMinutes - startMinutes;
+  
+  // If end time is earlier than start time, assume it's the next day
+  if (diff < 0) {
+    diff += 24 * 60; // Add 24 hours in minutes
+  }
+  
+  // Convert to hours with 2 decimal places
+  return parseFloat((diff / 60).toFixed(2));
+}
+
+// Format hours (converts decimal hours to hours and minutes)
+export function formatHours(hours: number): string {
+  const wholeHours = Math.floor(hours);
+  const minutes = Math.round((hours - wholeHours) * 60);
+  
+  return `${wholeHours}h ${minutes}m`;
+}

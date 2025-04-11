@@ -1,7 +1,13 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { Employee, Shift } from "@shared/schema";
-import { formatDateForAPI, generateTimeSlots, isTimeBetween } from "@/lib/date-helpers";
-import { Edit, Save } from "lucide-react";
+import { 
+  formatDateForAPI, 
+  generateTimeSlots, 
+  isTimeBetween, 
+  calculateHoursBetween, 
+  formatHours 
+} from "@/lib/date-helpers";
+import { Edit, Save, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ScheduleTableProps {
