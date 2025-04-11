@@ -463,7 +463,7 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
               </th>
               
               {timeSlots.map((time) => {
-                // Calcular total de empleados asignados a este intervalo
+                // Calcular total de empleados asignados a este intervalo (turnos ya guardados)
                 const assignedCount = shifts.filter(shift => {
                   const shiftStartTime = shift.startTime;
                   const shiftEndTime = shift.endTime;
@@ -472,6 +472,32 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                     isTimeBetween(time, shiftStartTime, shiftEndTime)
                   );
                 }).length;
+                
+                // Contar selecciones actuales que no se han guardado
+                let selectedCount = 0;
+                for (const employee of employees) {
+                  // Verificar si este empleado tiene esta celda seleccionada
+                  const isCellCurrent = isCellSelected(employee.id, time);
+                  
+                  // Si la celda está seleccionada pero no asignada, aumentamos el contador
+                  if (isCellCurrent && !isCellAssigned(employee.id, time)) {
+                    selectedCount++;
+                  }
+                }
+                
+                // Total combinado: asignaciones guardadas + selecciones actuales
+                const totalCount = assignedCount + selectedCount;
+                
+                // Determinar color según el tipo de conteo
+                const backgroundColor = selectedCount > 0 
+                  ? 'rgba(76, 175, 80, 0.2)' // Verde si hay selecciones actuales
+                  : assignedCount > 0 
+                    ? 'rgba(25, 118, 210, 0.1)' // Azul si solo hay asignaciones
+                    : 'white';
+                
+                const textColor = selectedCount > 0 
+                  ? 'text-green-800' // Verde si hay selecciones actuales
+                  : 'text-blue-800'; // Azul para asignaciones existentes
                 
                 return (
                   <th 
@@ -483,7 +509,7 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                       position: 'sticky',
                       top: "40px", // Debajo de las dos primeras filas
                       zIndex: 20,
-                      backgroundColor: assignedCount > 0 ? 'rgba(25, 118, 210, 0.1)' : 'white',
+                      backgroundColor,
                       width: "20px", // Exactamente 20px de ancho
                       height: "20px", // Exactamente 20px de altura
                       lineHeight: "20px", // Garantizar altura exacta
@@ -493,10 +519,16 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                                 '1px dashed #EEEEEE'
                     }}
                   >
-                    {/* Mostrar contador solo si hay asignaciones */}
-                    {assignedCount > 0 && (
+                    {/* Mostrar contador cuando hay algún total */}
+                    {totalCount > 0 && (
                       <div className="flex justify-center items-center h-full">
-                        <div className="text-[0.5rem] font-bold text-blue-800">{assignedCount}</div>
+                        <div className={`text-[0.5rem] font-bold ${textColor}`}>
+                          {totalCount}
+                          {/* Mostrar un + si hay alguna selección nueva */}
+                          {selectedCount > 0 && (
+                            <span className="text-green-800">+</span>
+                          )}
+                        </div>
                       </div>
                     )}
                   </th>
