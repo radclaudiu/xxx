@@ -918,12 +918,13 @@ export default function ScheduleTable({
               </td>
               
               {/* Una celda por cada intervalo de tiempo */}
-              {timeSlots.map((time) => {
+              {timeSlots.map((time, index) => {
                 // Para esta fila, necesitamos mostrar las horas diarias para cada empleado
-                // Calculamos el total para cada empleado cuando es la hora de inicio del día (8:00)
+                // Calculamos el total en la primera celda del día (que ahora es dinámica)
                 // y mostramos un guión en las demás celdas para mantener la consistencia visual
                 
-                if (time === "8:00") {
+                // Verificar si es la primera celda en timeSlots (independientemente de la hora)
+                if (index === 0) {
                   // Mostrar la suma total de horas para cada empleado
                   return (
                     <td 
