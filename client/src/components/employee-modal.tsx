@@ -120,9 +120,19 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit }: Emplo
       return;
     }
     
+    if (maxHoursPerWeek === "" || maxHoursPerWeek <= 0 || maxHoursPerWeek > 168) {
+      toast({
+        title: "Error",
+        description: "Las horas semanales deben ser un valor entre 1 y 168.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const employeeData: InsertEmployee = {
       name: name.trim(),
       role: role.trim(),
+      maxHoursPerWeek: maxHoursPerWeek,
     };
     
     if (employeeToEdit) {
