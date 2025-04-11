@@ -13,6 +13,7 @@ import {
 } from "@/lib/date-helpers";
 import { Edit, Save, Clock, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ScheduleTableProps {
   employees: Employee[];
@@ -34,6 +35,10 @@ export default function ScheduleTable({
   // Estado para controlar el tamaño de las celdas
   const [cellSize, setCellSize] = useState(30);
   
+  // Estados para controlar los rangos de horario
+  const [startHour, setStartHour] = useState(8); // 8:00 AM por defecto
+  const [endHour, setEndHour] = useState(26); // 02:00 AM del día siguiente (representado como 26:00)
+  
   // Funciones para aumentar y disminuir tamaño
   const increaseCellSize = () => setCellSize(prev => Math.min(prev + 5, 50)); // Máximo 50px
   const decreaseCellSize = () => setCellSize(prev => Math.max(prev - 5, 15)); // Mínimo 15px
@@ -42,14 +47,26 @@ export default function ScheduleTable({
   useEffect(() => {
     document.documentElement.style.setProperty('--cell-size', `${cellSize}px`);
   }, [cellSize]);
-  // Generate time slots from 08:00 to 02:00 in 30-minute increments (02:00 del día siguiente)
+  
+  // Genera los slots de tiempo basados en las horas de inicio y fin configuradas
   const timeSlots = useMemo(() => {
-    // Para manejar el rango de 08:00 a 02:00 (del día siguiente),
-    // generamos primero de 08:00 a 23:30, luego agregamos 00:00 a 02:00
-    const morningToMidnight = generateTimeSlots(8, 23);
-    const midnightToEarly = generateTimeSlots(0, 2);
-    return [...morningToMidnight, ...midnightToEarly];
-  }, []);
+    // Si el fin es después de medianoche (>= 24), dividimos en dos rangos
+    if (endHour >= 24) {
+      // Convertir el endHour a formato 0-23 si está después de medianoche
+      const earlyMorningEnd = endHour - 24; // Por ejemplo, 26 se convierte en 2 (2:00 AM)
+      
+      // Generar slots desde la hora inicial hasta medianoche
+      const morningToMidnight = generateTimeSlots(startHour, 23);
+      
+      // Generar slots desde medianoche hasta la hora final
+      const midnightToEarly = generateTimeSlots(0, earlyMorningEnd);
+      
+      return [...morningToMidnight, ...midnightToEarly];
+    } else {
+      // Si el rango completo está en el mismo día, es más simple
+      return generateTimeSlots(startHour, endHour);
+    }
+  }, [startHour, endHour]); // Recalcular cuando cambien los rangos
   
   // Format date for API
   const formattedDate = formatDateForAPI(date);
@@ -446,25 +463,101 @@ export default function ScheduleTable({
   return (
     <div className="space-y-4">
       {/* Control buttons */}
-      <div className="flex justify-between mb-2">
-        <div className="flex items-center space-x-2">
-          <span className="text-sm font-medium">Tamaño de celdas: {cellSize}px</span>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={decreaseCellSize}
-            className="h-8 w-8 p-0"
-          >
-            −
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={increaseCellSize}
-            className="h-8 w-8 p-0"
-          >
-            +
-          </Button>
+      <div className="flex justify-between flex-wrap gap-3 mb-2">
+        <div className="flex items-center space-x-4">
+          {/* Control de tamaño de celdas */}
+          <div className="flex items-center space-x-2">
+            <span className="text-sm font-medium">Tamaño de celdas: {cellSize}px</span>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={decreaseCellSize}
+              className="h-8 w-8 p-0"
+            >
+              −
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={increaseCellSize}
+              className="h-8 w-8 p-0"
+            >
+              +
+            </Button>
+          </div>
+          
+          {/* Controles para rango horario */}
+          <div className="flex items-center space-x-2">
+            <span className="text-sm font-medium">Rango horario:</span>
+            
+            {/* Selector de hora inicio */}
+            <div className="flex items-center space-x-1">
+              <Select 
+                value={startHour.toString()} 
+                onValueChange={(value) => {
+                  const hour = parseInt(value, 10);
+                  // Validar que la hora de inicio sea menor que la de fin
+                  if (hour < endHour || (hour >= 24 && endHour >= 24)) {
+                    setStartHour(hour);
+                    // Limpiar selecciones al cambiar el rango
+                    setSelectedCellsByEmployee(new Map());
+                  }
+                }}
+              >
+                <SelectTrigger className="h-8 w-20">
+                  <SelectValue placeholder="Inicio" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({length: 24}, (_, i) => (
+                    <SelectItem key={`start-${i}`} value={i.toString()}>
+                      {i < 10 ? `0${i}:00` : `${i}:00`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <span className="text-sm">a</span>
+              
+              {/* Selector de hora fin */}
+              <Select 
+                value={endHour > 23 ? (endHour - 24).toString() + "-next" : endHour.toString()} 
+                onValueChange={(value) => {
+                  let hour;
+                  // Si la hora termina con "-next", es del día siguiente
+                  if (value.endsWith("-next")) {
+                    hour = parseInt(value.split("-")[0], 10) + 24;
+                  } else {
+                    hour = parseInt(value, 10);
+                  }
+                  
+                  // Validar que la hora de fin sea mayor que la de inicio
+                  if (hour > startHour || (hour < startHour && hour + 24 > startHour)) {
+                    setEndHour(hour);
+                    // Limpiar selecciones al cambiar el rango
+                    setSelectedCellsByEmployee(new Map());
+                  }
+                }}
+              >
+                <SelectTrigger className="h-8 w-20">
+                  <SelectValue placeholder="Fin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {/* Opciones del mismo día */}
+                  {Array.from({length: 24}, (_, i) => (
+                    <SelectItem key={`end-${i}`} value={i.toString()}>
+                      {i < 10 ? `0${i}:00` : `${i}:00`}
+                    </SelectItem>
+                  ))}
+                  {/* Opciones del día siguiente (marcadas) */}
+                  {Array.from({length: 12}, (_, i) => (
+                    <SelectItem key={`end-next-${i}`} value={`${i}-next`}>
+                      {i < 10 ? `0${i}:00` : `${i}:00`} +1
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
         
         {hasSelections && (
@@ -941,8 +1034,8 @@ export default function ScheduleTable({
                     boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
                     height: `${cellSize}px`,
                     lineHeight: `${cellSize}px`,
-                    minWidth: "120px",
-                    width: "120px"
+                    minWidth: "150px",
+                    width: "150px"
                   }}
                 >
                   <div className="flex justify-center items-center h-full gap-1">
