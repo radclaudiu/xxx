@@ -380,7 +380,7 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                     zIndex: 20,
                     backgroundColor: 'white',
                     boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-                    minWidth: "22px", // Celdas aún más pequeñas para intervalos de 15 min
+                    minWidth: "30px", // Cubos de 30x30 píxeles
                     borderLeft: time.endsWith(':00') ? '1px solid #BDBDBD' : '1px dashed #E0E0E0'
                   }}
                 >
@@ -431,8 +431,8 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                         time.endsWith(':00') ? 'hour-marker' : ''
                       }`}
                       style={{
-                        minWidth: "22px", // Celdas aún más pequeñas para intervalos de 15 min
-                        height: "18px", // Altura mínima para celdas compactas
+                        minWidth: "30px", // Cubos de 30x30 píxeles
+                        height: "30px", // Cubos de 30x30 píxeles
                         backgroundColor: isSelected ? 'rgba(76, 175, 80, 0.4)' : 
                                         isAssigned ? 'rgba(25, 118, 210, 0.2)' : 
                                         'transparent',
@@ -454,7 +454,7 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                     >
                       {isSelected && !isAssigned && (
                         <div className="flex justify-center items-center h-full">
-                          <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                          <div className="w-3 h-3 bg-green-500 rounded-sm"></div>
                         </div>
                       )}
                       {isFirstCell && shift && (
