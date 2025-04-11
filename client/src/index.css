@@ -32,8 +32,8 @@
 
 /* Para controlar la altura de las filas */
 table tr {
-  height: 40px !important;
-  line-height: 40px !important;
+  height: 30px !important;
+  line-height: 30px !important;
 }
 
 /* Para controlar el tamaño del contenido */
@@ -49,11 +49,11 @@ thead tr:first-child th[colspan="4"] {
 
 /* Asegurarnos que el posicionamiento sticky funcione para las tres filas del encabezado */
 thead tr:nth-child(2) th {
-  top: 40px !important;
+  top: 30px !important;
 }
 
 thead tr:nth-child(3) th {
-  top: 80px !important;
+  top: 60px !important;
 }
 
 /* Estilo para la fila de totales (ahora al final) */
