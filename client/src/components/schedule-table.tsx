@@ -28,6 +28,12 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
     setSelectedCellsByEmployee(new Map());
   }, [date]);
   
+  // State for drag selection
+  const [isDragging, setIsDragging] = useState(false);
+  const [startTime, setStartTime] = useState<string | null>(null);
+  const [activeEmployee, setActiveEmployee] = useState<Employee | null>(null);
+  const mouseDownRef = useRef(false);
+  
   // Function to check if a cell should be marked as assigned
   const isCellAssigned = (employeeId: number, time: string) => {
     return shifts.some(shift => 
@@ -52,29 +58,63 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
     return shift && shift.startTime === time;
   };
   
-  // State for drag selection
-  const [isDragging, setIsDragging] = useState(false);
-  const [startTime, setStartTime] = useState<string | null>(null);
-  const [activeEmployee, setActiveEmployee] = useState<Employee | null>(null);
-  const mouseDownRef = useRef(false);
-  
-  // Handle document-wide mouse up event
+  // Handle document-wide mouse/touch up events
   useEffect(() => {
-    const handleMouseUp = () => {
+    // Handler for mouse up and touch end events
+    const handleEndInteraction = () => {
       setIsDragging(false);
       mouseDownRef.current = false;
       setStartTime(null);
       setActiveEmployee(null);
     };
     
-    document.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      document.removeEventListener('mouseup', handleMouseUp);
+    // Prevent text selection during dragging
+    const handleSelectStart = (e: Event) => {
+      if (isDragging) {
+        e.preventDefault();
+      }
     };
-  }, []);
+    
+    // Add event listeners
+    document.addEventListener('mouseup', handleEndInteraction);
+    document.addEventListener('touchend', handleEndInteraction);
+    document.addEventListener('selectstart', handleSelectStart);
+    
+    return () => {
+      // Clean up all event listeners
+      document.removeEventListener('mouseup', handleEndInteraction);
+      document.removeEventListener('touchend', handleEndInteraction);
+      document.removeEventListener('selectstart', handleSelectStart);
+    };
+  }, [isDragging]);
   
-  // Handle mouse down on a cell
-  const handleMouseDown = (employee: Employee, time: string) => {
+  // Toggle a single cell selection
+  const toggleSingleCell = (employee: Employee, time: string) => {
+    // Create a new Map from the current state for immutability
+    const newSelectedCellsByEmployee = new Map(selectedCellsByEmployee);
+    
+    // Get or create the set of selected cells for this employee
+    const selectedCells = newSelectedCellsByEmployee.get(employee.id) || new Set<string>();
+    
+    // Toggle the cell selection
+    if (selectedCells.has(time)) {
+      selectedCells.delete(time);
+    } else {
+      selectedCells.add(time);
+    }
+    
+    // Update the Map with the modified Set
+    if (selectedCells.size > 0) {
+      newSelectedCellsByEmployee.set(employee.id, selectedCells);
+    } else {
+      newSelectedCellsByEmployee.delete(employee.id);
+    }
+    
+    setSelectedCellsByEmployee(newSelectedCellsByEmployee);
+  };
+  
+  // Handler for starting an interaction (mouse or touch)
+  const handleInteractionStart = (employee: Employee, time: string) => {
     // If cell is already assigned, don't allow selection
     if (isCellAssigned(employee.id, time)) return;
     
@@ -87,8 +127,20 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
     toggleSingleCell(employee, time);
   };
   
-  // Handle mouse enter (hover) on a cell during drag
-  const handleMouseEnter = (employee: Employee, time: string) => {
+  // Mouse down handler
+  const handleMouseDown = (employee: Employee, time: string) => {
+    handleInteractionStart(employee, time);
+  };
+  
+  // Touch start handler
+  const handleTouchStart = (e: React.TouchEvent, employee: Employee, time: string) => {
+    // Prevent default to stop text selection behavior
+    e.preventDefault();
+    handleInteractionStart(employee, time);
+  };
+  
+  // Handler for cell interaction during drag
+  const handleCellInteraction = (employee: Employee, time: string) => {
     // Only process if we're dragging and it's the same employee
     if (!mouseDownRef.current || !isDragging || !activeEmployee || activeEmployee.id !== employee.id) return;
     
@@ -103,9 +155,6 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
       if (startIndex >= 0 && currentIndex >= 0) {
         // Create a new Map from the current state for immutability
         const newSelectedCellsByEmployee = new Map(selectedCellsByEmployee);
-        
-        // Get or create the set of selected cells for this employee
-        const selectedCells = newSelectedCellsByEmployee.get(employee.id) || new Set<string>();
         
         // Handle selection in either direction (forward or backward)
         const minIdx = Math.min(startIndex, currentIndex);
@@ -134,29 +183,36 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
     }
   };
   
-  // Toggle single cell selection (used on initial click)
-  const toggleSingleCell = (employee: Employee, time: string) => {
-    // Create a new Map from the current state for immutability
-    const newSelectedCellsByEmployee = new Map(selectedCellsByEmployee);
+  // Mouse enter handler
+  const handleMouseEnter = (employee: Employee, time: string) => {
+    handleCellInteraction(employee, time);
+  };
+  
+  // Touch move handler
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging || !activeEmployee) return;
     
-    // Get or create the set of selected cells for this employee
-    const selectedCells = newSelectedCellsByEmployee.get(employee.id) || new Set<string>();
+    // Get touch position
+    const touch = e.touches[0];
+    const element = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement;
     
-    // Toggle the cell selection
-    if (selectedCells.has(time)) {
-      selectedCells.delete(time);
-    } else {
-      selectedCells.add(time);
+    // Check if touch is over a cell
+    if (element && element.tagName === 'TD') {
+      // Try to get employee and time from data attributes
+      const cellId = element.getAttribute('data-cell-id');
+      if (cellId) {
+        const [empId, time] = cellId.split('-');
+        const employeeId = parseInt(empId, 10);
+        const employee = employees.find(e => e.id === employeeId);
+        
+        if (employee && time) {
+          handleCellInteraction(employee, time);
+        }
+      }
     }
     
-    // Update the Map with the modified Set
-    if (selectedCells.size > 0) {
-      newSelectedCellsByEmployee.set(employee.id, selectedCells);
-    } else {
-      newSelectedCellsByEmployee.delete(employee.id);
-    }
-    
-    setSelectedCellsByEmployee(newSelectedCellsByEmployee);
+    // Prevent default to stop scrolling, zooming and text selection
+    e.preventDefault();
   };
   
   // Check if a cell is selected
@@ -183,6 +239,8 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
         return (aHour * 60 + aMinute) - (bHour * 60 + bMinute);
       });
       
+      if (sortedTimes.length === 0) return;
+      
       // Group consecutive times
       let currentGroup: string[] = [sortedTimes[0]];
       
@@ -201,7 +259,7 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
           // Times are not consecutive, save current group and start a new one
           const startTime = currentGroup[0];
           const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
-          // For end time, we need the next slot after the last one (since shifts end at the start of the next slot)
+          // For end time, we need the next slot after the last one
           const endTime = lastTimeIndex + 1 < timeSlots.length ? 
                           timeSlots[lastTimeIndex + 1] : 
                           currentGroup[currentGroup.length - 1];
@@ -261,7 +319,9 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
       )}
       
       {/* Schedule table */}
-      <div className="overflow-x-auto border border-neutral-200 rounded">
+      <div 
+        className="overflow-x-auto border border-neutral-200 rounded select-none"
+        onTouchMove={handleTouchMove}>
         <table className="w-full border-collapse table-fixed">
           {/* Table Header */}
           <thead>
@@ -329,6 +389,7 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                   return (
                     <td 
                       key={`${employee.id}-${time}`}
+                      data-cell-id={`${employee.id}-${time}`}
                       className={`border time-cell ${
                         isAssigned ? 'assigned' : ''
                       } ${isSelected ? 'selected' : ''} ${
@@ -344,10 +405,15 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                                 isAssigned ? '1px solid #1976D2' : 
                                 '1px solid #E0E0E0',
                         borderLeft: time.endsWith(':00') ? '1px solid #BDBDBD' : '1px dashed #E0E0E0',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        WebkitUserSelect: 'none',  // Safari
+                        MozUserSelect: 'none',     // Firefox
+                        msUserSelect: 'none',      // IE/Edge
+                        userSelect: 'none'         // Standard
                       }}
                       onMouseDown={() => handleMouseDown(employee, time)}
                       onMouseEnter={() => handleMouseEnter(employee, time)}
+                      onTouchStart={(e) => handleTouchStart(e, employee, time)}
                     >
                       {isSelected && !isAssigned && (
                         <div className="flex justify-center items-center h-full">
