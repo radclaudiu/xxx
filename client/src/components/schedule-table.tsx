@@ -374,8 +374,8 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                     zIndex: 30,
                     backgroundColor: 'white',
                     boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
-                    height: "20px",
-                    lineHeight: "20px"
+                    height: "40px",
+                    lineHeight: "40px"
                   }}>
                 <span className="text-xs font-semibold">Empleados</span>
               </th>
@@ -394,8 +394,8 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                       zIndex: 20,
                       backgroundColor: 'white',
                       boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-                      height: "20px",
-                      lineHeight: "20px",
+                      height: "40px",
+                      lineHeight: "40px",
                       boxSizing: "border-box",
                       borderLeft: '2px solid #AAAAAA'
                     }}
@@ -417,8 +417,8 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                     zIndex: 30,
                     backgroundColor: 'white',
                     boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
-                    height: "20px",
-                    lineHeight: "20px"
+                    height: "40px",
+                    lineHeight: "40px"
                   }}>
               </th>
               
@@ -432,12 +432,12 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                     }`}
                     style={{
                       position: 'sticky',
-                      top: "20px", // Debajo de la primera fila
+                      top: "40px", // Debajo de la primera fila
                       zIndex: 20,
                       backgroundColor: 'white',
-                      width: "20px", // Exactamente 20px de ancho
-                      height: "20px", // Exactamente 20px de altura
-                      lineHeight: "20px", // Garantizar altura exacta
+                      width: "40px", // Exactamente 20px de ancho
+                      height: "40px", // Exactamente 20px de altura
+                      lineHeight: "40px", // Garantizar altura exacta
                       boxSizing: "border-box", // Incluir bordes en dimensiones
                       borderLeft: time.endsWith(':00') ? '2px solid #AAAAAA' : 
                                 time.endsWith(':30') ? '1px solid #DDDDDD' : 
@@ -468,11 +468,11 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                     zIndex: 10,
                     backgroundColor: 'white',
                     boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
-                    height: "20px",
-                    lineHeight: "20px"
+                    height: "40px",
+                    lineHeight: "40px"
                   }}
                 >
-                  <div className="flex justify-between items-center px-1" style={{height: "20px", overflow: "hidden"}}>
+                  <div className="flex justify-between items-center px-1" style={{height: "40px", overflow: "hidden"}}>
                     <span className="truncate text-xs">{employee.name}</span>
                     <button className="text-neutral-400 hover:text-neutral-600 ml-1 p-0">
                       <Edit className="h-3 w-3" />
@@ -496,9 +496,9 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                         time.endsWith(':00') ? 'hour-marker' : ''
                       }`}
                       style={{
-                        width: "20px", // Exactamente 20px de ancho
-                        height: "20px", // Exactamente 20px de altura
-                        lineHeight: "20px", // Garantizar altura exacta
+                        width: "40px", // Exactamente 20px de ancho
+                        height: "40px", // Exactamente 20px de altura
+                        lineHeight: "40px", // Garantizar altura exacta
                         padding: "0", // Sin padding para mantener tamaño exacto
                         boxSizing: "border-box", // Incluir bordes en dimensiones
                         backgroundColor: isSelected ? 'rgba(76, 175, 80, 0.4)' : 
@@ -549,8 +549,8 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                   zIndex: 10,
                   backgroundColor: '#F3F4F6',
                   boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
-                  height: "20px",
-                  lineHeight: "20px"
+                  height: "40px",
+                  lineHeight: "40px"
                 }}
               >
                 <div className="flex justify-center items-center h-full">
@@ -603,9 +603,9 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                     }`}
                     style={{
                       backgroundColor,
-                      width: "20px", // Exactamente 20px de ancho
-                      height: "20px", // Exactamente 20px de altura
-                      lineHeight: "20px", // Garantizar altura exacta
+                      width: "40px", // Exactamente 20px de ancho
+                      height: "40px", // Exactamente 20px de altura
+                      lineHeight: "40px", // Garantizar altura exacta
                       boxSizing: "border-box", // Incluir bordes en dimensiones
                       borderLeft: time.endsWith(':00') ? '2px solid #AAAAAA' : 
                                 time.endsWith(':30') ? '1px solid #DDDDDD' : 
