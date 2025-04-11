@@ -380,11 +380,14 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                     zIndex: 20,
                     backgroundColor: 'white',
                     boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-                    minWidth: '45px', // Hacemos las celdas más pequeñas
+                    minWidth: '30px', // Celdas mucho más pequeñas para intervalos de 15 min
                     borderLeft: time.endsWith(':00') ? '1px solid #BDBDBD' : '1px dashed #E0E0E0'
                   }}
                 >
-                  <div className="text-[0.65rem] font-normal tracking-tighter">{time}</div>
+                  {/* Mostrar texto solo para horas completas (XX:00) */}
+                  {time.endsWith(':00') ? (
+                    <div className="text-[0.65rem] font-normal tracking-tighter">{time.split(':')[0]}h</div>
+                  ) : null}
                 </th>
               ))}
             </tr>
@@ -428,8 +431,8 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                         time.endsWith(':00') ? 'hour-marker' : ''
                       }`}
                       style={{
-                        minWidth: '45px', // Celdas más pequeñas
-                        height: '25px', // Altura reducida
+                        minWidth: '30px', // Celdas mucho más pequeñas para intervalos de 15 min
+                        height: '20px', // Altura aún más reducida
                         backgroundColor: isSelected ? 'rgba(76, 175, 80, 0.4)' : 
                                         isAssigned ? 'rgba(25, 118, 210, 0.2)' : 
                                         'transparent',

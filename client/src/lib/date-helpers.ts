@@ -40,7 +40,7 @@ export function getNextDay(date: Date): Date {
   return newDate;
 }
 
-// Generate time slots in 30-minute increments
+// Generate time slots in 15-minute increments
 export function generateTimeSlots(startHour: number, endHour: number): string[] {
   const slots: string[] = [];
   
@@ -48,10 +48,14 @@ export function generateTimeSlots(startHour: number, endHour: number): string[] 
     // Format hour with leading zero if needed
     const formattedHour = hour.toString().padStart(2, '0');
     
-    // Add both :00 and :30 slots, except for the last hour which only has :00
+    // Add :00, :15, :30, and :45 slots
     slots.push(`${formattedHour}:00`);
+    
+    // Add :15, :30, and :45 slots, except for the last hour
     if (hour < endHour) {
+      slots.push(`${formattedHour}:15`);
       slots.push(`${formattedHour}:30`);
+      slots.push(`${formattedHour}:45`);
     }
   }
   
