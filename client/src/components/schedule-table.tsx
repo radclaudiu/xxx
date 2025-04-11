@@ -429,7 +429,7 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                     <td 
                       key={`${employee.id}-${time}`}
                       data-cell-id={`${employee.id}-${time}`}
-                      className={`border time-cell ${
+                      className={`time-cell ${
                         isAssigned ? 'assigned' : ''
                       } ${isSelected ? 'selected' : ''} ${
                         time.endsWith(':00') ? 'hour-marker' : ''
@@ -441,9 +441,12 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                         backgroundColor: isSelected ? 'rgba(76, 175, 80, 0.4)' : 
                                         isAssigned ? 'rgba(25, 118, 210, 0.2)' : 
                                         'transparent',
-                        border: isSelected ? '1px solid #4CAF50' :
-                                isAssigned ? '1px solid #1976D2' : 
-                                '1px solid #E0E0E0',
+                        borderTop: isSelected ? '1px solid #4CAF50' : 
+                                 isAssigned ? '1px solid #1976D2' : '1px solid #E0E0E0',
+                        borderRight: isSelected ? '1px solid #4CAF50' : 
+                                    isAssigned ? '1px solid #1976D2' : '1px solid #E0E0E0',
+                        borderBottom: isSelected ? '1px solid #4CAF50' : 
+                                     isAssigned ? '1px solid #1976D2' : '1px solid #E0E0E0',
                         borderLeft: time.endsWith(':00') ? '2px solid #AAAAAA' : 
                                    time.endsWith(':30') ? '1px solid #DDDDDD' : 
                                    '1px dashed #EEEEEE',

@@ -3,10 +3,6 @@
 @tailwind utilities;
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
@@ -20,6 +16,14 @@
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
+}
+
+/* Estilos para celdas de tiempo */
+.time-cell {
+  box-sizing: border-box;
+  width: 30px;
+  height: 30px;
+  padding: 0;
 }
 
 /* Prevenir eventos de touch no deseados en dispositivos móviles */
