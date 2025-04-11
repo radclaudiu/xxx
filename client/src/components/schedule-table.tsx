@@ -6,7 +6,10 @@ import {
   isTimeBetween, 
   calculateHoursBetween, 
   formatHours,
-  convertTimeToMinutes
+  convertTimeToMinutes,
+  getStartOfWeek,
+  getEndOfWeek,
+  isInSameWeek
 } from "@/lib/date-helpers";
 import { Edit, Save, Clock, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -360,6 +363,86 @@ export default function ScheduleTable({
   // Check if there are any selections
   const hasSelections = selectedCellsByEmployee.size > 0;
   
+  // Calcular las horas semanales trabajadas y restantes para cada empleado
+  const calculateWeeklyHours = (employee: Employee) => {
+    const currentWeekStart = getStartOfWeek(date);
+    const currentWeekEnd = getEndOfWeek(date);
+    
+    // Inicializar horas trabajadas
+    let workedHours = 0;
+    
+    // Contar horas de turnos ya guardados en la semana actual
+    shifts.forEach(shift => {
+      if (
+        shift.employeeId === employee.id && 
+        isInSameWeek(new Date(shift.date), date)
+      ) {
+        workedHours += calculateHoursBetween(shift.startTime, shift.endTime);
+      }
+    });
+    
+    // Contar horas de selecciones actuales no guardadas para hoy
+    const selectedTimes = selectedCellsByEmployee.get(employee.id);
+    if (selectedTimes && selectedTimes.size > 0) {
+      // Convertir tiempos seleccionados a array y ordenar
+      const sortedTimes = Array.from(selectedTimes).sort((a, b) => {
+        return convertTimeToMinutes(a) - convertTimeToMinutes(b);
+      });
+      
+      // Agrupar tiempos consecutivos
+      let currentGroup: string[] = [sortedTimes[0]];
+      
+      for (let i = 1; i < sortedTimes.length; i++) {
+        const prevTime = currentGroup[currentGroup.length - 1];
+        const currTime = sortedTimes[i];
+        
+        // Verificar si los tiempos son consecutivos
+        const prevIndex = timeSlots.indexOf(prevTime);
+        const currIndex = timeSlots.indexOf(currTime);
+        
+        if (currIndex - prevIndex === 1) {
+          // Tiempos consecutivos, agregar al grupo actual
+          currentGroup.push(currTime);
+        } else {
+          // Tiempos no consecutivos, calcular horas para el grupo actual
+          const startTime = currentGroup[0];
+          const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
+          const endTime = lastTimeIndex + 1 < timeSlots.length ? 
+                          timeSlots[lastTimeIndex + 1] : 
+                          currentGroup[currentGroup.length - 1];
+          
+          // Sumar horas de este grupo
+          workedHours += calculateHoursBetween(startTime, endTime);
+          
+          // Iniciar nuevo grupo
+          currentGroup = [currTime];
+        }
+      }
+      
+      // Procesar el último grupo
+      if (currentGroup.length > 0) {
+        const startTime = currentGroup[0];
+        const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
+        const endTime = lastTimeIndex + 1 < timeSlots.length ? 
+                        timeSlots[lastTimeIndex + 1] : 
+                        currentGroup[currentGroup.length - 1];
+        
+        // Sumar horas del último grupo
+        workedHours += calculateHoursBetween(startTime, endTime);
+      }
+    }
+    
+    // Calcular horas restantes
+    const maxWeeklyHours = employee.maxHoursPerWeek || 40; // Default 40 si no está definido
+    const remainingHours = Math.max(0, maxWeeklyHours - workedHours);
+    
+    return {
+      maxWeeklyHours,
+      workedHours: parseFloat(workedHours.toFixed(2)),
+      remainingHours: parseFloat(remainingHours.toFixed(2))
+    };
+  };
+  
   return (
     <div className="space-y-4">
       {/* Control buttons */}
@@ -523,16 +606,52 @@ export default function ScheduleTable({
                     backgroundColor: 'white',
                     boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
                     height: `${cellSize}px`,
-                    lineHeight: `${cellSize}px`,
-                    minWidth: "120px",
-                    width: "120px"
+                    minWidth: "150px", // Un poco más ancho para acomodar la información adicional
+                    width: "150px",
+                    padding: 0
                   }}
                 >
-                  <div className="flex justify-between items-center px-1" style={{height: `${cellSize}px`, width: "100%", overflow: "hidden"}}>
-                    <span className="truncate text-xs">{employee.name}</span>
-                    <button className="text-neutral-400 hover:text-neutral-600 ml-1 p-0">
-                      <Edit className="h-3 w-3" />
-                    </button>
+                  <div className="flex items-center h-full" style={{width: "100%"}}>
+                    {/* Celda principal del empleado */}
+                    <div className="flex justify-between items-center h-full px-1" 
+                      style={{
+                        width: "120px",
+                        borderRight: "1px dashed #EEEEEE",
+                        overflow: "hidden"
+                      }}
+                    >
+                      <span className="truncate text-xs">{employee.name}</span>
+                      <button className="text-neutral-400 hover:text-neutral-600 ml-1 p-0">
+                        <Edit className="h-3 w-3" />
+                      </button>
+                    </div>
+                    
+                    {/* Celda que muestra las horas semanales restantes */}
+                    {(() => {
+                      const { maxWeeklyHours, workedHours, remainingHours } = calculateWeeklyHours(employee);
+                      
+                      // Determinar color basado en horas restantes
+                      const remainingPercentage = (remainingHours / maxWeeklyHours) * 100;
+                      const textColor = 
+                        remainingPercentage <= 10 ? "text-red-600" :
+                        remainingPercentage <= 25 ? "text-amber-600" :
+                        "text-blue-600";
+                      
+                      return (
+                        <div className="flex flex-col justify-center items-center h-full px-1" 
+                          style={{
+                            width: "30px",
+                            boxSizing: "border-box",
+                            overflow: "hidden"
+                          }}
+                        >
+                          <span className={`text-[0.45rem] ${textColor} font-semibold`} 
+                            title={`${remainingHours}h restantes de ${maxWeeklyHours}h semanales`}>
+                            {remainingHours}h
+                          </span>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </td>
                 
