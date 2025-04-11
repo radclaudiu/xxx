@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatDateForAPI, formatDate, generateTimeSlots } from "@/lib/date-helpers";
+import { formatDateForAPI, formatDate, generateTimeSlots, convertTimeToMinutes } from "@/lib/date-helpers";
 import { X } from "lucide-react";
 
 interface ShiftModalProps {
@@ -43,16 +43,29 @@ export default function ShiftModal({
   useEffect(() => {
     if (isOpen) {
       if (shift) {
+        // If editing an existing shift
         setStartTime(shift.startTime);
         setEndTime(shift.endTime);
         setNotes(shift.notes || "");
+      } else if (initialTime) {
+        // If creating a new shift with selected range
+        setStartTime(initialTime);
+        
+        // Find next time slot after initialTime
+        const timeIndex = startTimeOptions.indexOf(initialTime);
+        let suggestedEndTime = "09:30";
+        
+        if (timeIndex >= 0 && timeIndex + 1 < endTimeOptions.length) {
+          suggestedEndTime = endTimeOptions[timeIndex + 1];
+        }
+        
+        // Get the next slot after the selected initialTime
+        setEndTime(suggestedEndTime);
+        setNotes("");
       } else {
-        setStartTime(initialTime || "09:00");
-        const timeIndex = startTimeOptions.indexOf(initialTime || "09:00");
-        // Set end time to the next available slot after start time
-        setEndTime(timeIndex >= 0 && timeIndex + 1 < endTimeOptions.length 
-          ? endTimeOptions[timeIndex + 1] 
-          : "09:30");
+        // Default values for new shift
+        setStartTime("09:00");
+        setEndTime("09:30");
         setNotes("");
       }
     }
@@ -63,14 +76,17 @@ export default function ShiftModal({
     setStartTime(value);
     
     // Update end time if it's before or equal to the new start time
-    const startIndex = startTimeOptions.indexOf(value);
-    const endIndex = endTimeOptions.indexOf(endTime);
+    const startMinutes = convertTimeToMinutes(value);
+    const endMinutes = convertTimeToMinutes(endTime);
     
-    if (endIndex <= startIndex) {
-      // Set end time to the next slot after start time
-      const newEndIndex = startIndex + 1;
-      if (newEndIndex < endTimeOptions.length) {
-        setEndTime(endTimeOptions[newEndIndex]);
+    if (endMinutes <= startMinutes) {
+      // Find the next time slot after the new start time
+      const startIndex = startTimeOptions.indexOf(value);
+      if (startIndex >= 0 && startIndex + 1 < endTimeOptions.length) {
+        setEndTime(endTimeOptions[startIndex + 1]);
+      } else {
+        // If we're at the last start time option, just set the end time to the last end time option
+        setEndTime(endTimeOptions[endTimeOptions.length - 1]);
       }
     }
   };

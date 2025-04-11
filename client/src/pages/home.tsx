@@ -89,16 +89,18 @@ export default function Home() {
     setCurrentDate(getNextDay(currentDate));
   };
   
-  // Open shift modal for a specific employee and time
-  const handleCellClick = (employee: Employee, time: string) => {
+  // Open shift modal for a specific employee and time range
+  const handleCellClick = (employee: Employee, startTime: string, endTime: string) => {
     setSelectedEmployee(employee);
-    setSelectedTime(time);
+    setSelectedTime(startTime);
     
     // Check if there's already a shift at this time for this employee
     const existingShift = shifts.find(
       shift => shift.employeeId === employee.id && 
       shift.date === formatDateForAPI(currentDate) &&
-      (time >= shift.startTime && time < shift.endTime)
+      ((startTime >= shift.startTime && startTime < shift.endTime) ||
+       (endTime > shift.startTime && endTime <= shift.endTime) ||
+       (shift.startTime >= startTime && shift.startTime < endTime))
     );
     
     setSelectedShift(existingShift || null);
