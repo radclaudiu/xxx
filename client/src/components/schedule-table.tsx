@@ -134,11 +134,16 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
   
   // Touch start handler
   const handleTouchStart = (e: React.TouchEvent, employee: Employee, time: string) => {
-    // Prevent default to stop text selection behavior and scrolling
+    // Si hay 2 o más dedos, permitir el desplazamiento nativo
+    if (e.touches.length >= 2) {
+      return; // No prevenir el comportamiento por defecto
+    }
+    
+    // Para un solo dedo, prevenir el desplazamiento durante la selección
     e.preventDefault();
     e.stopPropagation();
     
-    // Asegurarnos que no se desplaza la tabla al hacer el gesto de arrastre
+    // Asegurarnos que no se desplaza la tabla al hacer el gesto de arrastre con un dedo
     const touchEvent = e.nativeEvent;
     touchEvent.stopPropagation();
     
@@ -196,8 +201,12 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
   
   // Touch move handler
   const handleTouchMove = (e: React.TouchEvent) => {
-    // Always prevent default to stop scrolling during any touch movement
-    // This effectively prevents the table from scrolling when the user is dragging
+    // Si hay 2 o más dedos, permitir el desplazamiento (scroll) nativo
+    if (e.touches.length >= 2) {
+      return; // No prevenir el comportamiento por defecto para permitir desplazamiento con dos dedos
+    }
+    
+    // Para un solo dedo, prevenir el desplazamiento durante la selección
     e.preventDefault();
     
     if (!isDragging || !activeEmployee) return;
@@ -329,11 +338,16 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
       <div 
         className="overflow-x-auto border border-neutral-200 rounded select-none"
         style={{ 
-          touchAction: "none",  // Esto es clave para prevenir el scroll durante el arrastre
+          touchAction: "manipulation", // Permite gestos como pellizcar para zoom pero bloquea paneos
           WebkitOverflowScrolling: "touch" // Mejorar el desplazamiento suave
         }}
         onTouchMove={handleTouchMove}
-        onTouchStart={(e) => e.stopPropagation()}>
+        onTouchStart={(e) => {
+          // Solo detener la propagación para eventos de un dedo
+          if (e.touches.length === 1) {
+            e.stopPropagation();
+          }
+        }}>
         <table className="w-full border-collapse table-fixed">
           {/* Table Header */}
           <thead>

@@ -24,7 +24,21 @@
 
 /* Prevenir eventos de touch no deseados en dispositivos móviles */
 @media (hover: none) and (pointer: coarse) {
+  /* Permitir scroll con múltiples dedos */
   .time-cell {
-    touch-action: none !important;
+    touch-action: manipulation !important;
+  }
+  
+  /* Agregar una instrucción visual para ayudar al usuario */
+  .select-none::before {
+    content: "Usa un dedo para seleccionar celdas y dos dedos para desplazarte";
+    display: block;
+    padding: 8px;
+    background-color: rgba(0,0,0,0.05);
+    text-align: center;
+    font-size: 0.8rem;
+    color: #666;
+    margin-bottom: 8px;
+    border-radius: 4px;
   }
 }
