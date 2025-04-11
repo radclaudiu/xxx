@@ -508,8 +508,8 @@ export default function ScheduleTable({
                     boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
                     height: `${cellSize}px`,
                     lineHeight: `${cellSize}px`,
-                    minWidth: "120px",
-                    width: "120px"
+                    minWidth: "150px",
+                    width: "150px"
                   }}>
                 <span className="text-xs font-semibold">Empleados</span>
               </th>
@@ -554,8 +554,8 @@ export default function ScheduleTable({
                     boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
                     height: `${cellSize}px`,
                     lineHeight: `${cellSize}px`,
-                    minWidth: "120px",
-                    width: "120px"
+                    minWidth: "150px",
+                    width: "150px"
                   }}>
               </th>
               
@@ -615,13 +615,13 @@ export default function ScheduleTable({
                     {/* Celda principal del empleado */}
                     <div className="flex justify-between items-center h-full px-1" 
                       style={{
-                        width: "120px",
+                        width: "110px",
                         borderRight: "1px dashed #EEEEEE",
                         overflow: "hidden"
                       }}
                     >
-                      <span className="truncate text-xs">{employee.name}</span>
-                      <button className="text-neutral-400 hover:text-neutral-600 ml-1 p-0">
+                      <span className="truncate text-xs font-medium pr-1" style={{maxWidth: "95px", display: "block"}}>{employee.name}</span>
+                      <button className="text-neutral-400 hover:text-neutral-600 flex-shrink-0 p-0">
                         <Edit className="h-3 w-3" />
                       </button>
                     </div>
@@ -726,8 +726,8 @@ export default function ScheduleTable({
                   boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
                   height: `${cellSize}px`,
                   lineHeight: `${cellSize}px`,
-                  minWidth: "120px",
-                  width: "120px"
+                  minWidth: "150px",
+                  width: "150px"
                 }}
               >
                 <div className="flex justify-center items-center h-full">
@@ -814,8 +814,8 @@ export default function ScheduleTable({
                   boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
                   height: `${cellSize}px`,
                   lineHeight: `${cellSize}px`,
-                  minWidth: "120px",
-                  width: "120px"
+                  minWidth: "150px",
+                  width: "150px"
                 }}
               >
                 <div className="flex justify-center items-center h-full gap-1">
