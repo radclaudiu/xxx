@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X, Clock } from "lucide-react";
+import { X } from "lucide-react";
 
 interface EmployeeModalProps {
   isOpen: boolean;
@@ -18,7 +18,6 @@ interface EmployeeModalProps {
 export default function EmployeeModal({ isOpen, onClose, employeeToEdit }: EmployeeModalProps) {
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
-  const [maxHoursPerWeek, setMaxHoursPerWeek] = useState<number | "">(40); // Default to 40 hours
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -28,11 +27,9 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit }: Emplo
       if (employeeToEdit) {
         setName(employeeToEdit.name);
         setRole(employeeToEdit.role || "");
-        setMaxHoursPerWeek(employeeToEdit.maxHoursPerWeek || 40);
       } else {
         setName("");
         setRole("");
-        setMaxHoursPerWeek(40); // Default to 40 hours
       }
     }
   }, [isOpen, employeeToEdit]);
@@ -120,19 +117,9 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit }: Emplo
       return;
     }
     
-    if (maxHoursPerWeek === "" || maxHoursPerWeek <= 0 || maxHoursPerWeek > 168) {
-      toast({
-        title: "Error",
-        description: "Las horas semanales deben ser un valor entre 1 y 168.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
     const employeeData: InsertEmployee = {
       name: name.trim(),
       role: role.trim(),
-      maxHoursPerWeek: maxHoursPerWeek,
     };
     
     if (employeeToEdit) {
@@ -194,26 +181,6 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit }: Emplo
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
                 placeholder="Cargo o posición"
-                disabled={isLoading}
-              />
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="employeeHours" className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Horas Semanales Contratadas
-              </Label>
-              <Input
-                id="employeeHours"
-                type="number"
-                min="1"
-                max="168"
-                value={maxHoursPerWeek}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setMaxHoursPerWeek(value === "" ? "" : Number(value));
-                }}
-                placeholder="Horas semanales (máx. 168)"
                 disabled={isLoading}
               />
             </div>
