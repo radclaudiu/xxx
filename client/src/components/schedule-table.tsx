@@ -380,15 +380,15 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                     zIndex: 20,
                     backgroundColor: 'white',
                     boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-                    width: "30px", // Exactamente 30px de ancho
-                    height: "30px", // Exactamente 30px de altura
+                    width: "20px", // Exactamente 20px de ancho
+                    height: "20px", // Exactamente 20px de altura
                     borderLeft: time.endsWith(':00') ? '2px solid #AAAAAA' : time.endsWith(':30') ? '1px solid #DDDDDD' : '1px dashed #EEEEEE'
                   }}
                 >
                   {/* Mostrar texto solo para horas completas (XX:00) */}
                   {time.endsWith(':00') ? (
                     <div className="flex justify-center items-center h-full">
-                      <div className="text-[0.6rem] font-semibold tracking-tighter">{time.split(':')[0]}h</div>
+                      <div className="text-[0.5rem] font-semibold tracking-tighter">{time.split(':')[0]}h</div>
                     </div>
                   ) : null}
                 </th>
@@ -408,7 +408,7 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                     zIndex: 10,
                     backgroundColor: 'white',
                     boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
-                    height: "30px"
+                    height: "20px"
                   }}
                 >
                   <div className="flex justify-between items-center">
@@ -435,8 +435,8 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                         time.endsWith(':00') ? 'hour-marker' : ''
                       }`}
                       style={{
-                        width: "30px", // Exactamente 30px de ancho
-                        height: "30px", // Exactamente 30px de altura
+                        width: "20px", // Exactamente 20px de ancho
+                        height: "20px", // Exactamente 20px de altura
                         padding: "0", // Sin padding para mantener tamaño exacto
                         backgroundColor: isSelected ? 'rgba(76, 175, 80, 0.4)' : 
                                         isAssigned ? 'rgba(25, 118, 210, 0.2)' : 
@@ -464,7 +464,7 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                     >
                       {isSelected && !isAssigned && (
                         <div className="flex justify-center items-center h-full">
-                          <div className="w-3 h-3 bg-green-500 rounded-sm"></div>
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                         </div>
                       )}
                       {isFirstCell && shift && (
