@@ -12,8 +12,14 @@ interface ScheduleTableProps {
 }
 
 export default function ScheduleTable({ employees, shifts, date, onSaveShifts }: ScheduleTableProps) {
-  // Generate time slots from 9:00 to 18:00 in 30-minute increments
-  const timeSlots = useMemo(() => generateTimeSlots(9, 18), []);
+  // Generate time slots from 08:00 to 02:00 in 30-minute increments (02:00 del día siguiente)
+  const timeSlots = useMemo(() => {
+    // Para manejar el rango de 08:00 a 02:00 (del día siguiente),
+    // generamos primero de 08:00 a 23:30, luego agregamos 00:00 a 02:00
+    const morningToMidnight = generateTimeSlots(8, 23);
+    const midnightToEarly = generateTimeSlots(0, 2);
+    return [...morningToMidnight, ...midnightToEarly];
+  }, []);
   
   // Format date for API
   const formattedDate = formatDateForAPI(date);
@@ -365,7 +371,7 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
               {timeSlots.map((time) => (
                 <th 
                   key={time}
-                  className={`border-b border-neutral-200 p-2 text-center time-cell ${
+                  className={`border-b border-neutral-200 p-1 text-center time-cell ${
                     time.endsWith(':00') ? 'hour-marker' : ''
                   }`}
                   style={{
@@ -374,11 +380,11 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                     zIndex: 20,
                     backgroundColor: 'white',
                     boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-                    minWidth: '60px',
+                    minWidth: '45px', // Hacemos las celdas más pequeñas
                     borderLeft: time.endsWith(':00') ? '1px solid #BDBDBD' : '1px dashed #E0E0E0'
                   }}
                 >
-                  <div className="text-xs font-normal">{time}</div>
+                  <div className="text-[0.65rem] font-normal tracking-tighter">{time}</div>
                 </th>
               ))}
             </tr>
@@ -422,8 +428,8 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                         time.endsWith(':00') ? 'hour-marker' : ''
                       }`}
                       style={{
-                        minWidth: '60px',
-                        height: '30px',
+                        minWidth: '45px', // Celdas más pequeñas
+                        height: '25px', // Altura reducida
                         backgroundColor: isSelected ? 'rgba(76, 175, 80, 0.4)' : 
                                         isAssigned ? 'rgba(25, 118, 210, 0.2)' : 
                                         'transparent',
@@ -445,7 +451,7 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                     >
                       {isSelected && !isAssigned && (
                         <div className="flex justify-center items-center h-full">
-                          <div className="w-3 h-3 bg-green-500 rounded-sm"></div>
+                          <div className="w-2 h-2 bg-green-500 rounded-sm"></div>
                         </div>
                       )}
                       {isFirstCell && shift && (
