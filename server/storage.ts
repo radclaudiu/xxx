@@ -235,7 +235,24 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createEmployee(employee: InsertEmployee): Promise<Employee> {
-    const [result] = await db.insert(employees).values(employee).returning();
+    // Asegurarse de que los campos requeridos estén presentes con valores por defecto
+    const employeeWithDefaults = {
+      ...employee,
+      role: employee.role || "", // Valor por defecto para role
+      email: employee.email || null, // Valores por defecto para los campos que pueden ser nulos
+      phone: employee.phone || null,
+      address: employee.address || null,
+      hireDate: employee.hireDate || null,
+      contractType: employee.contractType || null,
+      hourlyRate: employee.hourlyRate || null,
+      maxHoursPerWeek: employee.maxHoursPerWeek || null,
+      preferredDays: employee.preferredDays || null,
+      unavailableDays: employee.unavailableDays || null,
+      isActive: employee.isActive === undefined ? true : employee.isActive,
+      notes: employee.notes || null,
+    };
+    
+    const [result] = await db.insert(employees).values(employeeWithDefaults).returning();
     return result;
   }
   
@@ -283,7 +300,19 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createShift(shift: InsertShift): Promise<Shift> {
-    const [result] = await db.insert(shifts).values(shift).returning();
+    // Asegurarse de que los campos requeridos estén presentes con valores por defecto
+    const shiftWithDefaults = {
+      ...shift,
+      notes: shift.notes || "",
+      status: shift.status || "scheduled",
+      breakTime: shift.breakTime || null,
+      actualStartTime: null,
+      actualEndTime: null,
+      totalHours: null,
+      scheduleId: shift.scheduleId || null,
+    };
+    
+    const [result] = await db.insert(shifts).values(shiftWithDefaults).returning();
     return result;
   }
   
@@ -315,7 +344,18 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createSchedule(schedule: InsertSchedule): Promise<Schedule> {
-    const [result] = await db.insert(schedules).values(schedule).returning();
+    // Asegurarse de que los campos requeridos estén presentes con valores por defecto
+    const scheduleWithDefaults = {
+      ...schedule,
+      description: schedule.description || "",
+      startDate: schedule.startDate || null,
+      endDate: schedule.endDate || null,
+      status: schedule.status || "draft",
+      department: schedule.department || null,
+      createdBy: schedule.createdBy || null,
+    };
+    
+    const [result] = await db.insert(schedules).values(scheduleWithDefaults).returning();
     return result;
   }
   
@@ -328,16 +368,14 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Save and load entire schedule data
-  async saveScheduleData(scheduleId: number, employees: Employee[], shifts: Shift[]): Promise<boolean> {
+  async saveScheduleData(scheduleId: number, employeesList: Employee[], shiftsList: Shift[]): Promise<boolean> {
     // Verificar que el horario existe
     const schedule = await this.getSchedule(scheduleId);
     if (!schedule) return false;
     
-    // Implementación simple: crear nuevos turnos asociados con el ID del horario
-    // Para cada turno, establecer el scheduleId
-    for (const shift of shifts) {
+    // Implementación simple: actualizar turnos existentes con el ID del horario
+    for (const shift of shiftsList) {
       if (shift.id) {
-        // Actualizar turno existente
         await db
           .update(shifts)
           .set({ scheduleId })
@@ -359,14 +397,27 @@ export class DatabaseStorage implements IStorage {
       .from(shifts)
       .where(eq(shifts.scheduleId, scheduleId));
     
-    // Obtener todos los empleados relacionados con estos turnos
-    const employeeIds = [...new Set(scheduleShifts.map(shift => shift.employeeId))];
-    const scheduleEmployees = await db
-      .select()
-      .from(employees)
-      .where(employeeIds.length > 0 
-        ? employees.id.in(employeeIds) 
-        : undefined);
+    if (scheduleShifts.length === 0) {
+      return { employees: [], shifts: [] };
+    }
+    
+    // Obtener todos los IDs de empleados de los turnos
+    const employeeIdSet = new Set<number>();
+    scheduleShifts.forEach(shift => {
+      employeeIdSet.add(shift.employeeId);
+    });
+    
+    // Convertir el Set a Array
+    const employeeIds = Array.from(employeeIdSet);
+    
+    // Consultar empleados uno por uno
+    const scheduleEmployees: Employee[] = [];
+    for (const empId of employeeIds) {
+      const emp = await this.getEmployee(empId);
+      if (emp) {
+        scheduleEmployees.push(emp);
+      }
+    }
     
     return {
       employees: scheduleEmployees,
