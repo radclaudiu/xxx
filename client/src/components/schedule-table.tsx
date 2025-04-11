@@ -355,46 +355,94 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
           }
         }}>
         <table className="w-full border-collapse table-fixed">
-          {/* Table Header */}
+          {/* Table Header - Estructura de dos filas */}
           <thead>
+            {/* Primera fila: Horas agrupadas */}
             <tr>
-              <th className="sticky-corner border-b border-r border-neutral-200 p-3 bg-neutral-100 min-w-[200px] text-left"
+              <th className="sticky-corner border-b border-r border-neutral-200 p-1 bg-neutral-100 text-center"
                   style={{
                     position: 'sticky',
                     left: 0,
                     zIndex: 30,
                     backgroundColor: 'white',
-                    boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
+                    boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
+                    height: "20px",
+                    lineHeight: "20px"
                   }}>
-                Empleados
+                <span className="text-xs font-semibold">Empleados</span>
               </th>
-              {timeSlots.map((time) => (
-                <th 
-                  key={time}
-                  className={`border-b border-neutral-200 p-1 text-center time-cell ${
-                    time.endsWith(':00') ? 'hour-marker' : ''
-                  }`}
+              
+              {/* Agrupar cada 4 celdas (1 hora) */}
+              {timeSlots.filter(time => time.endsWith(':00')).map((hour) => {
+                const hourValue = hour.split(':')[0];
+                return (
+                  <th 
+                    key={hour}
+                    colSpan={4} // Abarca 4 celdas (00, 15, 30, 45)
+                    className="border-b border-neutral-200 p-0 text-center bg-neutral-50"
+                    style={{
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 20,
+                      backgroundColor: 'white',
+                      boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+                      height: "20px",
+                      lineHeight: "20px",
+                      boxSizing: "border-box",
+                      borderLeft: '2px solid #AAAAAA'
+                    }}
+                  >
+                    <div className="flex justify-center items-center h-full">
+                      <div className="text-[0.6rem] font-bold tracking-tight">{hourValue}h</div>
+                    </div>
+                  </th>
+                );
+              })}
+            </tr>
+            
+            {/* Segunda fila: Intervalos de 15 minutos */}
+            <tr>
+              <th className="sticky-corner border-b border-r border-neutral-200 p-1 bg-neutral-50"
                   style={{
                     position: 'sticky',
-                    top: 0,
-                    zIndex: 20,
+                    left: 0,
+                    zIndex: 30,
                     backgroundColor: 'white',
-                    boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-                    width: "20px", // Exactamente 20px de ancho
-                    height: "20px", // Exactamente 20px de altura
-                    lineHeight: "20px", // Garantizar altura exacta
-                    boxSizing: "border-box", // Incluir bordes en dimensiones
-                    borderLeft: time.endsWith(':00') ? '2px solid #AAAAAA' : time.endsWith(':30') ? '1px solid #DDDDDD' : '1px dashed #EEEEEE'
-                  }}
-                >
-                  {/* Mostrar texto solo para horas completas (XX:00) */}
-                  {time.endsWith(':00') ? (
+                    boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
+                    height: "20px",
+                    lineHeight: "20px"
+                  }}>
+              </th>
+              
+              {timeSlots.map((time) => {
+                const minutes = time.split(':')[1];
+                return (
+                  <th 
+                    key={time}
+                    className={`border-b border-neutral-200 p-0 text-center time-cell ${
+                      time.endsWith(':00') ? 'hour-marker' : ''
+                    }`}
+                    style={{
+                      position: 'sticky',
+                      top: "20px", // Debajo de la primera fila
+                      zIndex: 20,
+                      backgroundColor: 'white',
+                      width: "20px", // Exactamente 20px de ancho
+                      height: "20px", // Exactamente 20px de altura
+                      lineHeight: "20px", // Garantizar altura exacta
+                      boxSizing: "border-box", // Incluir bordes en dimensiones
+                      borderLeft: time.endsWith(':00') ? '2px solid #AAAAAA' : 
+                                time.endsWith(':30') ? '1px solid #DDDDDD' : 
+                                '1px dashed #EEEEEE'
+                    }}
+                  >
+                    {/* Mostrar minuto para todos los intervalos */}
                     <div className="flex justify-center items-center h-full">
-                      <div className="text-[0.5rem] font-semibold tracking-tighter">{time.split(':')[0]}h</div>
+                      <div className="text-[0.45rem] tracking-tighter text-gray-500">{minutes}</div>
                     </div>
-                  ) : null}
-                </th>
-              ))}
+                  </th>
+                );
+              })}
             </tr>
           </thead>
 

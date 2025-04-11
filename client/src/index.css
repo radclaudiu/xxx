@@ -42,6 +42,16 @@ table td, table th {
   overflow: hidden;
 }
 
+/* Estilo para la cabecera con horas agrupadas */
+thead tr:first-child th[colspan="4"] {
+  border-bottom: 1px solid #E0E0E0;
+}
+
+/* Asegurarnos que el posicionamiento sticky funcione para ambas filas del encabezado */
+thead tr:nth-child(2) th {
+  top: 20px !important;
+}
+
 /* Prevenir eventos de touch no deseados en dispositivos móviles */
 @media (hover: none) and (pointer: coarse) {
   /* Permitir scroll con múltiples dedos */
