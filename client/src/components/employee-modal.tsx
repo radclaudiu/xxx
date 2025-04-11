@@ -18,6 +18,7 @@ interface EmployeeModalProps {
 export default function EmployeeModal({ isOpen, onClose, employeeToEdit }: EmployeeModalProps) {
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
+  const [maxHoursPerWeek, setMaxHoursPerWeek] = useState("40"); // Default 40 hours
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -27,9 +28,11 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit }: Emplo
       if (employeeToEdit) {
         setName(employeeToEdit.name);
         setRole(employeeToEdit.role || "");
+        setMaxHoursPerWeek(employeeToEdit.maxHoursPerWeek?.toString() || "40");
       } else {
         setName("");
         setRole("");
+        setMaxHoursPerWeek("40");
       }
     }
   }, [isOpen, employeeToEdit]);
@@ -117,9 +120,21 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit }: Emplo
       return;
     }
     
+    // Validar que maxHoursPerWeek sea un número válido
+    const maxHours = parseInt(maxHoursPerWeek, 10);
+    if (isNaN(maxHours) || maxHours < 0) {
+      toast({
+        title: "Error",
+        description: "Las horas máximas semanales deben ser un número positivo.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const employeeData: InsertEmployee = {
       name: name.trim(),
       role: role.trim(),
+      maxHoursPerWeek: maxHours
     };
     
     if (employeeToEdit) {
@@ -181,6 +196,23 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit }: Emplo
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
                 placeholder="Cargo o posición"
+                disabled={isLoading}
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="maxHoursPerWeek" className="flex items-center gap-2">
+                Horas Máximas Semanales
+                <span className="text-xs text-muted-foreground">(Lun-Dom)</span>
+              </Label>
+              <Input
+                id="maxHoursPerWeek"
+                type="number"
+                min="0"
+                max="168"
+                value={maxHoursPerWeek}
+                onChange={(e) => setMaxHoursPerWeek(e.target.value)}
+                placeholder="40"
                 disabled={isLoading}
               />
             </div>

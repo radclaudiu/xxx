@@ -108,3 +108,29 @@ export function formatHours(hours: number): string {
   
   return `${wholeHours}h ${minutes}m`;
 }
+
+// Get the start date of the week (Monday) containing the specified date
+export function getStartOfWeek(date: Date): Date {
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is Sunday
+  const monday = new Date(date);
+  monday.setDate(diff);
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
+// Get the end date of the week (Sunday) containing the specified date
+export function getEndOfWeek(date: Date): Date {
+  const startOfWeek = getStartOfWeek(date);
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
+  endOfWeek.setHours(23, 59, 59, 999);
+  return endOfWeek;
+}
+
+// Check if two dates are in the same week
+export function isInSameWeek(date1: Date, date2: Date): boolean {
+  const startOfWeek1 = getStartOfWeek(date1);
+  const startOfWeek2 = getStartOfWeek(date2);
+  return startOfWeek1.getTime() === startOfWeek2.getTime();
+}
