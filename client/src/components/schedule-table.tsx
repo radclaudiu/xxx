@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { Employee, Shift } from "@shared/schema";
 import { formatDateForAPI, generateTimeSlots, isTimeBetween } from "@/lib/date-helpers";
 import { Edit, Save } from "lucide-react";
@@ -52,8 +52,90 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
     return shift && shift.startTime === time;
   };
   
-  // Toggle cell selection
-  const toggleCellSelection = (employee: Employee, time: string) => {
+  // State for drag selection
+  const [isDragging, setIsDragging] = useState(false);
+  const [startTime, setStartTime] = useState<string | null>(null);
+  const [activeEmployee, setActiveEmployee] = useState<Employee | null>(null);
+  const mouseDownRef = useRef(false);
+  
+  // Handle document-wide mouse up event
+  useEffect(() => {
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      mouseDownRef.current = false;
+      setStartTime(null);
+      setActiveEmployee(null);
+    };
+    
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
+  
+  // Handle mouse down on a cell
+  const handleMouseDown = (employee: Employee, time: string) => {
+    // If cell is already assigned, don't allow selection
+    if (isCellAssigned(employee.id, time)) return;
+    
+    mouseDownRef.current = true;
+    setIsDragging(true);
+    setStartTime(time);
+    setActiveEmployee(employee);
+    
+    // Select or deselect the time slot immediately
+    toggleSingleCell(employee, time);
+  };
+  
+  // Handle mouse enter (hover) on a cell during drag
+  const handleMouseEnter = (employee: Employee, time: string) => {
+    // Only process if we're dragging and it's the same employee
+    if (!mouseDownRef.current || !isDragging || !activeEmployee || activeEmployee.id !== employee.id) return;
+    
+    // If cell is already assigned, don't allow selection
+    if (isCellAssigned(employee.id, time)) return;
+    
+    if (startTime) {
+      // Select all cells between startTime and current time
+      const startIndex = timeSlots.indexOf(startTime);
+      const currentIndex = timeSlots.indexOf(time);
+      
+      if (startIndex >= 0 && currentIndex >= 0) {
+        // Create a new Map from the current state for immutability
+        const newSelectedCellsByEmployee = new Map(selectedCellsByEmployee);
+        
+        // Get or create the set of selected cells for this employee
+        const selectedCells = newSelectedCellsByEmployee.get(employee.id) || new Set<string>();
+        
+        // Handle selection in either direction (forward or backward)
+        const minIdx = Math.min(startIndex, currentIndex);
+        const maxIdx = Math.max(startIndex, currentIndex);
+        
+        // Create a new set with only the cells in the selected range
+        const newSelectedCells = new Set<string>();
+        
+        for (let i = minIdx; i <= maxIdx; i++) {
+          const timeSlot = timeSlots[i];
+          // Only add if the cell is not already assigned
+          if (!isCellAssigned(employee.id, timeSlot)) {
+            newSelectedCells.add(timeSlot);
+          }
+        }
+        
+        // Update with the new selection
+        if (newSelectedCells.size > 0) {
+          newSelectedCellsByEmployee.set(employee.id, newSelectedCells);
+        } else {
+          newSelectedCellsByEmployee.delete(employee.id);
+        }
+        
+        setSelectedCellsByEmployee(newSelectedCellsByEmployee);
+      }
+    }
+  };
+  
+  // Toggle single cell selection (used on initial click)
+  const toggleSingleCell = (employee: Employee, time: string) => {
     // Create a new Map from the current state for immutability
     const newSelectedCellsByEmployee = new Map(selectedCellsByEmployee);
     
@@ -264,7 +346,8 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                         borderLeft: time.endsWith(':00') ? '1px solid #BDBDBD' : '1px dashed #E0E0E0',
                         cursor: 'pointer'
                       }}
-                      onClick={() => !isAssigned && toggleCellSelection(employee, time)}
+                      onMouseDown={() => handleMouseDown(employee, time)}
+                      onMouseEnter={() => handleMouseEnter(employee, time)}
                     >
                       {isSelected && !isAssigned && (
                         <div className="flex justify-center items-center h-full">
