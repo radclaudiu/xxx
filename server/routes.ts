@@ -1,0 +1,231 @@
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { z } from "zod";
+import { insertEmployeeSchema, insertShiftSchema, insertScheduleSchema } from "@shared/schema";
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Employee routes
+  app.get("/api/employees", async (req, res) => {
+    try {
+      const employees = await storage.getEmployees();
+      res.json(employees);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch employees" });
+    }
+  });
+
+  app.post("/api/employees", async (req, res) => {
+    try {
+      const validatedData = insertEmployeeSchema.parse(req.body);
+      const employee = await storage.createEmployee(validatedData);
+      res.status(201).json(employee);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid employee data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to create employee" });
+      }
+    }
+  });
+
+  app.put("/api/employees/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertEmployeeSchema.partial().parse(req.body);
+      const employee = await storage.updateEmployee(id, validatedData);
+      
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      
+      res.json(employee);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid employee data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to update employee" });
+      }
+    }
+  });
+
+  app.delete("/api/employees/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteEmployee(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete employee" });
+    }
+  });
+
+  // Shift routes
+  app.get("/api/shifts", async (req, res) => {
+    try {
+      const date = req.query.date as string | undefined;
+      const employeeId = req.query.employeeId ? parseInt(req.query.employeeId as string) : undefined;
+      
+      const shifts = await storage.getShifts(date, employeeId);
+      res.json(shifts);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch shifts" });
+    }
+  });
+
+  app.post("/api/shifts", async (req, res) => {
+    try {
+      const validatedData = insertShiftSchema.parse(req.body);
+      
+      // Verify employee exists
+      const employee = await storage.getEmployee(validatedData.employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      
+      const shift = await storage.createShift(validatedData);
+      res.status(201).json(shift);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid shift data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to create shift" });
+      }
+    }
+  });
+
+  app.put("/api/shifts/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertShiftSchema.partial().parse(req.body);
+      
+      if (validatedData.employeeId) {
+        // Verify employee exists if updating employeeId
+        const employee = await storage.getEmployee(validatedData.employeeId);
+        if (!employee) {
+          return res.status(404).json({ message: "Employee not found" });
+        }
+      }
+      
+      const shift = await storage.updateShift(id, validatedData);
+      
+      if (!shift) {
+        return res.status(404).json({ message: "Shift not found" });
+      }
+      
+      res.json(shift);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid shift data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to update shift" });
+      }
+    }
+  });
+
+  app.delete("/api/shifts/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteShift(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Shift not found" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete shift" });
+    }
+  });
+
+  // Schedule routes (for saving/loading)
+  app.get("/api/schedules", async (req, res) => {
+    try {
+      const schedules = await storage.getSchedules();
+      res.json(schedules);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch schedules" });
+    }
+  });
+
+  app.post("/api/schedules", async (req, res) => {
+    try {
+      const validatedData = insertScheduleSchema.parse(req.body);
+      const schedule = await storage.createSchedule(validatedData);
+      res.status(201).json(schedule);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid schedule data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to create schedule" });
+      }
+    }
+  });
+
+  app.post("/api/schedules/:id/save", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { employees, shifts } = req.body;
+      
+      // Verify schedule exists
+      const schedule = await storage.getSchedule(id);
+      if (!schedule) {
+        return res.status(404).json({ message: "Schedule not found" });
+      }
+      
+      const success = await storage.saveScheduleData(id, employees, shifts);
+      
+      if (!success) {
+        return res.status(500).json({ message: "Failed to save schedule data" });
+      }
+      
+      res.json({ message: "Schedule data saved successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to save schedule data" });
+    }
+  });
+
+  app.get("/api/schedules/:id/load", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Verify schedule exists
+      const schedule = await storage.getSchedule(id);
+      if (!schedule) {
+        return res.status(404).json({ message: "Schedule not found" });
+      }
+      
+      const data = await storage.loadScheduleData(id);
+      
+      if (!data) {
+        return res.status(404).json({ message: "No data found for this schedule" });
+      }
+      
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to load schedule data" });
+    }
+  });
+
+  app.delete("/api/schedules/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteSchedule(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Schedule not found" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete schedule" });
+    }
+  });
+
+  const httpServer = createServer(app);
+  return httpServer;
+}
