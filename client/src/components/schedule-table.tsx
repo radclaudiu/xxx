@@ -5,9 +5,10 @@ import {
   generateTimeSlots, 
   isTimeBetween, 
   calculateHoursBetween, 
-  formatHours 
+  formatHours,
+  convertTimeToMinutes
 } from "@/lib/date-helpers";
-import { Edit, Save, Clock } from "lucide-react";
+import { Edit, Save, Clock, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ScheduleTableProps {
@@ -807,6 +808,140 @@ export default function ScheduleTable({
                 }
               }).filter(Boolean)}
             </tr>
+            
+            {/* Fila de análisis financiero */}
+            {(estimatedDailySales > 0 || hourlyEmployeeCost > 0) && (
+              <tr className="financial-analysis-row">
+                <td 
+                  className="border-b border-r border-neutral-200 p-0 bg-green-50"
+                  style={{
+                    position: 'sticky',
+                    left: 0,
+                    zIndex: 10,
+                    backgroundColor: '#f0fdf4',
+                    boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
+                    height: `${cellSize}px`,
+                    lineHeight: `${cellSize}px`,
+                    minWidth: "120px",
+                    width: "120px"
+                  }}
+                >
+                  <div className="flex justify-center items-center h-full gap-1">
+                    <DollarSign className="h-3 w-3 text-green-600" />
+                    <div className="text-[0.5rem] font-semibold text-green-700">Análisis Financiero</div>
+                  </div>
+                </td>
+                
+                <td 
+                  colSpan={timeSlots.length}
+                  className="border-b border-r border-neutral-200 p-2 text-left bg-green-50"
+                  style={{
+                    height: `${cellSize}px`,
+                    boxSizing: "border-box"
+                  }}
+                >
+                  {(() => {
+                    // Calcular las horas totales de todos los empleados para este día
+                    let totalHours = 0;
+                    
+                    // Contar turnos guardados
+                    shifts.forEach(shift => {
+                      if (shift.date === formatDateForAPI(date)) {
+                        totalHours += calculateHoursBetween(shift.startTime, shift.endTime);
+                      }
+                    });
+                    
+                    // Contar selecciones actuales no guardadas
+                    selectedCellsByEmployee.forEach((selectedTimes, employeeId) => {
+                      if (selectedTimes.size === 0) return;
+                      
+                      // Convertir tiempos seleccionados a array y ordenar
+                      const sortedTimes = Array.from(selectedTimes).sort((a, b) => {
+                        return convertTimeToMinutes(a) - convertTimeToMinutes(b);
+                      });
+                      
+                      if (sortedTimes.length === 0) return;
+                      
+                      // Agrupar tiempos consecutivos
+                      let currentGroup: string[] = [sortedTimes[0]];
+                      
+                      for (let i = 1; i < sortedTimes.length; i++) {
+                        const prevTime = currentGroup[currentGroup.length - 1];
+                        const currTime = sortedTimes[i];
+                        
+                        // Verificar si los tiempos son consecutivos
+                        const prevIndex = timeSlots.indexOf(prevTime);
+                        const currIndex = timeSlots.indexOf(currTime);
+                        
+                        if (currIndex - prevIndex === 1) {
+                          // Tiempos consecutivos, agregar al grupo actual
+                          currentGroup.push(currTime);
+                        } else {
+                          // Tiempos no consecutivos, calcular horas para el grupo actual
+                          const startTime = currentGroup[0];
+                          const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
+                          // Para el tiempo final, necesitamos el siguiente slot después del último
+                          const endTime = lastTimeIndex + 1 < timeSlots.length ? 
+                                          timeSlots[lastTimeIndex + 1] : 
+                                          currentGroup[currentGroup.length - 1];
+                          
+                          // Sumar horas de este grupo
+                          totalHours += calculateHoursBetween(startTime, endTime);
+                          
+                          // Iniciar nuevo grupo
+                          currentGroup = [currTime];
+                        }
+                      }
+                      
+                      // Procesar el último grupo
+                      if (currentGroup.length > 0) {
+                        const startTime = currentGroup[0];
+                        const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
+                        const endTime = lastTimeIndex + 1 < timeSlots.length ? 
+                                        timeSlots[lastTimeIndex + 1] : 
+                                        currentGroup[currentGroup.length - 1];
+                        
+                        // Sumar horas del último grupo
+                        totalHours += calculateHoursBetween(startTime, endTime);
+                      }
+                    });
+                    
+                    // Calcular coste total de personal
+                    const totalLaborCost = totalHours * hourlyEmployeeCost;
+                    
+                    // Calcular porcentaje de ventas destinado a personal
+                    const laborCostPercentage = estimatedDailySales > 0 
+                      ? (totalLaborCost / estimatedDailySales) * 100 
+                      : 0;
+                    
+                    return (
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="bg-white rounded-md p-2 shadow-sm">
+                          <div className="text-xs text-gray-500 mb-1">Ventas Estimadas:</div>
+                          <div className="text-sm font-bold text-green-700">€{estimatedDailySales.toFixed(2)}</div>
+                        </div>
+                        
+                        <div className="bg-white rounded-md p-2 shadow-sm">
+                          <div className="text-xs text-gray-500 mb-1">Coste de Personal:</div>
+                          <div className="text-sm font-bold text-amber-600">€{totalLaborCost.toFixed(2)}</div>
+                        </div>
+                        
+                        <div className="bg-white rounded-md p-2 shadow-sm">
+                          <div className="text-xs text-gray-500 mb-1">% Ventas en Personal:</div>
+                          <div className={`text-sm font-bold ${
+                            laborCostPercentage > 40 ? 'text-red-600' : 
+                            laborCostPercentage > 30 ? 'text-amber-600' : 
+                            'text-green-600'
+                          }`}>
+                            {laborCostPercentage.toFixed(2)}%
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
