@@ -30,10 +30,10 @@
   line-height: 20px !important;
 }
 
-/* Para controlar la altura de las filas */
+/* Para controlar la altura de las filas - será controlado por JavaScript */
 table tr {
-  height: 30px !important;
-  line-height: 30px !important;
+  height: var(--cell-size) !important;
+  line-height: var(--cell-size) !important;
 }
 
 /* Para controlar el tamaño del contenido */
@@ -49,11 +49,11 @@ thead tr:first-child th[colspan="4"] {
 
 /* Asegurarnos que el posicionamiento sticky funcione para las tres filas del encabezado */
 thead tr:nth-child(2) th {
-  top: 30px !important;
+  top: var(--cell-size) !important;
 }
 
 thead tr:nth-child(3) th {
-  top: 60px !important;
+  top: calc(var(--cell-size) * 2) !important;
 }
 
 /* Estilo para la fila de totales (ahora al final) */

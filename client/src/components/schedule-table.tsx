@@ -12,6 +12,17 @@ interface ScheduleTableProps {
 }
 
 export default function ScheduleTable({ employees, shifts, date, onSaveShifts }: ScheduleTableProps) {
+  // Estado para controlar el tamaño de las celdas
+  const [cellSize, setCellSize] = useState(30);
+  
+  // Funciones para aumentar y disminuir tamaño
+  const increaseCellSize = () => setCellSize(prev => Math.min(prev + 5, 50)); // Máximo 50px
+  const decreaseCellSize = () => setCellSize(prev => Math.max(prev - 5, 15)); // Mínimo 15px
+  
+  // Efecto para actualizar las variables CSS cuando cambia el tamaño de celda
+  useEffect(() => {
+    document.documentElement.style.setProperty('--cell-size', `${cellSize}px`);
+  }, [cellSize]);
   // Generate time slots from 08:00 to 02:00 in 30-minute increments (02:00 del día siguiente)
   const timeSlots = useMemo(() => {
     // Para manejar el rango de 08:00 a 02:00 (del día siguiente),
@@ -335,9 +346,29 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
   
   return (
     <div className="space-y-4">
-      {/* Save button */}
-      {hasSelections && (
-        <div className="flex justify-end mb-2">
+      {/* Control buttons */}
+      <div className="flex justify-between mb-2">
+        <div className="flex items-center space-x-2">
+          <span className="text-sm font-medium">Tamaño de celdas: {cellSize}px</span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={decreaseCellSize}
+            className="h-8 w-8 p-0"
+          >
+            −
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={increaseCellSize}
+            className="h-8 w-8 p-0"
+          >
+            +
+          </Button>
+        </div>
+        
+        {hasSelections && (
           <Button
             className="bg-green-600 hover:bg-green-700 text-white"
             onClick={handleSaveSelections}
@@ -345,8 +376,8 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
             <Save className="h-4 w-4 mr-2" />
             Guardar Turnos Seleccionados
           </Button>
-        </div>
-      )}
+        )}
+      </div>
       
       {/* Schedule table */}
       <div 
@@ -374,8 +405,8 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                     zIndex: 30,
                     backgroundColor: 'white',
                     boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
-                    height: "30px",
-                    lineHeight: "30px"
+                    height: `${cellSize}px`,
+                    lineHeight: `${cellSize}px`
                   }}>
                 <span className="text-xs font-semibold">Empleados</span>
               </th>
@@ -394,8 +425,8 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                       zIndex: 20,
                       backgroundColor: 'white',
                       boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-                      height: "30px",
-                      lineHeight: "30px",
+                      height: `${cellSize}px`,
+                      lineHeight: `${cellSize}px`,
                       boxSizing: "border-box",
                       borderLeft: '2px solid #AAAAAA'
                     }}
@@ -417,8 +448,8 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                     zIndex: 30,
                     backgroundColor: 'white',
                     boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
-                    height: "30px",
-                    lineHeight: "30px"
+                    height: `${cellSize}px`,
+                    lineHeight: `${cellSize}px`
                   }}>
               </th>
               
@@ -432,12 +463,12 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                     }`}
                     style={{
                       position: 'sticky',
-                      top: "30px", // Debajo de la primera fila
+                      top: `${cellSize}px`, // Debajo de la primera fila
                       zIndex: 20,
                       backgroundColor: 'white',
-                      width: "30px", // Exactamente 30px de ancho
-                      height: "30px", // Exactamente 30px de altura
-                      lineHeight: "30px", // Garantizar altura exacta
+                      width: `${cellSize}px`, // Ancho dinámico basado en cellSize
+                      height: `${cellSize}px`, // Altura dinámica basada en cellSize
+                      lineHeight: `${cellSize}px`, // Garantizar altura exacta
                       boxSizing: "border-box", // Incluir bordes en dimensiones
                       borderLeft: time.endsWith(':00') ? '2px solid #AAAAAA' : 
                                 time.endsWith(':30') ? '1px solid #DDDDDD' : 
@@ -468,11 +499,11 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                     zIndex: 10,
                     backgroundColor: 'white',
                     boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
-                    height: "30px",
-                    lineHeight: "30px"
+                    height: `${cellSize}px`,
+                    lineHeight: `${cellSize}px`
                   }}
                 >
-                  <div className="flex justify-between items-center px-1" style={{height: "30px", overflow: "hidden"}}>
+                  <div className="flex justify-between items-center px-1" style={{height: `${cellSize}px`, overflow: "hidden"}}>
                     <span className="truncate text-xs">{employee.name}</span>
                     <button className="text-neutral-400 hover:text-neutral-600 ml-1 p-0">
                       <Edit className="h-3 w-3" />
@@ -496,9 +527,9 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                         time.endsWith(':00') ? 'hour-marker' : ''
                       }`}
                       style={{
-                        width: "30px", // Exactamente 30px de ancho
-                        height: "30px", // Exactamente 30px de altura
-                        lineHeight: "30px", // Garantizar altura exacta
+                        width: `${cellSize}px`, // Ancho dinámico basado en cellSize
+                        height: `${cellSize}px`, // Altura dinámica basada en cellSize
+                        lineHeight: `${cellSize}px`, // Garantizar altura exacta
                         padding: "0", // Sin padding para mantener tamaño exacto
                         boxSizing: "border-box", // Incluir bordes en dimensiones
                         backgroundColor: isSelected ? 'rgba(76, 175, 80, 0.4)' : 
@@ -549,8 +580,8 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                   zIndex: 10,
                   backgroundColor: '#F3F4F6',
                   boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
-                  height: "30px",
-                  lineHeight: "30px"
+                  height: `${cellSize}px`,
+                  lineHeight: `${cellSize}px`
                 }}
               >
                 <div className="flex justify-center items-center h-full">
@@ -603,9 +634,9 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                     }`}
                     style={{
                       backgroundColor,
-                      width: "30px", // Exactamente 30px de ancho
-                      height: "30px", // Exactamente 30px de altura
-                      lineHeight: "30px", // Garantizar altura exacta
+                      width: `${cellSize}px`, // Ancho dinámico basado en cellSize
+                      height: `${cellSize}px`, // Altura dinámica basada en cellSize
+                      lineHeight: `${cellSize}px`, // Garantizar altura exacta
                       boxSizing: "border-box", // Incluir bordes en dimensiones
                       borderLeft: time.endsWith(':00') ? '2px solid #AAAAAA' : 
                                 time.endsWith(':30') ? '1px solid #DDDDDD' : 
