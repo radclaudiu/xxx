@@ -56,8 +56,13 @@ thead tr:nth-child(3) th {
   top: 40px !important;
 }
 
-/* Estilo para la fila de totales */
-thead tr:nth-child(3) th div {
+/* Estilo para la fila de totales (ahora al final) */
+.totals-row {
+  border-top: 2px solid #D1D5DB; /* Línea más gruesa para separar */
+  background-color: #F3F4F6; /* Fondo gris muy claro */
+}
+
+.totals-row td {
   font-weight: bold;
 }
 

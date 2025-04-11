@@ -453,92 +453,7 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
               })}
             </tr>
             
-            {/* Tercera fila: Totales por intervalo */}
-            <tr>
-              <th className="sticky-corner border-b border-r border-neutral-200 p-1 bg-neutral-100"
-                  style={{
-                    position: 'sticky',
-                    left: 0,
-                    zIndex: 30,
-                    backgroundColor: 'white',
-                    boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
-                    height: "20px",
-                    lineHeight: "20px"
-                  }}>
-                <div className="flex justify-center items-center h-full">
-                  <div className="text-[0.45rem] font-semibold">Total</div>
-                </div>
-              </th>
-              
-              {timeSlots.map((time) => {
-                // Calcular total de empleados asignados a este intervalo (turnos ya guardados)
-                const assignedCount = shifts.filter(shift => {
-                  const shiftStartTime = shift.startTime;
-                  const shiftEndTime = shift.endTime;
-                  return (
-                    shift.date === formatDateForAPI(date) && 
-                    isTimeBetween(time, shiftStartTime, shiftEndTime)
-                  );
-                }).length;
-                
-                // Contar selecciones actuales que no se han guardado
-                let selectedCount = 0;
-                for (const employee of employees) {
-                  // Verificar si este empleado tiene esta celda seleccionada
-                  const isCellCurrent = isCellSelected(employee.id, time);
-                  
-                  // Si la celda está seleccionada pero no asignada, aumentamos el contador
-                  if (isCellCurrent && !isCellAssigned(employee.id, time)) {
-                    selectedCount++;
-                  }
-                }
-                
-                // Total combinado: asignaciones guardadas + selecciones actuales
-                const totalCount = assignedCount + selectedCount;
-                
-                // Determinar color según el tipo de conteo
-                const backgroundColor = selectedCount > 0 
-                  ? 'rgba(76, 175, 80, 0.2)' // Verde si hay selecciones actuales
-                  : assignedCount > 0 
-                    ? 'rgba(25, 118, 210, 0.1)' // Azul si solo hay asignaciones
-                    : 'white';
-                
-                const textColor = selectedCount > 0 
-                  ? 'text-green-800' // Verde si hay selecciones actuales
-                  : 'text-blue-800'; // Azul para asignaciones existentes
-                
-                return (
-                  <th 
-                    key={`total-${time}`}
-                    className={`border-b border-neutral-200 p-0 text-center time-cell ${
-                      time.endsWith(':00') ? 'hour-marker' : ''
-                    }`}
-                    style={{
-                      position: 'sticky',
-                      top: "40px", // Debajo de las dos primeras filas
-                      zIndex: 20,
-                      backgroundColor,
-                      width: "20px", // Exactamente 20px de ancho
-                      height: "20px", // Exactamente 20px de altura
-                      lineHeight: "20px", // Garantizar altura exacta
-                      boxSizing: "border-box", // Incluir bordes en dimensiones
-                      borderLeft: time.endsWith(':00') ? '2px solid #AAAAAA' : 
-                                time.endsWith(':30') ? '1px solid #DDDDDD' : 
-                                '1px dashed #EEEEEE'
-                    }}
-                  >
-                    {/* Mostrar contador cuando hay algún total */}
-                    {totalCount > 0 && (
-                      <div className="flex justify-center items-center h-full">
-                        <div className={`text-[0.5rem] font-bold ${textColor}`}>
-                          {totalCount}
-                        </div>
-                      </div>
-                    )}
-                  </th>
-                );
-              })}
-            </tr>
+
           </thead>
 
           {/* Table Body */}
@@ -623,6 +538,92 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                 })}
               </tr>
             ))}
+            
+            {/* Fila de Totales (ahora al final de la tabla) */}
+            <tr className="totals-row">
+              <td 
+                className="border-b border-r border-neutral-200 p-0"
+                style={{
+                  position: 'sticky',
+                  left: 0,
+                  zIndex: 10,
+                  backgroundColor: '#F3F4F6',
+                  boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
+                  height: "20px",
+                  lineHeight: "20px"
+                }}
+              >
+                <div className="flex justify-center items-center h-full">
+                  <div className="text-[0.5rem] font-semibold">Total</div>
+                </div>
+              </td>
+              
+              {timeSlots.map((time) => {
+                // Calcular total de empleados asignados a este intervalo (turnos ya guardados)
+                const assignedCount = shifts.filter(shift => {
+                  const shiftStartTime = shift.startTime;
+                  const shiftEndTime = shift.endTime;
+                  return (
+                    shift.date === formatDateForAPI(date) && 
+                    isTimeBetween(time, shiftStartTime, shiftEndTime)
+                  );
+                }).length;
+                
+                // Contar selecciones actuales que no se han guardado
+                let selectedCount = 0;
+                for (const employee of employees) {
+                  // Verificar si este empleado tiene esta celda seleccionada
+                  const isCellCurrent = isCellSelected(employee.id, time);
+                  
+                  // Si la celda está seleccionada pero no asignada, aumentamos el contador
+                  if (isCellCurrent && !isCellAssigned(employee.id, time)) {
+                    selectedCount++;
+                  }
+                }
+                
+                // Total combinado: asignaciones guardadas + selecciones actuales
+                const totalCount = assignedCount + selectedCount;
+                
+                // Determinar color y fondo según el tipo de conteo (colores más neutros)
+                const backgroundColor = selectedCount > 0 
+                  ? 'rgba(229, 231, 235, 0.5)' // Gris claro para selecciones actuales
+                  : assignedCount > 0 
+                    ? 'rgba(229, 231, 235, 0.5)' // El mismo gris para asignaciones
+                    : 'white';
+                
+                const textColor = selectedCount > 0 
+                  ? 'text-gray-900' // Texto oscuro para todos
+                  : 'text-gray-900';
+                
+                return (
+                  <td 
+                    key={`total-${time}`}
+                    className={`border-b border-r border-neutral-200 p-0 text-center ${
+                      time.endsWith(':00') ? 'hour-marker' : ''
+                    }`}
+                    style={{
+                      backgroundColor,
+                      width: "20px", // Exactamente 20px de ancho
+                      height: "20px", // Exactamente 20px de altura
+                      lineHeight: "20px", // Garantizar altura exacta
+                      boxSizing: "border-box", // Incluir bordes en dimensiones
+                      borderLeft: time.endsWith(':00') ? '2px solid #AAAAAA' : 
+                                time.endsWith(':30') ? '1px solid #DDDDDD' : 
+                                '1px dashed #EEEEEE'
+                    }}
+                  >
+                    {/* Mostrar contador cuando hay algún total */}
+                    {totalCount > 0 && (
+                      <div className="flex justify-center items-center h-full">
+                        <div className={`text-[0.5rem] font-bold ${textColor}`}>
+                          {totalCount}
+                        </div>
+                      </div>
+                    )}
+                  </td>
+                );
+              })}
+            </tr>
           </tbody>
         </table>
       </div>
