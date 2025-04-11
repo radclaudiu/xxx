@@ -1,8 +1,11 @@
+import { eq, and, desc, asc } from "drizzle-orm";
 import { 
   Employee, InsertEmployee, 
   Shift, InsertShift,
-  Schedule, InsertSchedule
+  Schedule, InsertSchedule,
+  employees, shifts, schedules
 } from "@shared/schema";
+import { db } from "./db";
 
 export interface IStorage {
   // Employee operations
@@ -219,4 +222,158 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Implementación de la base de datos PostgreSQL
+export class DatabaseStorage implements IStorage {
+  // Employee operations
+  async getEmployees(): Promise<Employee[]> {
+    return await db.select().from(employees).orderBy(asc(employees.name));
+  }
+  
+  async getEmployee(id: number): Promise<Employee | undefined> {
+    const result = await db.select().from(employees).where(eq(employees.id, id));
+    return result.length > 0 ? result[0] : undefined;
+  }
+  
+  async createEmployee(employee: InsertEmployee): Promise<Employee> {
+    const [result] = await db.insert(employees).values(employee).returning();
+    return result;
+  }
+  
+  async updateEmployee(id: number, employee: Partial<InsertEmployee>): Promise<Employee | undefined> {
+    const [result] = await db
+      .update(employees)
+      .set(employee)
+      .where(eq(employees.id, id))
+      .returning();
+    return result;
+  }
+  
+  async deleteEmployee(id: number): Promise<boolean> {
+    // Las relaciones en cascada de la base de datos manejarán la eliminación de los turnos asociados
+    const [result] = await db
+      .delete(employees)
+      .where(eq(employees.id, id))
+      .returning({ id: employees.id });
+    return !!result;
+  }
+  
+  // Shift operations
+  async getShifts(date?: string, employeeId?: number): Promise<Shift[]> {
+    let query = db.select().from(shifts);
+    
+    if (date && employeeId) {
+      query = query.where(
+        and(
+          eq(shifts.date, date),
+          eq(shifts.employeeId, employeeId)
+        )
+      );
+    } else if (date) {
+      query = query.where(eq(shifts.date, date));
+    } else if (employeeId) {
+      query = query.where(eq(shifts.employeeId, employeeId));
+    }
+    
+    return await query;
+  }
+  
+  async getShift(id: number): Promise<Shift | undefined> {
+    const result = await db.select().from(shifts).where(eq(shifts.id, id));
+    return result.length > 0 ? result[0] : undefined;
+  }
+  
+  async createShift(shift: InsertShift): Promise<Shift> {
+    const [result] = await db.insert(shifts).values(shift).returning();
+    return result;
+  }
+  
+  async updateShift(id: number, shift: Partial<InsertShift>): Promise<Shift | undefined> {
+    const [result] = await db
+      .update(shifts)
+      .set(shift)
+      .where(eq(shifts.id, id))
+      .returning();
+    return result;
+  }
+  
+  async deleteShift(id: number): Promise<boolean> {
+    const [result] = await db
+      .delete(shifts)
+      .where(eq(shifts.id, id))
+      .returning({ id: shifts.id });
+    return !!result;
+  }
+  
+  // Schedule operations
+  async getSchedules(): Promise<Schedule[]> {
+    return await db.select().from(schedules).orderBy(desc(schedules.createdAt));
+  }
+  
+  async getSchedule(id: number): Promise<Schedule | undefined> {
+    const result = await db.select().from(schedules).where(eq(schedules.id, id));
+    return result.length > 0 ? result[0] : undefined;
+  }
+  
+  async createSchedule(schedule: InsertSchedule): Promise<Schedule> {
+    const [result] = await db.insert(schedules).values(schedule).returning();
+    return result;
+  }
+  
+  async deleteSchedule(id: number): Promise<boolean> {
+    const [result] = await db
+      .delete(schedules)
+      .where(eq(schedules.id, id))
+      .returning({ id: schedules.id });
+    return !!result;
+  }
+  
+  // Save and load entire schedule data
+  async saveScheduleData(scheduleId: number, employees: Employee[], shifts: Shift[]): Promise<boolean> {
+    // Verificar que el horario existe
+    const schedule = await this.getSchedule(scheduleId);
+    if (!schedule) return false;
+    
+    // Implementación simple: crear nuevos turnos asociados con el ID del horario
+    // Para cada turno, establecer el scheduleId
+    for (const shift of shifts) {
+      if (shift.id) {
+        // Actualizar turno existente
+        await db
+          .update(shifts)
+          .set({ scheduleId })
+          .where(eq(shifts.id, shift.id));
+      }
+    }
+    
+    return true;
+  }
+  
+  async loadScheduleData(scheduleId: number): Promise<{ employees: Employee[], shifts: Shift[] } | undefined> {
+    // Verificar que el horario existe
+    const schedule = await this.getSchedule(scheduleId);
+    if (!schedule) return undefined;
+    
+    // Obtener todos los turnos asociados a este horario
+    const scheduleShifts = await db
+      .select()
+      .from(shifts)
+      .where(eq(shifts.scheduleId, scheduleId));
+    
+    // Obtener todos los empleados relacionados con estos turnos
+    const employeeIds = [...new Set(scheduleShifts.map(shift => shift.employeeId))];
+    const scheduleEmployees = await db
+      .select()
+      .from(employees)
+      .where(employeeIds.length > 0 
+        ? employees.id.in(employeeIds) 
+        : undefined);
+    
+    return {
+      employees: scheduleEmployees,
+      shifts: scheduleShifts
+    };
+  }
+}
+
+// Cambiar el almacenamiento a la base de datos
+export const storage = new DatabaseStorage();
