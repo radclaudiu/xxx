@@ -532,10 +532,6 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                       <div className="flex justify-center items-center h-full">
                         <div className={`text-[0.5rem] font-bold ${textColor}`}>
                           {totalCount}
-                          {/* Mostrar un + si hay alguna selección nueva */}
-                          {selectedCount > 0 && (
-                            <span className="text-green-800">+</span>
-                          )}
                         </div>
                       </div>
                     )}
