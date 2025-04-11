@@ -936,81 +936,75 @@ export default function ScheduleTable({
                         boxSizing: "border-box"
                       }}
                     >
-                      <div className="grid grid-cols-4 gap-2 px-4">
-                        {employees.map((employee) => {
-                          // Calcular las horas diarias para este empleado
-                          let totalHours = 0;
+                      <div className="flex justify-center items-center h-full">
+                        {(() => {
+                          // Calcular el total de horas trabajadas por todos los empleados
+                          let totalDailyHours = 0;
                           
-                          // Primero, contar las horas ya guardadas en turnos
-                          const employeeShifts = shifts.filter(shift => 
-                            shift.employeeId === employee.id && 
-                            shift.date === formatDateForAPI(date)
-                          );
-                          
-                          // Sumar horas de los turnos guardados
-                          employeeShifts.forEach(shift => {
-                            totalHours += calculateHoursBetween(shift.startTime, shift.endTime);
+                          // Primero, contar las horas ya guardadas en turnos para todos los empleados
+                          shifts.forEach(shift => {
+                            if (shift.date === formatDateForAPI(date)) {
+                              totalDailyHours += calculateHoursBetween(shift.startTime, shift.endTime);
+                            }
                           });
                           
-                          // Ahora, contar las horas en selecciones actuales (no guardadas)
-                          const selectedTimes = selectedCellsByEmployee.get(employee.id);
-                          if (selectedTimes && selectedTimes.size > 0) {
-                            // Convertir a array y ordenar por tiempo
-                            const sortedTimes = Array.from(selectedTimes).sort((a, b) => {
-                              return convertTimeToMinutes(a) - convertTimeToMinutes(b);
-                            });
-                            
-                            // Agrupar tiempos consecutivos
-                            let currentGroup: string[] = [sortedTimes[0]];
-                            
-                            for (let i = 1; i < sortedTimes.length; i++) {
-                              const prevTime = currentGroup[currentGroup.length - 1];
-                              const currTime = sortedTimes[i];
+                          // Ahora, contar las horas en selecciones actuales (no guardadas) para todos los empleados
+                          for (const [employeeId, selectedTimes] of selectedCellsByEmployee.entries()) {
+                            if (selectedTimes.size > 0) {
+                              // Convertir a array y ordenar por tiempo
+                              const sortedTimes = Array.from(selectedTimes).sort((a, b) => {
+                                return convertTimeToMinutes(a) - convertTimeToMinutes(b);
+                              });
                               
-                              // Verificar si los tiempos son consecutivos
-                              const prevIndex = timeSlots.indexOf(prevTime);
-                              const currIndex = timeSlots.indexOf(currTime);
+                              // Agrupar tiempos consecutivos
+                              let currentGroup: string[] = [sortedTimes[0]];
                               
-                              if (currIndex - prevIndex === 1) {
-                                // Tiempos consecutivos, agregar al grupo actual
-                                currentGroup.push(currTime);
-                              } else {
-                                // Tiempos no consecutivos, calcular horas para el grupo actual
+                              for (let i = 1; i < sortedTimes.length; i++) {
+                                const prevTime = currentGroup[currentGroup.length - 1];
+                                const currTime = sortedTimes[i];
+                                
+                                // Verificar si los tiempos son consecutivos
+                                const prevIndex = timeSlots.indexOf(prevTime);
+                                const currIndex = timeSlots.indexOf(currTime);
+                                
+                                if (currIndex - prevIndex === 1) {
+                                  // Tiempos consecutivos, agregar al grupo actual
+                                  currentGroup.push(currTime);
+                                } else {
+                                  // Tiempos no consecutivos, calcular horas para el grupo actual
+                                  const startTime = currentGroup[0];
+                                  const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
+                                  // Para el tiempo final, necesitamos el siguiente slot después del último
+                                  const endTime = lastTimeIndex + 1 < timeSlots.length ? 
+                                                  timeSlots[lastTimeIndex + 1] : 
+                                                  currentGroup[currentGroup.length - 1];
+                                  
+                                  // Sumar horas de este grupo
+                                  totalDailyHours += calculateHoursBetween(startTime, endTime);
+                                  
+                                  // Iniciar nuevo grupo
+                                  currentGroup = [currTime];
+                                }
+                              }
+                              
+                              // Procesar el último grupo
+                              if (currentGroup.length > 0) {
                                 const startTime = currentGroup[0];
                                 const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
-                                // Para el tiempo final, necesitamos el siguiente slot después del último
                                 const endTime = lastTimeIndex + 1 < timeSlots.length ? 
                                                 timeSlots[lastTimeIndex + 1] : 
                                                 currentGroup[currentGroup.length - 1];
                                 
-                                // Sumar horas de este grupo
-                                totalHours += calculateHoursBetween(startTime, endTime);
-                                
-                                // Iniciar nuevo grupo
-                                currentGroup = [currTime];
+                                // Sumar horas del último grupo
+                                totalDailyHours += calculateHoursBetween(startTime, endTime);
                               }
-                            }
-                            
-                            // Procesar el último grupo
-                            if (currentGroup.length > 0) {
-                              const startTime = currentGroup[0];
-                              const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
-                              const endTime = lastTimeIndex + 1 < timeSlots.length ? 
-                                              timeSlots[lastTimeIndex + 1] : 
-                                              currentGroup[currentGroup.length - 1];
-                              
-                              // Sumar horas del último grupo
-                              totalHours += calculateHoursBetween(startTime, endTime);
                             }
                           }
                           
                           return (
-                            <div key={`daily-hours-${employee.id}`} className="flex items-center justify-between">
-                              <span className="text-[0.55rem] font-medium text-gray-700 truncate max-w-[80px]">{employee.name}:</span>
-                              <span className="text-[0.55rem] font-bold text-blue-700">{formatHours(totalHours)}</span>
-                            </div>
+                            <span className="text-xl font-bold text-blue-700">{formatHours(totalDailyHours)}</span>
                           );
-                        })}
+                        })()}
                       </div>
                     </td>
                   );
