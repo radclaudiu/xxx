@@ -6,7 +6,10 @@ import {
   isTimeBetween, 
   calculateHoursBetween, 
   formatHours,
-  convertTimeToMinutes
+  convertTimeToMinutes,
+  getStartOfWeek,
+  getEndOfWeek,
+  isInSameWeek
 } from "@/lib/date-helpers";
 import { Edit, Save, Clock, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -360,6 +363,89 @@ export default function ScheduleTable({
   // Check if there are any selections
   const hasSelections = selectedCellsByEmployee.size > 0;
   
+  // Calculate weekly hours for each employee
+  const calculateWeeklyHours = (employeeId: number) => {
+    // Get all shifts for this employee in the current week
+    const currentDate = new Date(date);
+    const weekStart = getStartOfWeek(currentDate);
+    const weekEnd = getEndOfWeek(currentDate);
+    
+    // Filter shifts within the same week
+    const employeeWeekShifts = shifts.filter(shift => {
+      const shiftDate = new Date(shift.date);
+      return (
+        shift.employeeId === employeeId && 
+        shiftDate >= weekStart && 
+        shiftDate <= weekEnd
+      );
+    });
+    
+    // Calculate total hours from shifts
+    let totalHours = 0;
+    employeeWeekShifts.forEach(shift => {
+      totalHours += calculateHoursBetween(shift.startTime, shift.endTime);
+    });
+    
+    // Add hours from current selected cells for this employee
+    const selectedCells = selectedCellsByEmployee.get(employeeId);
+    if (selectedCells && selectedCells.size > 0) {
+      // Convert to array and sort
+      const sortedTimes = Array.from(selectedCells).sort((a, b) => {
+        return convertTimeToMinutes(a) - convertTimeToMinutes(b);
+      });
+      
+      // Group consecutive times and calculate hours
+      let currentGroup: string[] = [sortedTimes[0]];
+      
+      for (let i = 1; i < sortedTimes.length; i++) {
+        const prevTime = currentGroup[currentGroup.length - 1];
+        const currTime = sortedTimes[i];
+        
+        // Check if times are consecutive
+        const prevIndex = timeSlots.indexOf(prevTime);
+        const currIndex = timeSlots.indexOf(currTime);
+        
+        if (currIndex - prevIndex === 1) {
+          // Times are consecutive, add to current group
+          currentGroup.push(currTime);
+        } else {
+          // Times are not consecutive, calculate hours for current group
+          const startTime = currentGroup[0];
+          const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
+          // For end time, we need the next slot after the last one
+          const endTime = lastTimeIndex + 1 < timeSlots.length ? 
+                        timeSlots[lastTimeIndex + 1] : 
+                        "03:00"; // If we're at the end, just add an hour
+          
+          totalHours += calculateHoursBetween(startTime, endTime);
+          
+          // Start new group
+          currentGroup = [currTime];
+        }
+      }
+      
+      // Process the last group
+      if (currentGroup.length > 0) {
+        const startTime = currentGroup[0];
+        const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
+        const endTime = lastTimeIndex + 1 < timeSlots.length ? 
+                      timeSlots[lastTimeIndex + 1] : 
+                      "03:00"; // If we're at the end, just add an hour
+        
+        totalHours += calculateHoursBetween(startTime, endTime);
+      }
+    }
+    
+    return Math.round(totalHours * 100) / 100; // Round to 2 decimals
+  };
+  
+  // Calculate remaining hours for each employee
+  const getRemainingHours = (employee: Employee) => {
+    const weeklyHours = calculateWeeklyHours(employee.id);
+    const maxHours = employee.maxHoursPerWeek || 40; // Default to 40 if not set
+    return Math.max(0, maxHours - weeklyHours); // Ensure it doesn't go below 0
+  };
+  
   return (
     <div className="space-y-4">
       {/* Control buttons */}
@@ -514,6 +600,7 @@ export default function ScheduleTable({
           <tbody>
             {employees.map((employee) => (
               <tr key={employee.id} className="employee-row">
+                {/* Primera columna: Nombre del empleado */}
                 <td 
                   className="border-b border-r border-neutral-200 p-0 bg-white"
                   style={{
@@ -534,6 +621,42 @@ export default function ScheduleTable({
                       <Edit className="h-3 w-3" />
                     </button>
                   </div>
+                </td>
+                
+                {/* Segunda columna: Horas disponibles para la semana */}
+                <td 
+                  className="border-b border-r border-neutral-200 p-0 bg-neutral-50"
+                  style={{
+                    height: `${cellSize}px`,
+                    width: `${cellSize * 2}px`,
+                    boxSizing: "border-box",
+                    borderLeft: '2px solid #AAA',
+                    paddingLeft: '2px',
+                    paddingRight: '2px'
+                  }}
+                >
+                  {(() => {
+                    const remainingHours = getRemainingHours(employee);
+                    const maxHours = employee.maxHoursPerWeek || 40;
+                    const percentage = (remainingHours / maxHours) * 100;
+                    
+                    // Determinar color basado en el porcentaje de horas restantes
+                    let textColor = 'text-green-600';
+                    if (percentage < 20) {
+                      textColor = 'text-red-600';
+                    } else if (percentage < 50) {
+                      textColor = 'text-orange-500';
+                    }
+                    
+                    return (
+                      <div className="flex justify-center items-center h-full">
+                        <div className={`text-[0.6rem] font-bold ${textColor}`}>
+                          <Clock className="h-3 w-3 inline-block mr-1" />
+                          {formatHours(remainingHours)} / {formatHours(maxHours)}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </td>
                 
                 {timeSlots.map((time) => {
@@ -613,6 +736,21 @@ export default function ScheduleTable({
               >
                 <div className="flex justify-center items-center h-full">
                   <div className="text-[0.5rem] font-semibold">Total</div>
+                </div>
+              </td>
+              
+              {/* Celda para la columna de horas disponibles en la fila de totales */}
+              <td 
+                className="border-b border-r border-neutral-200 p-0 bg-neutral-100"
+                style={{
+                  height: `${cellSize}px`,
+                  width: `${cellSize * 2}px`,
+                  boxSizing: "border-box",
+                  borderLeft: '2px solid #AAA'
+                }}
+              >
+                <div className="flex justify-center items-center h-full">
+                  <div className="text-[0.5rem] font-semibold text-gray-500">Horas/Sem.</div>
                 </div>
               </td>
               
