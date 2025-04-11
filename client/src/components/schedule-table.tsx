@@ -426,6 +426,7 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                       backgroundColor: 'white',
                       boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
                       height: `${cellSize}px`,
+                      width: `${cellSize * 4}px`, // 4 celdas de ancho (00, 15, 30, 45)
                       lineHeight: `${cellSize}px`,
                       boxSizing: "border-box",
                       borderLeft: '2px solid #AAAAAA'
@@ -503,7 +504,7 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                     lineHeight: `${cellSize}px`
                   }}
                 >
-                  <div className="flex justify-between items-center px-1" style={{height: `${cellSize}px`, overflow: "hidden"}}>
+                  <div className="flex justify-between items-center px-1" style={{height: `${cellSize}px`, width: "120px", overflow: "hidden"}}>
                     <span className="truncate text-xs">{employee.name}</span>
                     <button className="text-neutral-400 hover:text-neutral-600 ml-1 p-0">
                       <Edit className="h-3 w-3" />
