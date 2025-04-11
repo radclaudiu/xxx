@@ -444,6 +444,65 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                 );
               })}
             </tr>
+            
+            {/* Tercera fila: Totales por intervalo */}
+            <tr>
+              <th className="sticky-corner border-b border-r border-neutral-200 p-1 bg-neutral-100"
+                  style={{
+                    position: 'sticky',
+                    left: 0,
+                    zIndex: 30,
+                    backgroundColor: 'white',
+                    boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
+                    height: "20px",
+                    lineHeight: "20px"
+                  }}>
+                <div className="flex justify-center items-center h-full">
+                  <div className="text-[0.45rem] font-semibold">Total</div>
+                </div>
+              </th>
+              
+              {timeSlots.map((time) => {
+                // Calcular total de empleados asignados a este intervalo
+                const assignedCount = shifts.filter(shift => {
+                  const shiftStartTime = shift.startTime;
+                  const shiftEndTime = shift.endTime;
+                  return (
+                    shift.date === formatDateForAPI(date) && 
+                    isTimeBetween(time, shiftStartTime, shiftEndTime)
+                  );
+                }).length;
+                
+                return (
+                  <th 
+                    key={`total-${time}`}
+                    className={`border-b border-neutral-200 p-0 text-center time-cell ${
+                      time.endsWith(':00') ? 'hour-marker' : ''
+                    }`}
+                    style={{
+                      position: 'sticky',
+                      top: "40px", // Debajo de las dos primeras filas
+                      zIndex: 20,
+                      backgroundColor: assignedCount > 0 ? 'rgba(25, 118, 210, 0.1)' : 'white',
+                      width: "20px", // Exactamente 20px de ancho
+                      height: "20px", // Exactamente 20px de altura
+                      lineHeight: "20px", // Garantizar altura exacta
+                      boxSizing: "border-box", // Incluir bordes en dimensiones
+                      borderLeft: time.endsWith(':00') ? '2px solid #AAAAAA' : 
+                                time.endsWith(':30') ? '1px solid #DDDDDD' : 
+                                '1px dashed #EEEEEE'
+                    }}
+                  >
+                    {/* Mostrar contador solo si hay asignaciones */}
+                    {assignedCount > 0 && (
+                      <div className="flex justify-center items-center h-full">
+                        <div className="text-[0.5rem] font-bold text-blue-800">{assignedCount}</div>
+                      </div>
+                    )}
+                  </th>
+                );
+              })}
+            </tr>
           </thead>
 
           {/* Table Body */}
