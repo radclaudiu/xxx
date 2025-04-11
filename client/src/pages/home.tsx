@@ -8,12 +8,18 @@ import ScheduleTable from "@/components/schedule-table";
 import EmployeeModal from "@/components/employee-modal";
 import HelpModal from "@/components/help-modal";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Save, FolderOpen, HelpCircle, UserPlus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ChevronLeft, ChevronRight, Save, FolderOpen, HelpCircle, UserPlus, DollarSign, Clock } from "lucide-react";
 
 export default function Home() {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  
+  // Estados para gestionar los datos financieros
+  const [estimatedDailySales, setEstimatedDailySales] = useState<string>('');
+  const [hourlyEmployeeCost, setHourlyEmployeeCost] = useState<string>('');
   
   const { toast } = useToast();
   
@@ -181,6 +187,55 @@ export default function Home() {
       {/* Main Content */}
       <main className="flex-grow p-4">
         <div className="w-full bg-white rounded-lg shadow-md p-4">
+          {/* Financial Inputs */}
+          <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4 bg-blue-50 p-3 rounded-lg">
+            <div className="flex flex-wrap items-center gap-4 w-full">
+              <div className="flex items-center gap-2">
+                <div className="flex flex-col">
+                  <Label htmlFor="estimatedSales" className="mb-1 text-xs font-medium flex items-center gap-1">
+                    <DollarSign className="h-3 w-3" />
+                    Venta Estimada Diaria
+                  </Label>
+                  <div className="flex items-center">
+                    <Input
+                      id="estimatedSales"
+                      type="number"
+                      placeholder="0.00"
+                      value={estimatedDailySales}
+                      onChange={(e) => setEstimatedDailySales(e.target.value)}
+                      className="w-32 text-sm"
+                      min="0"
+                      step="0.01"
+                    />
+                    <span className="ml-1 text-xs text-gray-500">€</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <div className="flex flex-col">
+                  <Label htmlFor="hourlyCost" className="mb-1 text-xs font-medium flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    Coste por Hora de Empleado
+                  </Label>
+                  <div className="flex items-center">
+                    <Input
+                      id="hourlyCost"
+                      type="number"
+                      placeholder="0.00"
+                      value={hourlyEmployeeCost}
+                      onChange={(e) => setHourlyEmployeeCost(e.target.value)}
+                      className="w-32 text-sm"
+                      min="0"
+                      step="0.01"
+                    />
+                    <span className="ml-1 text-xs text-gray-500">€/hora</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Controls */}
           <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
             <div className="flex items-center gap-2">
@@ -230,6 +285,8 @@ export default function Home() {
             shifts={shifts} 
             date={currentDate}
             onSaveShifts={handleSaveShifts}
+            estimatedDailySales={parseFloat(estimatedDailySales) || 0}
+            hourlyEmployeeCost={parseFloat(hourlyEmployeeCost) || 0}
           />
         </div>
       </main>

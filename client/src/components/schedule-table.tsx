@@ -15,9 +15,18 @@ interface ScheduleTableProps {
   shifts: Shift[];
   date: Date;
   onSaveShifts: (selections: {employee: Employee, startTime: string, endTime: string}[]) => void;
+  estimatedDailySales?: number;
+  hourlyEmployeeCost?: number;
 }
 
-export default function ScheduleTable({ employees, shifts, date, onSaveShifts }: ScheduleTableProps) {
+export default function ScheduleTable({ 
+  employees, 
+  shifts, 
+  date, 
+  onSaveShifts,
+  estimatedDailySales = 0,
+  hourlyEmployeeCost = 0
+}: ScheduleTableProps) {
   // Estado para controlar el tamaño de las celdas
   const [cellSize, setCellSize] = useState(30);
   
