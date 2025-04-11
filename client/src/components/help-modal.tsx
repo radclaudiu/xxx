@@ -25,10 +25,12 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
         <div className="text-sm text-neutral-700 space-y-3">
           <p className="font-medium">Cómo usar el Sistema de Turnos de Trabajo:</p>
           <ol className="list-decimal pl-5 space-y-2">
-            <li>Haga clic en cualquier celda para crear o editar un turno para ese empleado.</li>
+            <li>Haga clic en las celdas de la tabla para seleccionar o deseleccionar franjas horarias.</li>
+            <li>Las celdas seleccionadas se mostrarán con un punto verde.</li>
+            <li>Use el botón "Guardar Turnos Seleccionados" para asignar los turnos.</li>
             <li>Utilice los botones de navegación para cambiar entre días.</li>
             <li>Agregue nuevos empleados con el botón "Agregar Empleado".</li>
-            <li>Guarde sus cambios con el botón "Guardar" en la parte superior.</li>
+            <li>Guarde el horario completo con el botón "Guardar" en la parte superior.</li>
             <li>Utilice "Cargar" para recuperar horarios guardados anteriormente.</li>
           </ol>
           <div className="mt-4 bg-neutral-100 p-3 rounded">

@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { formatDate, formatDateForAPI, getPreviousDay, getNextDay } from "@/lib/date-helpers";
 import { useToast } from "@/hooks/use-toast";
-import { Employee, Shift } from "@shared/schema";
+import { Employee, Shift, InsertShift } from "@shared/schema";
 import ScheduleTable from "@/components/schedule-table";
 import EmployeeModal from "@/components/employee-modal";
-import ShiftModal from "@/components/shift-modal";
 import HelpModal from "@/components/help-modal";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Save, FolderOpen, HelpCircle, UserPlus } from "lucide-react";
@@ -14,11 +13,7 @@ import { ChevronLeft, ChevronRight, Save, FolderOpen, HelpCircle, UserPlus } fro
 export default function Home() {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
-  const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   
   const { toast } = useToast();
   
@@ -28,7 +23,6 @@ export default function Home() {
       // Prevent handling shortcuts when modals are open or in input fields
       if (
         isEmployeeModalOpen || 
-        isShiftModalOpen || 
         isHelpModalOpen || 
         e.target instanceof HTMLInputElement || 
         e.target instanceof HTMLTextAreaElement
@@ -62,7 +56,7 @@ export default function Home() {
     
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isEmployeeModalOpen, isShiftModalOpen, isHelpModalOpen, toast]);
+  }, [isEmployeeModalOpen, isHelpModalOpen, toast]);
   
   // Fetch employees
   const { data: employees = [] } = useQuery<Employee[]>({
@@ -89,22 +83,56 @@ export default function Home() {
     setCurrentDate(getNextDay(currentDate));
   };
   
-  // Open shift modal for a specific employee and time range
-  const handleCellClick = (employee: Employee, startTime: string, endTime: string) => {
-    setSelectedEmployee(employee);
-    setSelectedTime(startTime);
+  // Create shift mutation
+  const createShiftMutation = useMutation({
+    mutationFn: async (newShift: InsertShift) => {
+      const response = await apiRequest("POST", "/api/shifts", newShift);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/shifts", formatDateForAPI(currentDate)] 
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Error al asignar turno: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Handle saving selected shifts
+  const handleSaveShifts = (selections: {employee: Employee, startTime: string, endTime: string}[]) => {
+    // Process each selection and create a shift
+    const promises = selections.map(selection => {
+      const shiftData: InsertShift = {
+        employeeId: selection.employee.id,
+        date: formatDateForAPI(currentDate),
+        startTime: selection.startTime,
+        endTime: selection.endTime,
+        notes: "",
+      };
+      
+      return createShiftMutation.mutateAsync(shiftData);
+    });
     
-    // Check if there's already a shift at this time for this employee
-    const existingShift = shifts.find(
-      shift => shift.employeeId === employee.id && 
-      shift.date === formatDateForAPI(currentDate) &&
-      ((startTime >= shift.startTime && startTime < shift.endTime) ||
-       (endTime > shift.startTime && endTime <= shift.endTime) ||
-       (shift.startTime >= startTime && shift.startTime < endTime))
-    );
-    
-    setSelectedShift(existingShift || null);
-    setIsShiftModalOpen(true);
+    // Wait for all shifts to be created
+    Promise.all(promises)
+      .then(() => {
+        toast({
+          title: "Turnos guardados",
+          description: `Se han asignado ${selections.length} turno(s) exitosamente.`,
+        });
+      })
+      .catch((error) => {
+        toast({
+          title: "Error",
+          description: `Algunos turnos no pudieron ser asignados. ${error.message}`,
+          variant: "destructive",
+        });
+      });
   };
   
   // Save schedule (placeholder)
@@ -201,7 +229,7 @@ export default function Home() {
             employees={employees} 
             shifts={shifts} 
             date={currentDate}
-            onCellClick={handleCellClick}
+            onSaveShifts={handleSaveShifts}
           />
         </div>
       </main>
@@ -218,15 +246,6 @@ export default function Home() {
         isOpen={isEmployeeModalOpen} 
         onClose={() => setIsEmployeeModalOpen(false)} 
         employeeToEdit={null}
-      />
-      
-      <ShiftModal 
-        isOpen={isShiftModalOpen} 
-        onClose={() => setIsShiftModalOpen(false)} 
-        employee={selectedEmployee}
-        date={currentDate} 
-        initialTime={selectedTime || undefined}
-        shift={selectedShift}
       />
       
       <HelpModal 
