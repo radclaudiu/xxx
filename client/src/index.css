@@ -21,9 +21,25 @@
 /* Estilos para celdas de tiempo */
 .time-cell {
   box-sizing: border-box;
-  width: 20px;
-  height: 20px;
-  padding: 0;
+  width: 20px !important;
+  height: 20px !important;
+  min-height: 20px !important;
+  max-height: 20px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  line-height: 20px !important;
+}
+
+/* Para controlar la altura de las filas */
+table tr {
+  height: 20px !important;
+  line-height: 20px !important;
+}
+
+/* Para controlar el tamaño del contenido */
+table td, table th {
+  vertical-align: middle;
+  overflow: hidden;
 }
 
 /* Prevenir eventos de touch no deseados en dispositivos móviles */

@@ -382,6 +382,8 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                     boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
                     width: "20px", // Exactamente 20px de ancho
                     height: "20px", // Exactamente 20px de altura
+                    lineHeight: "20px", // Garantizar altura exacta
+                    boxSizing: "border-box", // Incluir bordes en dimensiones
                     borderLeft: time.endsWith(':00') ? '2px solid #AAAAAA' : time.endsWith(':30') ? '1px solid #DDDDDD' : '1px dashed #EEEEEE'
                   }}
                 >
@@ -401,20 +403,21 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
             {employees.map((employee) => (
               <tr key={employee.id} className="employee-row">
                 <td 
-                  className="border-b border-r border-neutral-200 p-2 bg-white"
+                  className="border-b border-r border-neutral-200 p-0 bg-white"
                   style={{
                     position: 'sticky',
                     left: 0,
                     zIndex: 10,
                     backgroundColor: 'white',
                     boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
-                    height: "20px"
+                    height: "20px",
+                    lineHeight: "20px"
                   }}
                 >
-                  <div className="flex justify-between items-center">
-                    <span className="truncate">{employee.name}</span>
-                    <button className="text-neutral-400 hover:text-neutral-600">
-                      <Edit className="h-4 w-4" />
+                  <div className="flex justify-between items-center px-1" style={{height: "20px", overflow: "hidden"}}>
+                    <span className="truncate text-xs">{employee.name}</span>
+                    <button className="text-neutral-400 hover:text-neutral-600 ml-1 p-0">
+                      <Edit className="h-3 w-3" />
                     </button>
                   </div>
                 </td>
@@ -437,7 +440,9 @@ export default function ScheduleTable({ employees, shifts, date, onSaveShifts }:
                       style={{
                         width: "20px", // Exactamente 20px de ancho
                         height: "20px", // Exactamente 20px de altura
+                        lineHeight: "20px", // Garantizar altura exacta
                         padding: "0", // Sin padding para mantener tamaño exacto
+                        boxSizing: "border-box", // Incluir bordes en dimensiones
                         backgroundColor: isSelected ? 'rgba(76, 175, 80, 0.4)' : 
                                         isAssigned ? 'rgba(25, 118, 210, 0.2)' : 
                                         'transparent',
