@@ -44,20 +44,20 @@ export function getNextDay(date: Date): Date {
 export function generateTimeSlots(startHour: number, endHour: number): string[] {
   const slots: string[] = [];
   
-  for (let hour = startHour; hour <= endHour; hour++) {
+  for (let hour = startHour; hour < endHour; hour++) {
     // Format hour with leading zero if needed
     const formattedHour = hour.toString().padStart(2, '0');
     
-    // Add :00, :15, :30, and :45 slots
+    // Add :00, :15, :30, and :45 slots para todas las horas
     slots.push(`${formattedHour}:00`);
-    
-    // Add :15, :30, and :45 slots, except for the last hour
-    if (hour < endHour) {
-      slots.push(`${formattedHour}:15`);
-      slots.push(`${formattedHour}:30`);
-      slots.push(`${formattedHour}:45`);
-    }
+    slots.push(`${formattedHour}:15`);
+    slots.push(`${formattedHour}:30`);
+    slots.push(`${formattedHour}:45`);
   }
+  
+  // Añadir la última hora (solo el :00)
+  const lastHour = endHour.toString().padStart(2, '0');
+  slots.push(`${lastHour}:00`);
   
   return slots;
 }
