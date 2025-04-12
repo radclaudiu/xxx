@@ -267,6 +267,11 @@ export default function ScheduleTable({
     
     // Agregar clase a document.body para cambiar comportamiento táctil global
     document.documentElement.classList.add('is-selecting');
+    // Prevenir rebote/desplazamiento en iOS
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    document.body.style.height = '100%';
   };
   
   // Método para manejar la selección de celdas (tanto mouse como touch)
@@ -366,6 +371,11 @@ export default function ScheduleTable({
     
     // Quitar clase del document para restaurar comportamiento táctil normal
     document.documentElement.classList.remove('is-selecting');
+    // Restaurar scroll normal
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
+    document.body.style.height = '';
   };
   
   // Configurar/limpiar eventos globales según el estado de arrastre

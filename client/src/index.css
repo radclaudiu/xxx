@@ -128,14 +128,21 @@ thead tr:nth-child(3) th {
   touch-action: manipulation !important; /* Permitir gestos básicos */
 }
 
-/* Clase para marcar cuando está ocurriendo una selección */
-.is-selecting {
-  touch-action: none !important; /* Bloquear scroll durante selección */
+/* Estados del documento */
+html.is-selecting {
+  touch-action: none !important; /* Bloquear scroll durante selección en todo el documento */
+  overflow: hidden !important;
 }
 
-/* Clase para indicar que se está arrastrando */
+/* Cuando se está arrastrando */
+.is-dragging {
+  cursor: grabbing !important;
+}
+
+/* Bloquear scroll en celdas durante arrastre */
 .is-dragging .time-cell {
-  touch-action: none !important; /* Bloquear scroll en celdas durante arrastre */
+  touch-action: none !important;
+  pointer-events: auto !important;
 }
 
 /* Mensaje informativo para dispositivos táctiles */
