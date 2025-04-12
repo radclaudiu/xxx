@@ -122,6 +122,26 @@ export default function Home() {
     },
   });
   
+  // Delete shift mutation
+  const deleteShiftMutation = useMutation({
+    mutationFn: async (shiftId: number) => {
+      const response = await apiRequest("DELETE", `/api/shifts/${shiftId}`);
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/shifts"] 
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Error al eliminar turno: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+  
   // Handle saving selected shifts
   const handleSaveShifts = (selections: {employee: Employee, startTime: string, endTime: string}[]) => {
     // Process each selection and create a shift
@@ -168,6 +188,11 @@ export default function Home() {
       title: "Cargado",
       description: "Horario cargado exitosamente.",
     });
+  };
+  
+  // Handle deleting a shift
+  const handleDeleteShift = (shiftId: number) => {
+    deleteShiftMutation.mutate(shiftId);
   };
   
   return (
@@ -312,6 +337,7 @@ export default function Home() {
             shifts={shifts} 
             date={currentDate}
             onSaveShifts={handleSaveShifts}
+            onDeleteShift={handleDeleteShift}
             estimatedDailySales={parseFloat(estimatedDailySales) || 0}
             hourlyEmployeeCost={parseFloat(hourlyEmployeeCost) || 0}
           />
