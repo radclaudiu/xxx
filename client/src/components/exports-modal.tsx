@@ -130,9 +130,8 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                         {weeklyHours.map((day, index) => (
                           <td key={index} className="border p-1 text-center text-xs">
                             {day.shiftsDetails ? (
-                              <div>
-                                <div className="font-medium">{formatHours(day.totalHours)}</div>
-                                <div className="text-gray-500 text-[0.6rem]">{day.shiftsDetails}</div>
+                              <div className="text-xs text-gray-700">
+                                {day.shiftsDetails}
                               </div>
                             ) : (
                               <span className="text-gray-500 italic text-[0.6rem]">Libre</span>
