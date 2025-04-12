@@ -141,36 +141,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to delete shift" });
     }
   });
-  
-  // Patch endpoint para actualizaciones parciales de turnos (para arrastrar y soltar)
-  app.patch("/api/shifts/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const validatedData = insertShiftSchema.partial().parse(req.body);
-      
-      if (validatedData.employeeId) {
-        // Verificar que el empleado existe si se está actualizando employeeId
-        const employee = await storage.getEmployee(validatedData.employeeId);
-        if (!employee) {
-          return res.status(404).json({ message: "Empleado no encontrado" });
-        }
-      }
-      
-      const shift = await storage.updateShift(id, validatedData);
-      
-      if (!shift) {
-        return res.status(404).json({ message: "Turno no encontrado" });
-      }
-      
-      res.json(shift);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ message: "Datos de turno inválidos", errors: error.errors });
-      } else {
-        res.status(500).json({ message: "No se pudo actualizar el turno" });
-      }
-    }
-  });
 
   // Schedule routes (for saving/loading)
   app.get("/api/schedules", async (req, res) => {

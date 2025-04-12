@@ -150,24 +150,3 @@ export function isInSameWeek(date1: Date, date2: Date): boolean {
   const startOfWeek2 = getStartOfWeek(date2);
   return startOfWeek1.getTime() === startOfWeek2.getTime();
 }
-
-// Calculate the end time based on a start time and a duration in hours
-export function calculateEndTime(startTime: string, durationInHours: number): string {
-  // Convert start time to minutes
-  const [startHour, startMinute] = startTime.split(':').map(Number);
-  
-  // Calculate total minutes
-  let totalMinutes = startHour * 60 + startMinute + durationInHours * 60;
-  
-  // Handle wrap around 24 hours
-  if (totalMinutes >= 24 * 60) {
-    totalMinutes = totalMinutes % (24 * 60);
-  }
-  
-  // Convert back to hours and minutes
-  const newHour = Math.floor(totalMinutes / 60);
-  const newMinute = Math.floor(totalMinutes % 60);
-  
-  // Format as HH:MM
-  return `${newHour.toString().padStart(2, '0')}:${newMinute.toString().padStart(2, '0')}`;
-}
