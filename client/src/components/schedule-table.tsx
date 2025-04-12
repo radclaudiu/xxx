@@ -216,133 +216,229 @@ export default function ScheduleTable({
     handleInteractionStart(employee, time);
   };
   
-  // Touch start handler
+  // Estado para saber si estamos en un dispositivo táctil
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  
+  // Detectar si es un dispositivo táctil
+  useEffect(() => {
+    const isTouchCapable = 'ontouchstart' in window || 
+      navigator.maxTouchPoints > 0 || 
+      (navigator as any).msMaxTouchPoints > 0;
+    
+    setIsTouchDevice(isTouchCapable);
+    
+    // Añadir clase para prevenir zoom en dispositivos táctiles
+    if (isTouchCapable) {
+      document.documentElement.classList.add('touch-device');
+    }
+    
+    return () => {
+      document.documentElement.classList.remove('touch-device');
+    };
+  }, []);
+  
+  // Referencia para almacenar información sobre el toque
+  const touchInfoRef = useRef({
+    lastTouched: { employeeId: 0, time: '' },
+    startX: 0,
+    startY: 0,
+    isSwiping: false
+  });
+  
+  // Función que maneja el inicio del toque
   const handleTouchStart = (e: React.TouchEvent, employee: Employee, time: string) => {
-    // Registramos la posición inicial del toque para seguimiento
-    const touch = e.touches[0];
-    const startX = touch.clientX;
-    const startY = touch.clientY;
+    // Solo procesar un solo toque para selección
+    if (e.touches.length !== 1) return;
     
-    // Almacenamos estas posiciones para comparar durante el movimiento
-    mouseDownRef.current = true;
-    
-    // Comenzamos el seguimiento de la selección
+    // Evitar comportamiento default que puede causar scroll inesperado
+    // pero solo para un toque (para permitir scroll con 2+ dedos)
     const touchEvent = e.nativeEvent;
     touchEvent.stopPropagation();
     
-    // Capturar el evento touch para que otros handlers no lo procesen
-    touchEvent.preventDefault();
+    // Guardar posición inicial
+    const touch = e.touches[0];
+    touchInfoRef.current = {
+      lastTouched: { employeeId: employee.id, time },
+      startX: touch.clientX,
+      startY: touch.clientY,
+      isSwiping: false
+    };
     
-    // Iniciar selección y marcar el estado de arrastre
+    // Activar estado de arrastre
+    mouseDownRef.current = true;
     setIsDragging(true);
     setActiveEmployee(employee);
+    setStartTime(time);
     
-    // Llamar a la función que maneja el inicio de la interacción
-    handleInteractionStart(employee, time);
+    // Añadir clase para prevenir scrolling durante el arrastre
+    document.body.classList.add('is-dragging');
+    
+    // Seleccionar la celda inicial
+    if (!isCellAssigned(employee.id, time)) {
+      toggleSingleCell(employee, time);
+    }
   };
   
-  // Handler for cell interaction during drag
+  // Manejador optimizado para interacción de celdas
   const handleCellInteraction = (employee: Employee, time: string) => {
-    // Only process if we're dragging and it's the same employee
-    if (!mouseDownRef.current || !isDragging || !activeEmployee || activeEmployee.id !== employee.id) return;
-    
-    // If cell is already assigned, don't allow selection
+    // Verificar si podemos procesar esta interacción
+    if (!isDragging || !activeEmployee || activeEmployee.id !== employee.id) return;
     if (isCellAssigned(employee.id, time)) return;
     
+    // Actualizar la última celda tocada
+    if (touchInfoRef.current) {
+      touchInfoRef.current.lastTouched = { employeeId: employee.id, time };
+    }
+    
+    // Si tenemos un tiempo de inicio, seleccionar todo el rango
     if (startTime) {
-      // Select all cells between startTime and current time
       const startIndex = timeSlots.indexOf(startTime);
       const currentIndex = timeSlots.indexOf(time);
       
       if (startIndex >= 0 && currentIndex >= 0) {
-        // Create a new Map from the current state for immutability
-        const newSelectedCellsByEmployee = new Map(selectedCellsByEmployee);
+        // Crear nuevo mapa de selecciones
+        const newMap = new Map(selectedCellsByEmployee);
+        const newSet = new Set<string>();
         
-        // Handle selection in either direction (forward or backward)
+        // Seleccionar todas las celdas en el rango
         const minIdx = Math.min(startIndex, currentIndex);
         const maxIdx = Math.max(startIndex, currentIndex);
         
-        // Create a new set with only the cells in the selected range
-        const newSelectedCells = new Set<string>();
-        
         for (let i = minIdx; i <= maxIdx; i++) {
           const timeSlot = timeSlots[i];
-          // Only add if the cell is not already assigned
           if (!isCellAssigned(employee.id, timeSlot)) {
-            newSelectedCells.add(timeSlot);
+            newSet.add(timeSlot);
           }
         }
         
-        // Update with the new selection
-        if (newSelectedCells.size > 0) {
-          newSelectedCellsByEmployee.set(employee.id, newSelectedCells);
+        // Actualizar selecciones
+        if (newSet.size > 0) {
+          newMap.set(employee.id, newSet);
         } else {
-          newSelectedCellsByEmployee.delete(employee.id);
+          newMap.delete(employee.id);
         }
         
-        setSelectedCellsByEmployee(newSelectedCellsByEmployee);
-        // Incrementar contador para forzar actualización inmediata de la UI
+        // Actualizar estado
+        setSelectedCellsByEmployee(newMap);
         setUpdateCounter(prev => prev + 1);
       }
     }
   };
   
-  // Mouse enter handler
-  const handleMouseEnter = (employee: Employee, time: string) => {
-    handleCellInteraction(employee, time);
-  };
-  
-  // Touch move handler para manejar el arrastre sobre múltiples celdas
+  // Manejador de eventos de movimiento táctil
   const handleTouchMove = (e: TouchEvent) => {
-    if (!isDragging || !activeEmployee) return;
-    e.preventDefault(); // Prevenir desplazamiento de página durante el arrastre
+    // Solo procesar si estamos arrastrando y con un dedo
+    if (!isDragging || !activeEmployee || e.touches.length !== 1) return;
     
-    // Obtener la posición actual del toque
+    // Prevenir scrolling durante arrastre
+    e.preventDefault();
+    
+    // Obtener posición actual
     const touch = e.touches[0];
-    const x = touch.clientX;
-    const y = touch.clientY;
+    const curX = touch.clientX;
+    const curY = touch.clientY;
     
-    // Encontrar elementos en la posición y a su alrededor
-    // Esto nos permite encontrar celdas incluso si el dedo se sale ligeramente
-    const offsets = [
-      [0, 0],    // Centro (posición exacta)
-      [-5, 0],   // Un poco a la izquierda
-      [5, 0],    // Un poco a la derecha
-      [0, -10],  // Un poco arriba (para volver a la fila)
-      [0, 10],   // Un poco abajo (para volver a la fila)
-    ];
+    // Calcular distancia desde el inicio
+    const deltaX = Math.abs(curX - touchInfoRef.current.startX);
+    const deltaY = Math.abs(curY - touchInfoRef.current.startY);
     
-    // Intentar encontrar una celda en alguna de estas posiciones
-    for (const [offsetX, offsetY] of offsets) {
-      const elementUnderTouch = document.elementFromPoint(x + offsetX, y + offsetY);
+    // Si es movimiento significativo, marcar como arrastre
+    if (deltaX > 5 || deltaY > 5) {
+      touchInfoRef.current.isSwiping = true;
+    }
+    
+    // Si estamos arrastrando, buscar celda bajo el dedo
+    if (touchInfoRef.current.isSwiping) {
+      // Puntos alrededor del toque para mejor detección
+      const points = [
+        [curX, curY],           // Centro
+        [curX - 5, curY],       // Izquierda
+        [curX + 5, curY],       // Derecha
+        [curX, curY - 10],      // Arriba
+        [curX, curY + 10],      // Abajo
+        [curX - 5, curY - 5],   // Diagonal superior izquierda
+        [curX + 5, curY - 5],   // Diagonal superior derecha
+        [curX - 5, curY + 5],   // Diagonal inferior izquierda
+        [curX + 5, curY + 5]    // Diagonal inferior derecha
+      ];
       
-      // Si encontramos una celda de la tabla, procesarla
-      if (elementUnderTouch && elementUnderTouch.tagName === 'TD' && elementUnderTouch.hasAttribute('data-cell-id')) {
-        const cellId = elementUnderTouch.getAttribute('data-cell-id');
-        if (cellId) {
-          const [empId, time] = cellId.split('-');
-          const empIdNum = parseInt(empId, 10);
-          
-          // Solo procesar si es para el mismo empleado que comenzó el arrastre
-          if (empIdNum === activeEmployee.id) {
-            handleCellInteraction(activeEmployee, time);
-            return; // Salir después de encontrar una celda válida
+      // Buscar celda en alguno de estos puntos
+      for (const [x, y] of points) {
+        const element = document.elementFromPoint(x, y);
+        
+        if (element && element.tagName === 'TD' && element.hasAttribute('data-cell-id')) {
+          const cellId = element.getAttribute('data-cell-id');
+          if (cellId) {
+            const [empId, time] = cellId.split('-');
+            const empIdNum = parseInt(empId, 10);
+            
+            // Solo procesar para el mismo empleado
+            if (empIdNum === activeEmployee.id && 
+                // Evitar procesamiento repetido de la misma celda
+                (touchInfoRef.current.lastTouched.employeeId !== empIdNum || 
+                 touchInfoRef.current.lastTouched.time !== time)) {
+              
+              // Actualizar selección
+              handleCellInteraction(activeEmployee, time);
+              return;
+            }
           }
         }
       }
     }
   };
   
-  // Añadir manejador global para touchmove cuando se está arrastrando
-  useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('touchmove', handleTouchMove, { passive: false });
-    }
+  // Manejador para finalizar interacción táctil
+  const handleTouchEnd = () => {
+    // Limpiar estado de arrastre
+    mouseDownRef.current = false;
+    setIsDragging(false);
     
-    return () => {
-      document.removeEventListener('touchmove', handleTouchMove);
+    // Eliminar clase para permitir scroll nuevamente
+    document.body.classList.remove('is-dragging');
+    
+    // Resetear información de toque
+    touchInfoRef.current = {
+      lastTouched: { employeeId: 0, time: '' },
+      startX: 0,
+      startY: 0,
+      isSwiping: false
     };
-  }, [isDragging, activeEmployee]);
+  };
+  
+  // Configurar manejadores globales para eventos táctiles
+  useEffect(() => {
+    if (isTouchDevice) {
+      // Manejador para terminar arrastre al final del toque
+      const handleGlobalTouchEnd = () => {
+        if (isDragging) {
+          handleTouchEnd();
+        }
+      };
+      
+      // Añadir eventos globales
+      document.addEventListener('touchend', handleGlobalTouchEnd);
+      document.addEventListener('touchcancel', handleGlobalTouchEnd);
+      
+      if (isDragging) {
+        document.addEventListener('touchmove', handleTouchMove, { passive: false });
+      }
+      
+      // Limpiar eventos
+      return () => {
+        document.removeEventListener('touchend', handleGlobalTouchEnd);
+        document.removeEventListener('touchcancel', handleGlobalTouchEnd);
+        document.removeEventListener('touchmove', handleTouchMove);
+      };
+    }
+  }, [isDragging, isTouchDevice, activeEmployee]);
+  
+  // Manejador para mouse enter (solo para desktop)
+  const handleMouseEnter = (employee: Employee, time: string) => {
+    if (!isTouchDevice) {
+      handleCellInteraction(employee, time);
+    }
+  };
   
   // Check if a cell is selected
   const isCellSelected = (employeeId: number, time: string) => {
@@ -668,13 +764,8 @@ export default function ScheduleTable({
       
       {/* Schedule table */}
       <div 
-        className="overflow-x-auto border border-neutral-200 rounded select-none w-full touch-container"
-        style={{ 
-          touchAction: "auto", // Permitir todos los gestos táctiles
-          WebkitOverflowScrolling: "touch", // Mejorar el desplazamiento suave
-          width: "100%",
-          maxWidth: "100vw"
-        }}>
+        className="table-container border border-neutral-200 rounded select-none w-full"
+        >
         <table className="w-full border-collapse table-fixed" style={{ minWidth: "100%" }}>
           {/* Table Header - Estructura de dos filas */}
           <thead>
