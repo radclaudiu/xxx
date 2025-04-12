@@ -600,7 +600,7 @@ export default function ScheduleTable({
       <div 
         className="overflow-x-auto border border-neutral-200 rounded select-none w-full"
         style={{ 
-          touchAction: "auto", // Permitir todos los comportamientos táctiles por defecto
+          touchAction: "pan-y pinch-zoom", // Permitir solo scroll vertical y zoom, no horizontal con un dedo
           WebkitOverflowScrolling: "touch", // Mejorar el desplazamiento suave
           width: "100%",
           maxWidth: "100vw"
@@ -931,19 +931,26 @@ export default function ScheduleTable({
                           // Si la celda ya tiene un turno asignado, permitir el comportamiento normal (scroll)
                           if (isAssigned) return;
                           
-                          // Para células sin asignar, iniciar selección y prevenir scroll
-                          if (e.touches.length === 1) {
-                            e.preventDefault(); // Evita el desplazamiento con 1 dedo durante la selección
-                            handleTouchStart(e, employee, time);
-                          }
+                          // Para células sin asignar, siempre iniciar selección y prevenir comportamientos por defecto
+                          e.preventDefault(); // Prevenir scroll siempre que se toque una celda para seleccionar
+                          e.stopPropagation();
+                          handleTouchStart(e, employee, time);
                         }}
                         onTouchMove={(e) => {
                           // No hacer nada para celdas con turnos asignados
                           if (isAssigned) return;
                           
-                          // Durante la selección activa, prevenir scroll
-                          if (isDragging && activeEmployee && e.touches.length === 1) {
+                          // Durante la selección activa, siempre prevenir scroll
+                          if (isDragging && activeEmployee) {
                             e.preventDefault();
+                            e.stopPropagation();
+                          }
+                        }}
+                        onTouchEnd={(e) => {
+                          // Prevenir click accidental después de seleccionar
+                          if (!isAssigned) {
+                            e.preventDefault();
+                            e.stopPropagation();
                           }
                         }}
                       >
