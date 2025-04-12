@@ -229,7 +229,7 @@ export default function ScheduleTable({
     handleInteractionStart(employee, time);
   };
   
-  // Touch start handler simplificado para quitar selecciones de forma más confiable
+  // Touch start handler: añadir o quitar celdas individuales
   const handleTouchStart = (e: React.TouchEvent, employee: Employee, time: string) => {
     // No permitir selección en celdas ya asignadas
     if (isCellAssigned(employee.id, time)) return;
@@ -239,34 +239,15 @@ export default function ScheduleTable({
     touchEvent.stopPropagation();
     touchEvent.preventDefault();
     
-    // Iniciar estado de arrastre
+    // Iniciar estado de arrastre por si el usuario quiere arrastrar después
     mouseDownRef.current = true;
     setIsDragging(true);
     setActiveEmployee(employee);
     setStartTime(time);
     
-    // Verificar si la celda ya está seleccionada
-    const isSelected = isCellSelected(employee.id, time);
-    console.log(`Celda ${time} para empleado ${employee.id} está seleccionada: ${isSelected}`);
-    
-    if (isSelected) {
-      // ELIMINAR la selección - usar la función toggleSingleCell directamente
-      // que ya contiene la lógica necesaria para quitar la celda
-      toggleSingleCell(employee, time);
-    } else {
-      // Para nuevas selecciones, inicializar batch para mejor rendimiento en arrastre
-      batchedSelectionsRef.current = new Map(selectedCellsByEmployee);
-      lastTouchUpdateRef.current = Date.now();
-      
-      // Añadir la celda inicial
-      const batch = batchedSelectionsRef.current;
-      if (batch) {
-        const cellSet = batch.get(employee.id) || new Set<string>();
-        cellSet.add(time);
-        batch.set(employee.id, cellSet);
-        setSelectedCellsByEmployee(new Map(batch));
-      }
-    }
+    // SIMPLEMENTE USAR TOGGLE - funciona tanto para seleccionar como para deseleccionar
+    console.log(`Toggling celda ${time} para empleado ${employee.id}`);
+    toggleSingleCell(employee, time);
   };
   
   // Handler for cell interaction during drag
@@ -1107,61 +1088,20 @@ export default function ScheduleTable({
                           }
                         }}
                         onClick={(e) => {
-                          // Manejador directo para quitar selecciones existentes al hacer clic
-                          if (isSelected && !isAssigned) {
-                            console.log('Quitando selección directamente al hacer clic:', time);
-                            
-                            // Crear una copia del mapa actual para mantener inmutabilidad
-                            const newSelectedCellsByEmployee = new Map(selectedCellsByEmployee);
-                            const selectedCells = newSelectedCellsByEmployee.get(employee.id);
-                            
-                            if (selectedCells) {
-                              // Eliminar esta celda
-                              selectedCells.delete(time);
-                              
-                              // Actualizar map según corresponda
-                              if (selectedCells.size > 0) {
-                                newSelectedCellsByEmployee.set(employee.id, selectedCells);
-                              } else {
-                                newSelectedCellsByEmployee.delete(employee.id);
-                              }
-                              
-                              // Actualizar estado
-                              setSelectedCellsByEmployee(newSelectedCellsByEmployee);
+                          // Usar toggleSingleCell para añadir o quitar celdas
+                          if (!isAssigned) {
+                            console.log('Click en celda:', time, 'estado actual:', isSelected ? 'seleccionada' : 'no seleccionada');
+                            toggleSingleCell(employee, time);
+                          } else if (isFirstCell && shift && onDeleteShift) {
+                            // Mostrar opciones para eliminar turno existente (celdas azules)
+                            e.preventDefault();
+                            if (window.confirm(`¿Desea eliminar el turno de ${shift.startTime} a ${shift.endTime}?`)) {
+                              handleDeleteShift(shift);
                             }
                           }
                         }}
                         onTouchStart={(e) => {
-                          // Primera prioridad: quitar selecciones ya existentes
-                          if (isSelected && !isAssigned) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            
-                            console.log('Quitando selección desde onTouchStart:', time);
-                            
-                            // Crear una copia del mapa actual para mantener inmutabilidad
-                            const newSelectedCellsByEmployee = new Map(selectedCellsByEmployee);
-                            const selectedCells = newSelectedCellsByEmployee.get(employee.id);
-                            
-                            if (selectedCells) {
-                              // Eliminar esta celda
-                              selectedCells.delete(time);
-                              
-                              // Actualizar map según corresponda
-                              if (selectedCells.size > 0) {
-                                newSelectedCellsByEmployee.set(employee.id, selectedCells);
-                              } else {
-                                newSelectedCellsByEmployee.delete(employee.id);
-                              }
-                              
-                              // Actualizar estado
-                              setSelectedCellsByEmployee(newSelectedCellsByEmployee);
-                            }
-                            
-                            return; // No continuar con otra lógica
-                          }
-                          
-                          // Comportamiento normal de selección si no está ya seleccionada
+                          // Comportamiento normal de selección para todas las celdas libres
                           if (!isAssigned) {
                             handleTouchStart(e, employee, time);
                           } else if (isFirstCell && shift && onDeleteShift) {
