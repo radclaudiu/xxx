@@ -74,14 +74,22 @@ export default function Home() {
     queryKey: ["/api/employees"],
   });
   
-  // Fetch shifts for the current day
-  const { data: shifts = [] } = useQuery<Shift[]>({
-    queryKey: ["/api/shifts", formatDateForAPI(currentDate)],
+  // Fetch all shifts (without date filter) for use in exports
+  const { data: allShifts = [] } = useQuery<Shift[]>({
+    queryKey: ["/api/shifts"],
     queryFn: async () => {
-      const response = await fetch(`/api/shifts?date=${formatDateForAPI(currentDate)}`);
+      const response = await fetch(`/api/shifts`);
       if (!response.ok) throw new Error("Failed to fetch shifts");
       return response.json();
     },
+  });
+  
+  // Filter shifts for the current day (for the main schedule display)
+  const shifts = allShifts.filter(shift => {
+    const shiftDate = new Date(shift.date);
+    const formattedCurrentDate = formatDateForAPI(currentDate);
+    const formattedShiftDate = formatDateForAPI(shiftDate);
+    return formattedShiftDate === formattedCurrentDate;
   });
   
   // Navigate to previous day
@@ -102,7 +110,7 @@ export default function Home() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
-        queryKey: ["/api/shifts", formatDateForAPI(currentDate)] 
+        queryKey: ["/api/shifts"] 
       });
     },
     onError: (error) => {
@@ -329,10 +337,10 @@ export default function Home() {
         onClose={() => setIsHelpModalOpen(false)} 
       />
       
-      {/* Exportaciones Modal con referencia */}
+      {/* Exportaciones Modal con referencia - usando todos los turnos */}
       <ExportsModal 
         employees={employees} 
-        shifts={shifts} 
+        shifts={allShifts} 
         currentDate={currentDate}
         ref={exportsModalRef}
       />
