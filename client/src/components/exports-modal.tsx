@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Employee, Shift } from "@shared/schema";
-import { Download, Calendar, BarChart2, ClipboardList } from "lucide-react";
+import { Download, Calendar, FileText, ClipboardList, ChevronLeft, ChevronRight, BarChart2, Clock, Users, DollarSign } from "lucide-react";
 import { formatDate, getStartOfWeek, isInSameWeek, calculateHoursBetween, formatHours, formatDateForAPI } from "@/lib/date-helpers";
 
 interface ExportsModalProps {
@@ -14,19 +13,222 @@ interface ExportsModalProps {
 
 export default function ExportsModal({ employees, shifts, currentDate }: ExportsModalProps) {
   const [isOpen, setIsOpen] = useState(false);
-
-  // Obtener la fecha de inicio de la semana (lunes)
-  const weekStart = getStartOfWeek(currentDate);
+  const [selectedReport, setSelectedReport] = useState<string | null>(null);
   
-  // Generar array con los 7 días de la semana actual
+  // Estado para controlar la semana seleccionada
+  const [selectedWeekStart, setSelectedWeekStart] = useState(() => getStartOfWeek(currentDate));
+  
+  // Función para avanzar a la siguiente semana
+  const goToNextWeek = () => {
+    const nextWeek = new Date(selectedWeekStart);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    setSelectedWeekStart(nextWeek);
+  };
+  
+  // Función para retroceder a la semana anterior
+  const goToPrevWeek = () => {
+    const prevWeek = new Date(selectedWeekStart);
+    prevWeek.setDate(prevWeek.getDate() - 7);
+    setSelectedWeekStart(prevWeek);
+  };
+  
+  // Generar array con los 7 días de la semana seleccionada
   const weekDays = Array.from({ length: 7 }, (_, i) => {
-    const day = new Date(weekStart);
+    const day = new Date(selectedWeekStart);
     day.setDate(day.getDate() + i);
     return day;
   });
 
+  // Formato para mostrar el rango de la semana
+  const weekRangeText = `${formatDate(weekDays[0])} - ${formatDate(weekDays[6])}`;
+  
   // Días de la semana en español para encabezados
   const dayNames = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+
+  // Renderizar el informe seleccionado
+  const renderSelectedReport = () => {
+    switch (selectedReport) {
+      case 'week-schedule':
+        return (
+          <div className="rounded-md border">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr>
+                    <th className="border p-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">
+                      Empleado
+                    </th>
+                    {dayNames.map((day, index) => (
+                      <th key={day} className="border p-2 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase">
+                        {day}
+                        <div className="text-[0.6rem] font-normal text-gray-400">
+                          {formatDate(weekDays[index])}
+                        </div>
+                      </th>
+                    ))}
+                    <th className="border p-2 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase">
+                      Total
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {employees.map((employee) => {
+                    // Calcular las horas trabajadas para cada día de la semana
+                    const weeklyHours = weekDays.map(day => {
+                      // Filtrar turnos para este empleado en este día
+                      const dayShifts = shifts.filter(shift => {
+                        const shiftDate = new Date(shift.date);
+                        return (
+                          shift.employeeId === employee.id && 
+                          shiftDate.getDate() === day.getDate() &&
+                          shiftDate.getMonth() === day.getMonth() &&
+                          shiftDate.getFullYear() === day.getFullYear()
+                        );
+                      });
+                      
+                      // Calcular horas totales para este día
+                      let totalHours = 0;
+                      dayShifts.forEach(shift => {
+                        totalHours += calculateHoursBetween(shift.startTime, shift.endTime);
+                      });
+                      
+                      // Formatear los detalles de turnos
+                      const shiftsDetails = dayShifts.map(shift => 
+                        `${shift.startTime} - ${shift.endTime}`
+                      ).join(", ");
+                      
+                      return { totalHours, shiftsDetails };
+                    });
+                    
+                    // Calcular total de horas para la semana
+                    const totalWeeklyHours = weeklyHours.reduce(
+                      (sum, day) => sum + day.totalHours, 0
+                    );
+                    
+                    return (
+                      <tr key={employee.id} className="hover:bg-gray-50">
+                        <td className="border p-2 text-sm">
+                          {employee.name}
+                        </td>
+                        
+                        {weeklyHours.map((day, index) => (
+                          <td key={index} className="border p-2 text-center text-xs">
+                            {day.shiftsDetails ? (
+                              <div>
+                                <div className="font-medium">{formatHours(day.totalHours)}</div>
+                                <div className="text-gray-500 text-[0.65rem]">{day.shiftsDetails}</div>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
+                        ))}
+                        
+                        <td className="border p-2 text-center font-medium">
+                          {formatHours(totalWeeklyHours)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      case 'cost-report':
+        return (
+          <div className="flex flex-col items-center justify-center py-12">
+            <DollarSign size={48} className="text-amber-500 mb-4" />
+            <div className="text-center text-muted-foreground">
+              <h3 className="text-lg font-medium mb-2">Informe de Costes</h3>
+              <p className="mb-4">
+                Este informe mostrará un análisis detallado de los costes de personal por día, semana y empleado.
+              </p>
+              <div className="text-sm text-gray-500">
+                Próximamente disponible.
+              </div>
+            </div>
+          </div>
+        );
+      case 'productivity-report':
+        return (
+          <div className="flex flex-col items-center justify-center py-12">
+            <BarChart2 size={48} className="text-indigo-500 mb-4" />
+            <div className="text-center text-muted-foreground">
+              <h3 className="text-lg font-medium mb-2">Informe de Productividad</h3>
+              <p className="mb-4">
+                Visualiza la relación entre horas trabajadas y ventas generadas para optimizar la eficiencia.
+              </p>
+              <div className="text-sm text-gray-500">
+                Próximamente disponible.
+              </div>
+            </div>
+          </div>
+        );
+      case 'time-report':
+        return (
+          <div className="flex flex-col items-center justify-center py-12">
+            <Clock size={48} className="text-blue-500 mb-4" />
+            <div className="text-center text-muted-foreground">
+              <h3 className="text-lg font-medium mb-2">Informe de Horas</h3>
+              <p className="mb-4">
+                Reporte detallado de horas trabajadas por cada empleado, incluyendo totales acumulados.
+              </p>
+              <div className="text-sm text-gray-500">
+                Próximamente disponible.
+              </div>
+            </div>
+          </div>
+        );
+      case 'attendance-report':
+        return (
+          <div className="flex flex-col items-center justify-center py-12">
+            <Users size={48} className="text-green-500 mb-4" />
+            <div className="text-center text-muted-foreground">
+              <h3 className="text-lg font-medium mb-2">Informe de Asistencia</h3>
+              <p className="mb-4">
+                Control de asistencia y puntualidad de los empleados, con estadísticas por persona.
+              </p>
+              <div className="text-sm text-gray-500">
+                Próximamente disponible.
+              </div>
+            </div>
+          </div>
+        );
+      case 'print-template':
+        return (
+          <div className="flex flex-col items-center justify-center py-12">
+            <FileText size={48} className="text-gray-500 mb-4" />
+            <div className="text-center text-muted-foreground">
+              <h3 className="text-lg font-medium mb-2">Plantilla para Impresión</h3>
+              <p className="mb-4">
+                Formato optimizado para imprimir los horarios de la semana o distribuir por correo.
+              </p>
+              <div className="text-sm text-gray-500">
+                Próximamente disponible.
+              </div>
+            </div>
+          </div>
+        );
+      case 'export-csv':
+        return (
+          <div className="flex flex-col items-center justify-center py-12">
+            <ClipboardList size={48} className="text-orange-500 mb-4" />
+            <div className="text-center text-muted-foreground">
+              <h3 className="text-lg font-medium mb-2">Exportar Datos (CSV)</h3>
+              <p className="mb-4">
+                Exporta todos los datos de turnos en formato CSV para análisis en Excel u otras herramientas.
+              </p>
+              <div className="text-sm text-gray-500">
+                Próximamente disponible.
+              </div>
+            </div>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -43,111 +245,110 @@ export default function ExportsModal({ employees, shifts, currentDate }: Exports
           <DialogTitle>Exportaciones e Informes</DialogTitle>
         </DialogHeader>
         
-        <Tabs defaultValue="week-schedule">
-          <TabsList className="mb-4">
-            <TabsTrigger value="week-schedule" className="flex items-center gap-1">
-              <Calendar className="h-4 w-4" />
-              <span>Cuadrante Semanal</span>
-            </TabsTrigger>
-            <TabsTrigger value="reports" className="flex items-center gap-1">
-              <BarChart2 className="h-4 w-4" />
-              <span>Informes</span>
-            </TabsTrigger>
-            <TabsTrigger value="templates" className="flex items-center gap-1">
-              <ClipboardList className="h-4 w-4" />
-              <span>Plantillas</span>
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="week-schedule" className="px-1">
-            <div className="rounded-md border">
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr>
-                      <th className="border p-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">
-                        Empleado
-                      </th>
-                      {dayNames.map((day, index) => (
-                        <th key={day} className="border p-2 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase">
-                          {day}
-                          <div className="text-[0.6rem] font-normal text-gray-400">
-                            {formatDate(weekDays[index])}
-                          </div>
-                        </th>
-                      ))}
-                      <th className="border p-2 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase">
-                        Total
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {employees.map((employee) => {
-                      // Calcular las horas trabajadas para cada día de la semana
-                      const weeklyHours = weekDays.map(day => {
-                        // Filtrar turnos para este empleado en este día
-                        const dayShifts = shifts.filter(shift => {
-                          const shiftDate = new Date(shift.date);
-                          return (
-                            shift.employeeId === employee.id && 
-                            shiftDate.getDate() === day.getDate() &&
-                            shiftDate.getMonth() === day.getMonth() &&
-                            shiftDate.getFullYear() === day.getFullYear()
-                          );
-                        });
-                        
-                        // Calcular horas totales para este día
-                        let totalHours = 0;
-                        dayShifts.forEach(shift => {
-                          totalHours += calculateHoursBetween(shift.startTime, shift.endTime);
-                        });
-                        
-                        // Formatear los detalles de turnos
-                        const shiftsDetails = dayShifts.map(shift => 
-                          `${shift.startTime} - ${shift.endTime}`
-                        ).join(", ");
-                        
-                        return { totalHours, shiftsDetails };
-                      });
-                      
-                      // Calcular total de horas para la semana
-                      const totalWeeklyHours = weeklyHours.reduce(
-                        (sum, day) => sum + day.totalHours, 0
-                      );
-                      
-                      return (
-                        <tr key={employee.id} className="hover:bg-gray-50">
-                          <td className="border p-2 text-sm">
-                            {employee.name}
-                          </td>
-                          
-                          {weeklyHours.map((day, index) => (
-                            <td key={index} className="border p-2 text-center text-xs">
-                              {day.shiftsDetails ? (
-                                <div>
-                                  <div className="font-medium">{formatHours(day.totalHours)}</div>
-                                  <div className="text-gray-500 text-[0.65rem]">{day.shiftsDetails}</div>
-                                </div>
-                              ) : (
-                                <span className="text-gray-400">-</span>
-                              )}
-                            </td>
-                          ))}
-                          
-                          <td className="border p-2 text-center font-medium">
-                            {formatHours(totalWeeklyHours)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+        {/* Selector de semana */}
+        <div className="flex items-center justify-center mb-6 mt-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={goToPrevWeek}
+            className="h-8 w-8 p-0"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="mx-4 font-medium">
+            Semana: {weekRangeText}
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={goToNextWeek}
+            className="h-8 w-8 p-0"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+        
+        {/* Si no hay informe seleccionado, mostrar la grid de botones */}
+        {!selectedReport ? (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <Button 
+                variant="outline" 
+                className="h-28 flex flex-col items-center justify-center gap-2 p-2"
+                onClick={() => setSelectedReport('week-schedule')}
+              >
+                <Calendar className="h-8 w-8 text-indigo-500" />
+                <div className="text-center">Cuadrante Semanal</div>
+              </Button>
               
-              <div className="p-4 flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsOpen(false)}>
+              <Button 
+                variant="outline" 
+                className="h-28 flex flex-col items-center justify-center gap-2 p-2"
+                onClick={() => setSelectedReport('cost-report')}
+              >
+                <DollarSign className="h-8 w-8 text-amber-500" />
+                <div className="text-center">Informe de Costes</div>
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="h-28 flex flex-col items-center justify-center gap-2 p-2"
+                onClick={() => setSelectedReport('productivity-report')}
+              >
+                <BarChart2 className="h-8 w-8 text-indigo-500" />
+                <div className="text-center">Informe de Productividad</div>
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="h-28 flex flex-col items-center justify-center gap-2 p-2"
+                onClick={() => setSelectedReport('time-report')}
+              >
+                <Clock className="h-8 w-8 text-blue-500" />
+                <div className="text-center">Informe de Horas</div>
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="h-28 flex flex-col items-center justify-center gap-2 p-2"
+                onClick={() => setSelectedReport('attendance-report')}
+              >
+                <Users className="h-8 w-8 text-green-500" />
+                <div className="text-center">Informe de Asistencia</div>
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="h-28 flex flex-col items-center justify-center gap-2 p-2"
+                onClick={() => setSelectedReport('export-csv')}
+              >
+                <ClipboardList className="h-8 w-8 text-orange-500" />
+                <div className="text-center">Exportar Datos (CSV)</div>
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Mostrar el informe seleccionado */}
+            {renderSelectedReport()}
+            
+            {/* Botones de acción */}
+            <div className="flex justify-between mt-6">
+              <Button 
+                variant="outline" 
+                onClick={() => setSelectedReport(null)}
+              >
+                Volver
+              </Button>
+              
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsOpen(false)}
+                >
                   Cerrar
                 </Button>
+                
                 <Button 
                   onClick={() => {
                     // Aquí iría la funcionalidad para imprimir o exportar a PDF
@@ -159,30 +360,8 @@ export default function ExportsModal({ employees, shifts, currentDate }: Exports
                 </Button>
               </div>
             </div>
-          </TabsContent>
-          
-          <TabsContent value="reports">
-            <div className="flex flex-col gap-4 items-center justify-center py-8">
-              <p className="text-muted-foreground text-center">
-                Los informes estadísticos estarán disponibles próximamente.
-              </p>
-              <Button variant="outline" disabled>Informe de Costes</Button>
-              <Button variant="outline" disabled>Informe de Productividad</Button>
-              <Button variant="outline" disabled>Informe de Asistencia</Button>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="templates">
-            <div className="flex flex-col gap-4 items-center justify-center py-8">
-              <p className="text-muted-foreground text-center">
-                Las plantillas para exportación estarán disponibles próximamente.
-              </p>
-              <Button variant="outline" disabled>Plantilla Simple</Button>
-              <Button variant="outline" disabled>Plantilla Detallada</Button>
-              <Button variant="outline" disabled>Plantilla para Nóminas</Button>
-            </div>
-          </TabsContent>
-        </Tabs>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
