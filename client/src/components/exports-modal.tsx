@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, forwardRef, useImperativeHandle } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Employee, Shift } from "@shared/schema";
@@ -11,9 +11,17 @@ interface ExportsModalProps {
   currentDate: Date;
 }
 
-export default function ExportsModal({ employees, shifts, currentDate }: ExportsModalProps) {
+// Definimos la interfaz para los métodos expuestos a través de la referencia
+export interface ExportsModalRef {
+  openWithReport: (reportType: string) => void;
+}
+
+const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees, shifts, currentDate }, ref) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
+  
+  // Estado para controlar la semana seleccionada
+  const [selectedWeekStart, setSelectedWeekStart] = useState(() => getStartOfWeek(currentDate));
   
   // Método para abrir el modal directamente con un reporte específico
   const openWithReport = (reportType: string) => {
@@ -21,8 +29,10 @@ export default function ExportsModal({ employees, shifts, currentDate }: Exports
     setIsOpen(true);
   };
   
-  // Estado para controlar la semana seleccionada
-  const [selectedWeekStart, setSelectedWeekStart] = useState(() => getStartOfWeek(currentDate));
+  // Exponemos los métodos a través de la referencia
+  useImperativeHandle(ref, () => ({
+    openWithReport
+  }));
   
   // Función para avanzar a la siguiente semana
   const goToNextWeek = () => {
@@ -371,4 +381,10 @@ export default function ExportsModal({ employees, shifts, currentDate }: Exports
       </DialogContent>
     </Dialog>
   );
-}
+});
+
+// Nombre para la depuración
+ExportsModal.displayName = 'ExportsModal';
+
+// Exportamos el componente
+export default ExportsModal;

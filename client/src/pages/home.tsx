@@ -7,7 +7,7 @@ import { Employee, Shift, InsertShift } from "@shared/schema";
 import ScheduleTable from "@/components/schedule-table";
 import EmployeeModal from "@/components/employee-modal";
 import HelpModal from "@/components/help-modal";
-import ExportsModal from "@/components/exports-modal";
+import ExportsModal, { ExportsModalRef } from "@/components/exports-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,7 +20,7 @@ export default function Home() {
   const [isWeekViewOpen, setIsWeekViewOpen] = useState(false);
   
   // Referencia para el modal de exportaciones
-  const exportsModalRef = useRef<{ openWithReport: (reportType: string) => void } | null>(null);
+  const exportsModalRef = useRef<ExportsModalRef>(null);
   
   // Estados para gestionar los datos financieros
   const [estimatedDailySales, setEstimatedDailySales] = useState<string>('');
