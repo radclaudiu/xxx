@@ -227,7 +227,7 @@ export default function ScheduleTable({
     handleInteractionStart(employee, time);
   };
   
-  // Touch start handler
+  // Touch start handler con soporte para quitar selecciones
   const handleTouchStart = (e: React.TouchEvent, employee: Employee, time: string) => {
     // Iniciar la referencia de actualizaciones por lotes (mejora rendimiento en arrastre táctil)
     batchedSelectionsRef.current = new Map(selectedCellsByEmployee);
@@ -248,13 +248,30 @@ export default function ScheduleTable({
     setActiveEmployee(employee);
     setStartTime(time);
     
-    // Añadir la celda inicial al batch de selecciones
+    // Añadir/quitar la celda inicial al batch de selecciones
+    // Si ya está seleccionada, la quitamos para permitir "deseleccionar"
     const batch = batchedSelectionsRef.current;
     if (batch) {
       const cellSet = batch.get(employee.id) || new Set<string>();
+      const isAlreadySelected = cellSet.has(time);
+      
       if (!isCellAssigned(employee.id, time)) {
-        cellSet.add(time);
-        batch.set(employee.id, cellSet);
+        if (isAlreadySelected) {
+          // Si ya estaba seleccionado, lo quitamos (toggle)
+          cellSet.delete(time);
+        } else {
+          // Si no estaba seleccionado, lo añadimos
+          cellSet.add(time);
+        }
+        
+        // Actualizar el batch y el estado visual inmediatamente
+        if (cellSet.size > 0) {
+          batch.set(employee.id, cellSet);
+        } else {
+          batch.delete(employee.id);
+        }
+        
+        setSelectedCellsByEmployee(new Map(batch));
       }
     }
   };
@@ -308,7 +325,7 @@ export default function ScheduleTable({
     handleCellInteraction(employee, time);
   };
   
-  // Touch move handler para mostrar selecciones en tiempo real
+  // Touch move handler para mostrar selecciones en tiempo real y permitir deselección
   const handleTouchMove = (e: TouchEvent) => {
     if (!isDragging || !activeEmployee || !startTime) return;
     e.preventDefault(); // Prevenir desplazamiento de página durante el arrastre
@@ -360,6 +377,33 @@ export default function ScheduleTable({
             // Actualizar selecciones
             if (batchedSelectionsRef.current) {
               const batch = batchedSelectionsRef.current;
+              
+              // Al arrastrar de nuevo sobre una celda ya seleccionada, queremos quitarla
+              // Pero solo vamos a quitar celdas individuales, no rangos, para evitar comportamiento inesperado
+              // durante el arrastre continuo.
+              
+              // Verificar si es una celda individual (tocar y soltar, no arrastrar)
+              if (time === startTime) {
+                const selectedCells = batch.get(activeEmployee.id) || new Set<string>();
+                
+                // Si está seleccionada, quitarla
+                if (selectedCells.has(time) && !isCellAssigned(activeEmployee.id, time)) {
+                  selectedCells.delete(time);
+                  
+                  // Actualizar batch
+                  if (selectedCells.size > 0) {
+                    batch.set(activeEmployee.id, selectedCells);
+                  } else {
+                    batch.delete(activeEmployee.id);
+                  }
+                  
+                  // Actualizar inmediatamente para feedback visual en tiempo real
+                  setSelectedCellsByEmployee(new Map(batch));
+                  return; // Terminar después de quitar celda
+                }
+              }
+              
+              // Comportamiento de selección normal para arrastre a nuevas celdas
               const startIndex = timeSlots.indexOf(startTime);
               const currentIndex = timeSlots.indexOf(time);
               
@@ -387,7 +431,7 @@ export default function ScheduleTable({
                   batch.set(activeEmployee.id, selectedCells);
                   
                   // Actualizar inmediatamente para feedback visual en tiempo real
-                  setSelectedCellsByEmployee(new Map(batchedSelectionsRef.current));
+                  setSelectedCellsByEmployee(new Map(batch));
                 }
               }
             }
