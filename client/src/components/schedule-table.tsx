@@ -194,8 +194,10 @@ export default function ScheduleTable({
     // Toggle the cell selection
     if (selectedCells.has(time)) {
       selectedCells.delete(time);
+      console.log('Quitando selección de celda:', time); // Debug
     } else {
       selectedCells.add(time);
+      console.log('Añadiendo selección de celda:', time); // Debug
     }
     
     // Update the Map with the modified Set
@@ -227,50 +229,41 @@ export default function ScheduleTable({
     handleInteractionStart(employee, time);
   };
   
-  // Touch start handler con soporte para quitar selecciones
+  // Touch start handler simplificado para quitar selecciones de forma más confiable
   const handleTouchStart = (e: React.TouchEvent, employee: Employee, time: string) => {
-    // Iniciar la referencia de actualizaciones por lotes (mejora rendimiento en arrastre táctil)
-    batchedSelectionsRef.current = new Map(selectedCellsByEmployee);
+    // No permitir selección en celdas ya asignadas
+    if (isCellAssigned(employee.id, time)) return;
     
-    // Registramos el tiempo de la primera actualización
-    lastTouchUpdateRef.current = Date.now();
-    
-    // Comenzamos el seguimiento de la selección
+    // Detener eventos de propagación
     const touchEvent = e.nativeEvent;
     touchEvent.stopPropagation();
-    
-    // Capturar el evento touch para que otros handlers no lo procesen
     touchEvent.preventDefault();
     
-    // Iniciar selección y marcar el estado de arrastre
+    // Iniciar estado de arrastre
     mouseDownRef.current = true;
     setIsDragging(true);
     setActiveEmployee(employee);
     setStartTime(time);
     
-    // Añadir/quitar la celda inicial al batch de selecciones
-    // Si ya está seleccionada, la quitamos para permitir "deseleccionar"
-    const batch = batchedSelectionsRef.current;
-    if (batch) {
-      const cellSet = batch.get(employee.id) || new Set<string>();
-      const isAlreadySelected = cellSet.has(time);
+    // Verificar si la celda ya está seleccionada
+    const isSelected = isCellSelected(employee.id, time);
+    console.log(`Celda ${time} para empleado ${employee.id} está seleccionada: ${isSelected}`);
+    
+    if (isSelected) {
+      // ELIMINAR la selección - usar la función toggleSingleCell directamente
+      // que ya contiene la lógica necesaria para quitar la celda
+      toggleSingleCell(employee, time);
+    } else {
+      // Para nuevas selecciones, inicializar batch para mejor rendimiento en arrastre
+      batchedSelectionsRef.current = new Map(selectedCellsByEmployee);
+      lastTouchUpdateRef.current = Date.now();
       
-      if (!isCellAssigned(employee.id, time)) {
-        if (isAlreadySelected) {
-          // Si ya estaba seleccionado, lo quitamos (toggle)
-          cellSet.delete(time);
-        } else {
-          // Si no estaba seleccionado, lo añadimos
-          cellSet.add(time);
-        }
-        
-        // Actualizar el batch y el estado visual inmediatamente
-        if (cellSet.size > 0) {
-          batch.set(employee.id, cellSet);
-        } else {
-          batch.delete(employee.id);
-        }
-        
+      // Añadir la celda inicial
+      const batch = batchedSelectionsRef.current;
+      if (batch) {
+        const cellSet = batch.get(employee.id) || new Set<string>();
+        cellSet.add(time);
+        batch.set(employee.id, cellSet);
         setSelectedCellsByEmployee(new Map(batch));
       }
     }
