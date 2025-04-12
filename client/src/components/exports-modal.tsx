@@ -68,10 +68,10 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
         return (
           <div className="rounded-md border">
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
+              <table className="min-w-full w-max-content table-auto border-collapse">
                 <thead>
                   <tr>
-                    <th className="border p-1 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="border p-1 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase sticky left-0 z-10">
                       Empleado
                     </th>
                     {dayNames.map((day, index) => (
@@ -120,7 +120,7 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                     
                     return (
                       <tr key={employee.id} className="hover:bg-gray-50">
-                        <td className="border p-1 text-xs font-medium">
+                        <td className="border p-1 text-xs font-medium sticky left-0 z-10 bg-white">
                           {employee.name}
                         </td>
                         
@@ -300,7 +300,7 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
           Exportaciones
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl w-[90vw] max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl w-[95vw] md:w-[90vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Exportaciones e Informes</DialogTitle>
         </DialogHeader>
@@ -399,7 +399,7 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
         ) : (
           <>
             {/* Mostrar el informe seleccionado */}
-            <div className="max-h-[60vh] overflow-y-auto">
+            <div className="max-h-[65vh] overflow-y-auto">
               {renderSelectedReport()}
             </div>
             
