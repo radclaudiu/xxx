@@ -292,14 +292,18 @@ export default function ScheduleTable({
       return; // No prevenir el comportamiento por defecto para permitir desplazamiento con dos dedos
     }
     
-    // Para un solo dedo, prevenir el desplazamiento durante la selección
-    e.preventDefault();
-    
-    if (!isDragging || !activeEmployee) return;
-    
-    // Get touch position
-    const touch = e.touches[0];
-    const element = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement;
+    // Solo prevenir el comportamiento predeterminado si estamos en modo selección/arrastre
+    if (isDragging && activeEmployee) {
+      // Para un solo dedo, prevenir el desplazamiento durante la selección activa
+      e.preventDefault();
+      
+      // Get touch position
+      const touch = e.touches[0];
+      const element = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement;
+    } else {
+      // Si no estamos arrastrando, permitir el comportamiento normal (scroll)
+      return;
+    }
     
     // Check if touch is over a cell
     if (element && element.tagName === 'TD') {
@@ -631,15 +635,18 @@ export default function ScheduleTable({
       <div 
         className="overflow-x-auto border border-neutral-200 rounded select-none w-full"
         style={{ 
-          touchAction: "manipulation", // Permite gestos como pellizcar para zoom pero bloquea paneos
+          touchAction: "pan-y pinch-zoom", // Permitir scroll vertical y pellizcar para zoom
           WebkitOverflowScrolling: "touch", // Mejorar el desplazamiento suave
           width: "100%",
           maxWidth: "100vw"
         }}
         onTouchMove={handleTouchMove}
         onTouchStart={(e) => {
-          // Solo detener la propagación para eventos de un dedo
+          // Solo detener la propagación para eventos de un dedo en celdas, no en el contenedor
           if (e.touches.length === 1) {
+            // No detener propagación aquí para permitir scroll normal con un dedo
+          } else if (e.touches.length === 2) {
+            // Para dos dedos, permitir desplazamiento/zoom
             e.stopPropagation();
           }
         }}>
@@ -955,7 +962,7 @@ export default function ScheduleTable({
                           MozUserSelect: 'none',     // Firefox
                           msUserSelect: 'none',      // IE/Edge
                           userSelect: 'none',        // Standard
-                          touchAction: 'none',       // Prevenir desplazamiento en celdas
+                          touchAction: 'none',       // Prevenir desplazamiento en celdas individuales
                           WebkitTapHighlightColor: 'transparent' // Quitar resaltado al tocar
                         }}
                         onMouseDown={(e) => {
