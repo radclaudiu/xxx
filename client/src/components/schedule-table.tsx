@@ -1,27 +1,27 @@
-import { useMemo, useState, useEffect, useRef } from "react";
-import { Employee, Shift } from "@shared/schema";
+import React, { useState, useEffect, useRef } from 'react';
+import { Button } from '@/components/ui/button';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
+import { toast } from '@/hooks/use-toast';
+import { Info, Save, Edit } from 'lucide-react';
+import ExportsModal from './exports-modal';
 import { 
   formatDateForAPI, 
   generateTimeSlots, 
   isTimeBetween, 
-  calculateHoursBetween, 
-  formatHours,
-  convertTimeToMinutes,
+  convertTimeToMinutes, 
+  calculateHoursBetween,
   getStartOfWeek,
   getEndOfWeek,
   isInSameWeek
-} from "@/lib/date-helpers";
-import { Edit, Save, Clock, DollarSign, Trash, Info } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import ExportsModal from "@/components/exports-modal";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useToast } from "@/hooks/use-toast";
+} from '@/lib/date-helpers';
+import { Employee, Shift } from '@shared/schema';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ScheduleTableProps {
   employees: Employee[];
@@ -35,37 +35,35 @@ interface ScheduleTableProps {
 
 export default function ScheduleTable({ 
   employees, 
-  shifts, 
-  date, 
+  shifts,
+  date,
   onSaveShifts,
   onDeleteShift,
   estimatedDailySales = 0,
   hourlyEmployeeCost = 0
 }: ScheduleTableProps) {
-  // Para mostrar notificaciones
-  const { toast } = useToast();
-  // Estado para controlar el tamaño de las celdas
-  const [cellSize, setCellSize] = useState(30);
+  const isMobile = useIsMobile();
   
-  // Estados para controlar los rangos de horario
-  const [startHour, setStartHour] = useState(8); // 8:00 AM por defecto
-  const [endHour, setEndHour] = useState(26); // 02:00 AM del día siguiente (representado como 26:00)
+  // Cell size controls
+  const [cellSize, setCellSize] = useState(() => {
+    // En móviles, usar células más grandes por defecto para facilitar el toque
+    return isMobile ? 30 : 28;
+  });
   
-  // Funciones para aumentar y disminuir tamaño
-  const increaseCellSize = () => setCellSize(prev => Math.min(prev + 5, 50)); // Máximo 50px
-  const decreaseCellSize = () => setCellSize(prev => Math.max(prev - 5, 15)); // Mínimo 15px
+  const increaseCellSize = () => {
+    setCellSize(prev => Math.min(prev + 2, 40));
+  };
   
-  // Efecto para actualizar las variables CSS cuando cambia el tamaño de celda
-  useEffect(() => {
-    document.documentElement.style.setProperty('--cell-size', `${cellSize}px`);
-  }, [cellSize]);
+  const decreaseCellSize = () => {
+    setCellSize(prev => Math.max(prev - 2, 20));
+  };
   
-  // Genera los slots de tiempo basados en las horas de inicio y fin configuradas
-  const timeSlots = useMemo(() => {
-    // Genera todos los slots en un solo rango, independientemente de si cruza medianoche
-    // Si endHour >= 24, generateTimeSlots manejará correctamente la generación
-    return generateTimeSlots(startHour, endHour);
-  }, [startHour, endHour]); // Recalcular cuando cambien los rangos
+  // Rango horario configurable
+  const [startHour, setStartHour] = useState(8); // Por defecto 8:00
+  const [endHour, setEndHour] = useState(22);    // Por defecto 22:00
+  
+  // Generar intervalos de tiempo basados en el rango horario configurado
+  const timeSlots = generateTimeSlots(startHour, endHour);
   
   // Format date for API
   const formattedDate = formatDateForAPI(date);
@@ -84,9 +82,12 @@ export default function ScheduleTable({
   const [isDragging, setIsDragging] = useState(false);
   const [startTime, setStartTime] = useState<string | null>(null);
   const [activeEmployee, setActiveEmployee] = useState<Employee | null>(null);
-  // Estado para forzar re-renderizado cuando cambian las selecciones en tiempo real
-  const [updateCounter, setUpdateCounter] = useState(0);
   const mouseDownRef = useRef(false);
+  
+  // Variables para controlar actualizaciones durante arrastre táctil
+  const lastTouchUpdateRef = useRef<number>(0);
+  const batchedSelectionsRef = useRef<Map<number, Set<string>> | null>(null);
+  const pendingUpdateRef = useRef<NodeJS.Timeout | null>(null);
   
   // Function to check if a cell should be marked as assigned
   const isCellAssigned = (employeeId: number, time: string) => {
@@ -148,6 +149,18 @@ export default function ScheduleTable({
       mouseDownRef.current = false;
       setStartTime(null);
       setActiveEmployee(null);
+      
+      // Al terminar el arrastre, aplicamos las selecciones en batch si las hay
+      if (batchedSelectionsRef.current) {
+        setSelectedCellsByEmployee(batchedSelectionsRef.current);
+        batchedSelectionsRef.current = null;
+      }
+      
+      // Limpiar cualquier actualización pendiente
+      if (pendingUpdateRef.current) {
+        clearTimeout(pendingUpdateRef.current);
+        pendingUpdateRef.current = null;
+      }
     };
     
     // Prevent text selection during dragging
@@ -193,8 +206,6 @@ export default function ScheduleTable({
     }
     
     setSelectedCellsByEmployee(newSelectedCellsByEmployee);
-    // Incrementar contador para forzar actualización inmediata de la UI
-    setUpdateCounter(prev => prev + 1);
   };
   
   // Handler for starting an interaction (mouse or touch)
@@ -218,13 +229,11 @@ export default function ScheduleTable({
   
   // Touch start handler
   const handleTouchStart = (e: React.TouchEvent, employee: Employee, time: string) => {
-    // Registramos la posición inicial del toque para seguimiento
-    const touch = e.touches[0];
-    const startX = touch.clientX;
-    const startY = touch.clientY;
+    // Iniciar la referencia de actualizaciones por lotes (mejora rendimiento en arrastre táctil)
+    batchedSelectionsRef.current = new Map(selectedCellsByEmployee);
     
-    // Almacenamos estas posiciones para comparar durante el movimiento
-    mouseDownRef.current = true;
+    // Registramos el tiempo de la primera actualización
+    lastTouchUpdateRef.current = Date.now();
     
     // Comenzamos el seguimiento de la selección
     const touchEvent = e.nativeEvent;
@@ -234,11 +243,20 @@ export default function ScheduleTable({
     touchEvent.preventDefault();
     
     // Iniciar selección y marcar el estado de arrastre
+    mouseDownRef.current = true;
     setIsDragging(true);
     setActiveEmployee(employee);
+    setStartTime(time);
     
-    // Llamar a la función que maneja el inicio de la interacción
-    handleInteractionStart(employee, time);
+    // Añadir la celda inicial al batch de selecciones
+    const batch = batchedSelectionsRef.current;
+    if (batch) {
+      const cellSet = batch.get(employee.id) || new Set<string>();
+      if (!isCellAssigned(employee.id, time)) {
+        cellSet.add(time);
+        batch.set(employee.id, cellSet);
+      }
+    }
   };
   
   // Handler for cell interaction during drag
@@ -273,43 +291,14 @@ export default function ScheduleTable({
           }
         }
         
-        // Optimización para prevenir parpadeos:
-        // 1. Comparar la selección actual con la nueva selección
-        const currentCells = selectedCellsByEmployee.get(employee.id) || new Set<string>();
-        
-        // 2. Verificar si realmente hay cambios antes de actualizar el estado
-        let hasChanges = newSelectedCells.size !== currentCells.size;
-        
-        if (!hasChanges && newSelectedCells.size > 0) {
-          // Comparar contenido si tienen el mismo tamaño
-          for (const time of newSelectedCells) {
-            if (!currentCells.has(time)) {
-              hasChanges = true;
-              break;
-            }
-          }
+        // Update with the new selection
+        if (newSelectedCells.size > 0) {
+          newSelectedCellsByEmployee.set(employee.id, newSelectedCells);
+        } else {
+          newSelectedCellsByEmployee.delete(employee.id);
         }
         
-        // 3. Solo actualizar si hay cambios reales
-        if (hasChanges) {
-          if (newSelectedCells.size > 0) {
-            newSelectedCellsByEmployee.set(employee.id, newSelectedCells);
-          } else {
-            newSelectedCellsByEmployee.delete(employee.id);
-          }
-          
-          // Usar función de actualización para evitar condiciones de carrera
-          setSelectedCellsByEmployee(prev => {
-            const result = new Map(prev);
-            if (newSelectedCells.size > 0) {
-              result.set(employee.id, newSelectedCells);
-            } else {
-              result.delete(employee.id);
-            }
-            return result;
-          });
-        }
-        setUpdateCounter(prev => prev + 1);
+        setSelectedCellsByEmployee(newSelectedCellsByEmployee);
       }
     }
   };
@@ -319,59 +308,62 @@ export default function ScheduleTable({
     handleCellInteraction(employee, time);
   };
   
-  // Touch move handler para manejar el arrastre sobre múltiples celdas
+  // Touch move handler optimizado para evitar parpadeos
   const handleTouchMove = (e: TouchEvent) => {
-    if (!isDragging || !activeEmployee) return;
+    if (!isDragging || !activeEmployee || !startTime) return;
     e.preventDefault(); // Prevenir desplazamiento de página durante el arrastre
+    
+    // Aplicar throttling para limitar la frecuencia de actualizaciones
+    const now = Date.now();
+    if (now - lastTouchUpdateRef.current < 150) {
+      return; // Limitar a actualizar máximo una vez cada 150ms
+    }
+    
+    lastTouchUpdateRef.current = now;
     
     // Obtener la posición actual del toque
     const touch = e.touches[0];
     const x = touch.clientX;
     const y = touch.clientY;
     
-    // Encontrar elementos en la posición y a su alrededor
-    // Esto nos permite encontrar celdas incluso si el dedo se sale ligeramente
+    // Usar offsets para detectar elementos incluso si el dedo se desvía ligeramente
     const offsets = [
-      [0, 0],    // Centro (posición exacta)
-      [-5, 0],   // Un poco a la izquierda
-      [5, 0],    // Un poco a la derecha
-      [0, -10],  // Un poco arriba (para volver a la fila)
-      [0, 10],   // Un poco abajo (para volver a la fila)
+      [0, 0],     // Centro
+      [-5, 0],    // Izquierda
+      [5, 0],     // Derecha
+      [0, -10],   // Arriba
+      [0, 10],    // Abajo
       [-10, -10], // Diagonal superior izquierda
       [10, -10],  // Diagonal superior derecha
       [-10, 10],  // Diagonal inferior izquierda
       [10, 10],   // Diagonal inferior derecha
     ];
     
-    // Intentar encontrar una celda en alguna de estas posiciones
+    // Buscar una celda válida bajo el dedo
     for (const [offsetX, offsetY] of offsets) {
       const elementUnderTouch = document.elementFromPoint(x + offsetX, y + offsetY);
       
-      // Si encontramos una celda de la tabla, procesarla
-      if (elementUnderTouch && elementUnderTouch.tagName === 'TD' && elementUnderTouch.hasAttribute('data-cell-id')) {
+      if (elementUnderTouch?.tagName === 'TD' && elementUnderTouch.hasAttribute('data-cell-id')) {
         const cellId = elementUnderTouch.getAttribute('data-cell-id');
         if (cellId) {
           const [empId, time] = cellId.split('-');
           const empIdNum = parseInt(empId, 10);
           
-          // Solo procesar si es para el mismo empleado que comenzó el arrastre
+          // Sólo procesar si es la misma fila/empleado
           if (empIdNum === activeEmployee.id) {
-            // Usar un modo de selección más fino, sin alterar selecciones existentes
-            if (startTime) {
+            // Actualizar en el batch, no directamente en el estado
+            if (batchedSelectionsRef.current) {
+              const batch = batchedSelectionsRef.current;
               const startIndex = timeSlots.indexOf(startTime);
               const currentIndex = timeSlots.indexOf(time);
               
               if (startIndex >= 0 && currentIndex >= 0) {
-                // En lugar de restablecer todas las selecciones, solo modificamos las que están entre
-                // startTime y time, preservando las demás
-                const newSelectedCellsByEmployee = new Map(selectedCellsByEmployee);
-                const selectedCells = newSelectedCellsByEmployee.get(activeEmployee.id) || new Set<string>();
+                const selectedCells = batch.get(activeEmployee.id) || new Set<string>();
                 
-                // Determinar rango a seleccionar
+                // Seleccionar rango
                 const minIdx = Math.min(startIndex, currentIndex);
                 const maxIdx = Math.max(startIndex, currentIndex);
                 
-                // Solo modificar celdas en este rango
                 for (let i = minIdx; i <= maxIdx; i++) {
                   const timeSlot = timeSlots[i];
                   if (!isCellAssigned(activeEmployee.id, timeSlot)) {
@@ -379,36 +371,23 @@ export default function ScheduleTable({
                   }
                 }
                 
-                // Optimización para prevenir parpadeos: comparar antes de actualizar
-                const currentCells = selectedCellsByEmployee.get(activeEmployee.id) || new Set<string>();
-                let hasChanges = selectedCells.size !== currentCells.size;
-                
-                if (!hasChanges && selectedCells.size > 0) {
-                  // Verificar el contenido solo si tienen el mismo tamaño
-                  // Convertir a Array para evitar problemas de compatibilidad
-                  const selectedArray = Array.from(selectedCells);
-                  for (const time of selectedArray) {
-                    if (!currentCells.has(time)) {
-                      hasChanges = true;
-                      break;
-                    }
+                if (selectedCells.size > 0) {
+                  batch.set(activeEmployee.id, selectedCells);
+                  
+                  // Programar una actualización visual con debounce
+                  if (pendingUpdateRef.current) {
+                    clearTimeout(pendingUpdateRef.current);
                   }
-                }
-                
-                // Solo actualizar el estado si hay cambios reales
-                if (hasChanges && selectedCells.size > 0) {
-                  newSelectedCellsByEmployee.set(activeEmployee.id, selectedCells);
-                  // Usar función actualizadora para evitar condiciones de carrera
-                  setSelectedCellsByEmployee(prev => {
-                    const newMap = new Map(prev);
-                    newMap.set(activeEmployee.id, selectedCells);
-                    return newMap;
-                  });
-                  // No actualizamos el contador con cada pequeño cambio, solo al final del arrastre
+                  
+                  pendingUpdateRef.current = setTimeout(() => {
+                    if (batchedSelectionsRef.current) {
+                      setSelectedCellsByEmployee(new Map(batchedSelectionsRef.current));
+                    }
+                  }, 200); // Actualizar visualmente cada 200ms durante el arrastre
                 }
               }
             }
-            return; // Salir después de encontrar una celda válida
+            return; // Terminar después de encontrar una celda válida
           }
         }
       }
@@ -424,7 +403,7 @@ export default function ScheduleTable({
     return () => {
       document.removeEventListener('touchmove', handleTouchMove);
     };
-  }, [isDragging, activeEmployee]);
+  }, [isDragging, activeEmployee, startTime]);
   
   // Check if a cell is selected
   const isCellSelected = (employeeId: number, time: string) => {
@@ -508,8 +487,6 @@ export default function ScheduleTable({
       
       // Clear selections after saving
       setSelectedCellsByEmployee(new Map());
-      // Incrementar contador para forzar actualización inmediata de la UI
-      setUpdateCounter(prev => prev + 1);
     }
   };
   
@@ -1076,350 +1053,131 @@ export default function ScheduleTable({
                           // No activar selección si la celda ya tiene un turno asignado
                           if (!isAssigned) {
                             handleMouseDown(employee, time);
-                          }
-                        }}
-                        onMouseEnter={() => handleMouseEnter(employee, time)}
-                        onTouchStart={(e) => {
-                          // Si la celda ya tiene un turno asignado, permitir el comportamiento normal
-                          if (isAssigned) return;
-                          
-                          // Para celdas sin asignar, capturar el evento e iniciar la selección
-                          e.stopPropagation();
-                          handleTouchStart(e, employee, time);
-                        }}
-                        onTouchMove={(e) => {
-                          // Si no estamos en modo de selección, permitir el comportamiento normal
-                          if (!isDragging || !activeEmployee || isAssigned) return;
-                          
-                          // Para selección activa, prevenir desplazamiento y activar la celda
-                          if (activeEmployee.id === employee.id) {
+                          } else if (isFirstCell && shift && onDeleteShift) {
+                            // Mostrar opciones contextuales si es un turno existente
                             e.preventDefault();
-                            e.stopPropagation();
-                            
-                            // Obtener el elemento actual bajo el dedo
-                            const touch = e.touches[0];
-                            const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
-                            
-                            // Si el elemento tiene un atributo data-cell-id, extraer employee-id y time
-                            const cellId = elementUnderTouch?.getAttribute('data-cell-id');
-                            if (cellId) {
-                              const [empId, cellTime] = cellId.split('-');
-                              if (empId && cellTime) {
-                                const touchedEmployee = employees.find(e => e.id === parseInt(empId));
-                                if (touchedEmployee) {
-                                  handleMouseEnter(touchedEmployee, cellTime);
-                                }
-                              }
-                            } else {
-                              // Si no tenemos un data-cell-id, usar la celda actual
-                              handleMouseEnter(employee, time);
+                            if (window.confirm(`¿Desea eliminar el turno de ${shift.startTime} a ${shift.endTime}?`)) {
+                              handleDeleteShift(shift);
                             }
                           }
                         }}
-                        onTouchEnd={(e) => {
-                          // Limpiar estado
-                          if (isDragging && activeEmployee && activeEmployee.id === employee.id) {
-                            setIsDragging(false);
+                        onMouseEnter={() => {
+                          if (!isAssigned) {
+                            handleMouseEnter(employee, time);
+                          }
+                        }}
+                        onTouchStart={(e) => {
+                          // No activar selección si la celda ya tiene un turno asignado
+                          if (!isAssigned) {
+                            handleTouchStart(e, employee, time);
+                          } else if (isFirstCell && shift && onDeleteShift) {
+                            // Mostrar opciones contextuales si es un turno existente
+                            e.preventDefault();
+                            // Solo una confirmación simple para eliminación en móvil
+                            if (window.confirm(`¿Desea eliminar el turno de ${shift.startTime} a ${shift.endTime}?`)) {
+                              handleDeleteShift(shift);
+                            }
                           }
                         }}
                       >
-                        {isSelected && !isAssigned && (
-                          <div className="flex justify-center items-center h-full">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          </div>
-                        )}
                         {isFirstCell && shift && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <button 
-                                className="text-xs text-center font-semibold hover:bg-blue-100 w-full h-full cursor-pointer bg-transparent border-none flex items-center justify-center"
-                                onTouchStart={(e) => {
-                                  // Prevenir la propagación para eventos táctiles
-                                  e.stopPropagation();
-                                }}
-                                onTouchEnd={(e) => {
-                                  e.stopPropagation();
-                                }}
-                                onClick={(e) => {
-                                  // Detener la propagación para evitar que active el comportamiento de selección
-                                  e.stopPropagation();
-                                }}
-                              >
-                                <span className="pointer-events-none select-none">{shift.startTime} - {shift.endTime}</span>
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="z-50 bg-white p-2 rounded-lg border shadow-lg">
-                              <DropdownMenuItem 
-                                className="text-red-600 cursor-pointer flex items-center gap-2 text-xs p-3"
-                                onClick={() => handleDeleteShift(shift)}
-                              >
-                                <Trash className="h-3.5 w-3.5" />
-                                Eliminar turno
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <div 
+                            className="flex items-center justify-center h-full w-full overflow-hidden"
+                            style={{
+                              fontSize: "0.55rem",
+                              fontWeight: "bold",
+                              color: "#1565C0",
+                              whiteSpace: "nowrap",
+                              textOverflow: "ellipsis",
+                              padding: "0 2px"
+                            }}
+                          >
+                            {`${shift.startTime} - ${shift.endTime}`}
+                          </div>
                         )}
                       </td>
                     );
-                  }).filter(Boolean); // Filtrar los elementos null
+                  });
                 })()}
               </tr>
             ))}
             
-
-            {/* Fila de Horas Diarias */}
-            <tr className="daily-hours-row">
-              <td 
-                className="border-b border-r border-neutral-200 p-0 bg-blue-50"
-                style={{
-                  position: 'sticky',
-                  left: 0,
-                  zIndex: 10,
-                  backgroundColor: '#EBF5FF',
-                  boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
-                  height: `${cellSize}px`,
-                  lineHeight: `${cellSize}px`,
-                  minWidth: "150px",
-                  width: "150px"
-                }}
-              >
-                <div className="flex justify-center items-center h-full gap-1">
-                  <Clock className="h-3 w-3 text-blue-600" />
-                  <div className="text-[0.5rem] font-semibold text-blue-700">Horas Diarias</div>
-                </div>
-              </td>
-              
-              {/* Una celda por cada intervalo de tiempo */}
-              {timeSlots.map((time) => {
-                // Para esta fila, necesitamos mostrar las horas diarias para cada empleado
-                // Calculamos el total para cada empleado cuando es la hora de inicio del día (8:00)
-                // y mostramos un guión en las demás celdas para mantener la consistencia visual
-                
-                if (time === "8:00") {
-                  // Mostrar la suma total de horas para cada empleado
-                  return (
-                    <td 
-                      key={`daily-hours-${time}`}
-                      colSpan={timeSlots.length} // Abarca todas las columnas de tiempo
-                      className="border-b border-r border-neutral-200 p-0 text-center bg-blue-50"
-                      style={{
-                        height: `${cellSize}px`,
-                        lineHeight: `${cellSize}px`,
-                        boxSizing: "border-box"
-                      }}
-                    >
-                      <div className="flex justify-center items-center h-full">
-                        {(() => {
-                          // Calcular el total de horas trabajadas por todos los empleados
-                          let totalDailyHours = 0;
-                          
-                          // Primero, contar las horas ya guardadas en turnos para todos los empleados
-                          shifts.forEach(shift => {
-                            if (shift.date === formatDateForAPI(date)) {
-                              totalDailyHours += calculateHoursBetween(shift.startTime, shift.endTime);
-                            }
-                          });
-                          
-                          // Ahora, contar las horas en selecciones actuales (no guardadas) para todos los empleados
-                          // Convertir Map.entries() a Array para iterar de manera compatible con todas las versiones de TypeScript
-                          Array.from(selectedCellsByEmployee.entries()).forEach(([employeeId, selectedTimes]) => {
-                            if (selectedTimes.size > 0) {
-                              // Convertir a array y ordenar por tiempo
-                              const sortedTimes = Array.from(selectedTimes).sort((a, b) => {
-                                return convertTimeToMinutes(a as string) - convertTimeToMinutes(b as string);
-                              });
-                              
-                              // Agrupar tiempos consecutivos
-                              let currentGroup: string[] = [sortedTimes[0] as string];
-                              
-                              for (let i = 1; i < sortedTimes.length; i++) {
-                                const prevTime = currentGroup[currentGroup.length - 1];
-                                const currTime = sortedTimes[i] as string;
-                                
-                                // Verificar si los tiempos son consecutivos
-                                const prevIndex = timeSlots.indexOf(prevTime);
-                                const currIndex = timeSlots.indexOf(currTime);
-                                
-                                if (currIndex - prevIndex === 1) {
-                                  // Tiempos consecutivos, agregar al grupo actual
-                                  currentGroup.push(currTime);
-                                } else {
-                                  // Tiempos no consecutivos, calcular horas para el grupo actual
-                                  const startTime = currentGroup[0];
-                                  const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
-                                  // Para el tiempo final, necesitamos el siguiente slot después del último
-                                  const endTime = lastTimeIndex + 1 < timeSlots.length ? 
-                                                  timeSlots[lastTimeIndex + 1] : 
-                                                  currentGroup[currentGroup.length - 1];
-                                  
-                                  // Sumar horas de este grupo
-                                  totalDailyHours += calculateHoursBetween(startTime, endTime);
-                                  
-                                  // Iniciar nuevo grupo
-                                  currentGroup = [currTime];
-                                }
-                              }
-                              
-                              // Procesar el último grupo
-                              if (currentGroup.length > 0) {
-                                const startTime = currentGroup[0];
-                                const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
-                                const endTime = lastTimeIndex + 1 < timeSlots.length ? 
-                                                timeSlots[lastTimeIndex + 1] : 
-                                                currentGroup[currentGroup.length - 1];
-                                
-                                // Sumar horas del último grupo
-                                totalDailyHours += calculateHoursBetween(startTime, endTime);
-                              }
-                            }
-                          });
-                          
-                          return (
-                            <span className="text-xl font-bold text-blue-700">{formatHours(totalDailyHours)}</span>
-                          );
-                        })()}
-                      </div>
-                    </td>
-                  );
-                } else {
-                  // Para las demás celdas, retornar null porque ya están cubiertas por el colSpan
-                  return null;
-                }
-              }).filter(Boolean)}
-            </tr>
-            
-            {/* Fila de análisis financiero */}
-            {(estimatedDailySales > 0 || hourlyEmployeeCost > 0) && (
-              <tr className="financial-analysis-row">
+            {/* Fila final con resumen de costos */}
+            {hourlyEmployeeCost > 0 && estimatedDailySales > 0 && (
+              <tr className="totals-row">
                 <td 
-                  className="border-b border-r border-neutral-200 p-0 bg-green-50"
+                  className="border-t border-r border-neutral-200 p-1 bg-neutral-50 font-medium text-xs"
                   style={{
                     position: 'sticky',
                     left: 0,
                     zIndex: 10,
-                    backgroundColor: '#f0fdf4',
+                    backgroundColor: 'white',
                     boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
                     height: `${cellSize}px`,
-                    lineHeight: `${cellSize}px`,
-                    minWidth: "150px",
-                    width: "150px"
+                    width: "150px",
                   }}
                 >
-                  <div className="flex justify-center items-center h-full gap-1">
-                    <DollarSign className="h-3 w-3 text-green-600" />
-                    <div className="text-[0.5rem] font-semibold text-green-700">Análisis Financiero</div>
+                  <div className="flex justify-between items-center">
+                    <span>Costo (% Ventas)</span>
                   </div>
                 </td>
                 
-                <td 
-                  colSpan={timeSlots.length}
-                  className="border-b border-r border-neutral-200 p-2 text-left bg-green-50"
-                  style={{
-                    height: `${cellSize}px`,
-                    boxSizing: "border-box"
-                  }}
-                >
-                  {(() => {
-                    // Calcular las horas totales de todos los empleados para este día
-                    let totalHours = 0;
-                    
-                    // Contar turnos guardados
-                    shifts.forEach(shift => {
-                      if (shift.date === formatDateForAPI(date)) {
-                        totalHours += calculateHoursBetween(shift.startTime, shift.endTime);
-                      }
-                    });
-                    
-                    // Contar selecciones actuales no guardadas
-                    // Usar Array.from para compatibilidad con versiones anteriores de TypeScript
-                    Array.from(selectedCellsByEmployee.entries()).forEach(([employeeId, selectedTimes]) => {
-                      if (selectedTimes.size === 0) return;
-                      
-                      // Convertir tiempos seleccionados a array y ordenar
-                      const sortedTimes = Array.from(selectedTimes).sort((a, b) => {
-                        return convertTimeToMinutes(a as string) - convertTimeToMinutes(b as string);
-                      });
-                      
-                      if (sortedTimes.length === 0) return;
-                      
-                      // Agrupar tiempos consecutivos
-                      let currentGroup: string[] = [sortedTimes[0] as string];
-                      
-                      for (let i = 1; i < sortedTimes.length; i++) {
-                        const prevTime = currentGroup[currentGroup.length - 1];
-                        const currTime = sortedTimes[i] as string;
-                        
-                        // Verificar si los tiempos son consecutivos
-                        const prevIndex = timeSlots.indexOf(prevTime);
-                        const currIndex = timeSlots.indexOf(currTime);
-                        
-                        if (currIndex - prevIndex === 1) {
-                          // Tiempos consecutivos, agregar al grupo actual
-                          currentGroup.push(currTime);
-                        } else {
-                          // Tiempos no consecutivos, calcular horas para el grupo actual
-                          const startTime = currentGroup[0];
-                          const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
-                          // Para el tiempo final, necesitamos el siguiente slot después del último
-                          const endTime = lastTimeIndex + 1 < timeSlots.length ? 
-                                          timeSlots[lastTimeIndex + 1] : 
-                                          currentGroup[currentGroup.length - 1];
-                          
-                          // Sumar horas de este grupo
-                          totalHours += calculateHoursBetween(startTime, endTime);
-                          
-                          // Iniciar nuevo grupo
-                          currentGroup = [currTime];
-                        }
-                      }
-                      
-                      // Procesar el último grupo
-                      if (currentGroup.length > 0) {
-                        const startTime = currentGroup[0];
-                        const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
-                        const endTime = lastTimeIndex + 1 < timeSlots.length ? 
-                                        timeSlots[lastTimeIndex + 1] : 
-                                        currentGroup[currentGroup.length - 1];
-                        
-                        // Sumar horas del último grupo
-                        totalHours += calculateHoursBetween(startTime, endTime);
-                      }
-                    });
-                    
-                    // Calcular coste total de personal
-                    const totalLaborCost = totalHours * hourlyEmployeeCost;
-                    
-                    // Calcular porcentaje de ventas destinado a personal
-                    const laborCostPercentage = estimatedDailySales > 0 
-                      ? (totalLaborCost / estimatedDailySales) * 100 
-                      : 0;
-                    
-                    return (
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="bg-white rounded-md p-2 shadow-sm">
-                          <div className="text-xs text-gray-500 mb-1">Ventas Estimadas:</div>
-                          <div className="text-sm font-bold text-green-700">€{estimatedDailySales.toFixed(2)}</div>
+                {timeSlots.map((time) => {
+                  // Calcular total de empleados en este tiempo
+                  const employeeCount = shifts.filter(shift => 
+                    shift.date === formatDateForAPI(date) && 
+                    isTimeBetween(time, shift.startTime, shift.endTime)
+                  ).length;
+                  
+                  // Costo por 15 minutos (0.25 horas)
+                  const cost = employeeCount * hourlyEmployeeCost * 0.25;
+                  
+                  // Costo como porcentaje de ventas diarias por 15 min
+                  // (asumiendo distribución uniforme durante el día)
+                  const totalSlots = timeSlots.length;
+                  const salesPer15Min = estimatedDailySales / totalSlots;
+                  const costPercentage = salesPer15Min > 0 ? (cost / salesPer15Min) * 100 : 0;
+                  
+                  // Color basado en porcentaje de costo
+                  let bgColor = 'transparent';
+                  let textColor = 'text-gray-500';
+                  
+                  if (employeeCount > 0) {
+                    if (costPercentage <= 20) {
+                      bgColor = 'rgba(220, 252, 231, 0.5)'; // Verde claro
+                      textColor = 'text-green-700';
+                    } else if (costPercentage <= 30) {
+                      bgColor = 'rgba(254, 249, 195, 0.5)'; // Amarillo claro
+                      textColor = 'text-amber-700';
+                    } else {
+                      bgColor = 'rgba(254, 226, 226, 0.5)'; // Rojo claro
+                      textColor = 'text-red-700';
+                    }
+                  }
+                  
+                  return (
+                    <td 
+                      key={`cost-${time}`}
+                      className={`border-t border-neutral-200 p-0 text-center ${
+                        time.endsWith(':00') ? 'hour-marker' : ''
+                      }`}
+                      style={{
+                        backgroundColor: bgColor,
+                        height: `${cellSize}px`,
+                        width: `${cellSize}px`,
+                        borderLeft: time.endsWith(':00') ? '2px solid #AAAAAA' : 
+                                   time.endsWith(':30') ? '1px solid #DDDDDD' : 
+                                   '1px dashed #EEEEEE',
+                      }}
+                    >
+                      {employeeCount > 0 && (
+                        <div className={`text-[0.45rem] font-semibold ${textColor}`}>
+                          {costPercentage.toFixed(0)}%
                         </div>
-                        
-                        <div className="bg-white rounded-md p-2 shadow-sm">
-                          <div className="text-xs text-gray-500 mb-1">Coste de Personal:</div>
-                          <div className="text-sm font-bold text-amber-600">€{totalLaborCost.toFixed(2)}</div>
-                        </div>
-                        
-                        <div className="bg-white rounded-md p-2 shadow-sm">
-                          <div className="text-xs text-gray-500 mb-1">% Ventas en Personal:</div>
-                          <div className={`text-sm font-bold ${
-                            laborCostPercentage > 40 ? 'text-red-600' : 
-                            laborCostPercentage > 30 ? 'text-amber-600' : 
-                            'text-green-600'
-                          }`}>
-                            {laborCostPercentage.toFixed(2)}%
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </td>
+                      )}
+                    </td>
+                  );
+                })}
               </tr>
             )}
           </tbody>
