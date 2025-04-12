@@ -653,13 +653,24 @@ export default function ScheduleTable({
       y = (e as React.MouseEvent).clientY;
     }
     
-    // Abrir menú contextual
-    setContextMenu({
-      isOpen: true,
-      shift,
-      x,
-      y
-    });
+    // Cerrar cualquier menú contextual abierto previamente
+    setContextMenu(prev => ({
+      isOpen: false,
+      shift: null,
+      x: 0,
+      y: 0
+    }));
+    
+    // Retrasar la apertura para evitar conflictos con los eventos táctiles
+    setTimeout(() => {
+      // Abrir menú contextual
+      setContextMenu({
+        isOpen: true,
+        shift,
+        x,
+        y
+      });
+    }, 50);
   };
   
   // Cerrar menú contextual
@@ -675,19 +686,35 @@ export default function ScheduleTable({
       {/* Menú contextual para turnos */}
       {contextMenu.isOpen && contextMenu.shift && (
         <div 
-          className="fixed z-50 bg-white shadow-md rounded-md p-2 border border-gray-200"
+          className="fixed z-50 bg-white shadow-lg rounded-md p-3 border border-gray-200"
           style={{
             top: `${contextMenu.y}px`,
             left: `${contextMenu.x}px`,
-            transform: 'translate(-50%, -100%)',
-            minWidth: '150px'
+            transform: 'translate(-50%, -120%)',
+            minWidth: '180px',
+            touchAction: 'none' // Prevenir gestos táctiles que cierren el menú
+          }}
+          onClick={(e) => {
+            // Evitar que los clics dentro del menú se propaguen al overlay
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onTouchStart={(e) => {
+            // Evitar que los toques dentro del menú se propaguen
+            e.preventDefault();
+            e.stopPropagation();
           }}
         >
-          <div className="text-xs font-semibold mb-1 text-gray-500">
+          <div className="text-xs font-semibold mb-2 text-gray-600 border-b pb-1">
             Turno: {contextMenu.shift.startTime} - {contextMenu.shift.endTime}
           </div>
           <button
-            onClick={() => {
+            onClick={(e) => {
+              // Evitar propagación al overlay
+              e.preventDefault();
+              e.stopPropagation();
+              
+              // Eliminar turno
               if (contextMenu.shift && onDeleteShift) {
                 onDeleteShift(contextMenu.shift.id);
                 toast({
