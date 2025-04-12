@@ -143,6 +143,26 @@ export default function Home() {
     },
   });
   
+  // Update shift mutation
+  const updateShiftMutation = useMutation({
+    mutationFn: async ({ shiftId, updatedData }: { shiftId: number, updatedData: Partial<InsertShift> }) => {
+      const response = await apiRequest("PATCH", `/api/shifts/${shiftId}`, updatedData);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/shifts"] 
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Error al actualizar turno: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+  
   // Handle saving selected shifts
   const handleSaveShifts = (selections: {employee: Employee, startTime: string, endTime: string}[]) => {
     // Process each selection and create a shift
@@ -194,6 +214,20 @@ export default function Home() {
   // Handle deleting a shift
   const handleDeleteShift = (shiftId: number) => {
     deleteShiftMutation.mutate(shiftId);
+  };
+  
+  // Handle moving a shift (for drag and drop)
+  const handleMoveShift = (shiftId: number, newEmployeeId: number, newStartTime: string, newEndTime: string) => {
+    const updatedData: Partial<InsertShift> = {
+      employeeId: newEmployeeId,
+      startTime: newStartTime,
+      endTime: newEndTime
+    };
+    
+    updateShiftMutation.mutate({
+      shiftId,
+      updatedData
+    });
   };
   
   return (
@@ -332,13 +366,14 @@ export default function Home() {
             </div>
           </div>
           
-          {/* Schedule Table */}
-          <ScheduleTable 
+          {/* Schedule Table with Drag and Drop */}
+          <DraggableScheduleTable 
             employees={employees} 
             shifts={shifts} 
             date={currentDate}
             onSaveShifts={handleSaveShifts}
             onDeleteShift={handleDeleteShift}
+            onMoveShift={handleMoveShift}
             estimatedDailySales={parseFloat(estimatedDailySales) || 0}
             hourlyEmployeeCost={parseFloat(hourlyEmployeeCost) || 0}
           />

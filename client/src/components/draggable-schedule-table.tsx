@@ -9,8 +9,7 @@ import { Info, Save, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { Employee, Shift, InsertShift } from "@shared/schema";
 import { 
   formatDateForAPI, generateTimeSlots, isTimeBetween, calculateHoursBetween, 
-  formatHours, getStartOfWeek, getEndOfWeek, isInSameWeek, convertTimeToMinutes,
-  calculateEndTime
+  formatHours, getStartOfWeek, getEndOfWeek, isInSameWeek, convertTimeToMinutes
 } from "@/lib/date-helpers";
 import { useIsMobile } from "@/hooks/use-mobile";
 import ExportsModal from './exports-modal';

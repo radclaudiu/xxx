@@ -12,6 +12,7 @@ interface DroppableCellProps {
   isAssigned: boolean;
   isSelected: boolean;
   cellSize: number;
+  colSpan?: number;
   onDropShift: (data: {
     shiftId: number;
     sourceEmployeeId: number;
@@ -36,6 +37,7 @@ const DroppableCell: React.FC<DroppableCellProps> = ({
   isAssigned,
   isSelected,
   cellSize,
+  colSpan = 1,
   onDropShift,
   children,
   className = '',
@@ -119,6 +121,7 @@ const DroppableCell: React.FC<DroppableCellProps> = ({
   return (
     <td
       ref={drop}
+      colSpan={colSpan}
       className={`time-cell ${className} ${isOver && canDrop ? 'drop-target' : ''} ${isOver && !canDrop ? 'no-drop' : ''}`}
       style={dropStyle}
       data-cell-id={`${employee.id}-${time}`}
