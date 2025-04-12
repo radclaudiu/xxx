@@ -76,10 +76,7 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                     </th>
                     {dayNames.map((day, index) => (
                       <th key={day} className="border p-1 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase">
-                        {day}
-                        <div className="text-[0.6rem] font-normal text-gray-400">
-                          {formatDate(weekDays[index])}
-                        </div>
+                        {day} {weekDays[index].getDate()}
                       </th>
                     ))}
                     <th className="border p-1 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase">
@@ -244,9 +241,8 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                         
                         return (
                           <tr key={index} className={index % 2 === 0 ? "bg-gray-50" : ""}>
-                            <td className="py-1 px-2 font-medium w-1/3">{dayNames[index]}</td>
-                            <td className="py-1 px-2 w-1/3">{formatDate(day)}</td>
-                            <td className="py-1 px-2 w-1/3">
+                            <td className="py-1 px-2 font-medium w-1/2">{dayNames[index]} {day.getDate()}</td>
+                            <td className="py-1 px-2 w-1/2">
                               {shiftsText || <span className="text-gray-400 italic">Libre</span>}
                             </td>
                           </tr>
