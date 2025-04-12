@@ -1197,11 +1197,8 @@ export default function ScheduleTable({
                             console.log('Click en celda:', time, 'estado actual:', isSelected ? 'seleccionada' : 'no seleccionada');
                             toggleSingleCell(employee, time);
                           } else if (isFirstCell && shift && onDeleteShift) {
-                            // Mostrar opciones para eliminar turno existente (celdas azules)
-                            e.preventDefault();
-                            if (window.confirm(`¿Desea eliminar el turno de ${shift.startTime} a ${shift.endTime}?`)) {
-                              handleDeleteShift(shift);
-                            }
+                            // Mostrar menú contextual para eliminar turno existente
+                            handleOpenContextMenu(e, shift);
                           }
                         }}
                         onTouchStart={(e) => {
