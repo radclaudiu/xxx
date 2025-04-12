@@ -104,17 +104,17 @@ thead tr:nth-child(3) th {
 
 /* Prevenir eventos de touch no deseados en dispositivos móviles */
 @media (hover: none) and (pointer: coarse) {
-  /* Contenedor principal: permitir desplazamiento con dos dedos, pero no con uno */
+  /* Contenedor principal: permitir todo tipo de desplazamiento */
   .overflow-x-auto {
-    touch-action: manipulation !important;
+    touch-action: auto !important;
   }
   
-  /* Asegurarse que las celdas individuales nunca causen desplazamiento al tocarlas */
+  /* Establecer comportamiento por defecto para todas las celdas */
   .time-cell {
-    touch-action: none !important;
+    touch-action: pan-x pan-y !important;
   }
   
-  /* Otras celdas como encabezados permiten todos los gestos */
+  /* Permitir todos los gestos en encabezados */
   th {
     touch-action: auto !important;
   }

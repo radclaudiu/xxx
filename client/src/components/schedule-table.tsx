@@ -218,11 +218,13 @@ export default function ScheduleTable({
   
   // Touch start handler
   const handleTouchStart = (e: React.TouchEvent, employee: Employee, time: string) => {
-    // Ya no prevenimos el comportamiento por defecto aquí,
-    // sino en cada celda donde activamos este handler.
-    // Esto permite usar un dedo para desplazarse cuando no estamos seleccionando celdas
+    // Registramos la posición inicial del toque para seguimiento
+    const touch = e.touches[0];
+    const startX = touch.clientX;
+    const startY = touch.clientY;
     
-    // No hacemos e.preventDefault() ni e.stopPropagation() aquí
+    // Almacenamos estas posiciones para compararlas durante el movimiento
+    mouseDownRef.current = true;
     
     // Comenzamos el seguimiento de la selección
     const touchEvent = e.nativeEvent;
@@ -600,7 +602,7 @@ export default function ScheduleTable({
       <div 
         className="overflow-x-auto border border-neutral-200 rounded select-none w-full"
         style={{ 
-          touchAction: "pan-y pinch-zoom", // Permitir solo scroll vertical y zoom, no horizontal con un dedo
+          touchAction: "auto", // Permitir todos los comportamientos táctiles en el contenedor
           WebkitOverflowScrolling: "touch", // Mejorar el desplazamiento suave
           width: "100%",
           maxWidth: "100vw"
@@ -928,29 +930,28 @@ export default function ScheduleTable({
                         }}
                         onMouseEnter={() => handleMouseEnter(employee, time)}
                         onTouchStart={(e) => {
-                          // Si la celda ya tiene un turno asignado, permitir el comportamiento normal (scroll)
+                          // Si la celda ya tiene un turno asignado, permitir el comportamiento normal
                           if (isAssigned) return;
                           
-                          // Para células sin asignar, siempre iniciar selección y prevenir comportamientos por defecto
-                          e.preventDefault(); // Prevenir scroll siempre que se toque una celda para seleccionar
+                          // Para celdas sin asignar, capturar el evento e iniciar la selección
                           e.stopPropagation();
                           handleTouchStart(e, employee, time);
                         }}
                         onTouchMove={(e) => {
-                          // No hacer nada para celdas con turnos asignados
-                          if (isAssigned) return;
+                          // Si no estamos en modo de selección, permitir el comportamiento normal
+                          if (!isDragging || !activeEmployee || isAssigned) return;
                           
-                          // Durante la selección activa, siempre prevenir scroll
-                          if (isDragging && activeEmployee) {
+                          // Para selección activa, prevenir desplazamiento 
+                          if (activeEmployee.id === employee.id) {
                             e.preventDefault();
                             e.stopPropagation();
+                            handleMouseEnter(employee, time);
                           }
                         }}
                         onTouchEnd={(e) => {
-                          // Prevenir click accidental después de seleccionar
-                          if (!isAssigned) {
-                            e.preventDefault();
-                            e.stopPropagation();
+                          // Limpiar estado
+                          if (isDragging && activeEmployee && activeEmployee.id === employee.id) {
+                            setIsDragging(false);
                           }
                         }}
                       >
