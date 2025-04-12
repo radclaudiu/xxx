@@ -34,6 +34,21 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
     openWithReport
   }));
   
+  // Función para obtener todos los turnos de la semana seleccionada
+  const getWeekShifts = () => {
+    // Obtener fechas de inicio y fin de semana sin modificar los originales
+    const startDate = new Date(weekDays[0]);
+    startDate.setHours(0, 0, 0, 0);
+    
+    const endDate = new Date(weekDays[6]);
+    endDate.setHours(23, 59, 59, 999);
+    
+    return shifts.filter(shift => {
+      const shiftDate = new Date(shift.date);
+      return shiftDate >= startDate && shiftDate <= endDate;
+    });
+  };
+  
   // Función para avanzar a la siguiente semana
   const goToNextWeek = () => {
     const nextWeek = new Date(selectedWeekStart);
@@ -89,7 +104,7 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                     // Calcular las horas trabajadas para cada día de la semana
                     const weeklyHours = weekDays.map(day => {
                       // Filtrar turnos para este empleado en este día
-                      const dayShifts = shifts.filter(shift => {
+                      const dayShifts = getWeekShifts().filter(shift => {
                         const shiftDate = new Date(shift.date);
                         return (
                           shift.employeeId === employee.id && 
@@ -226,7 +241,7 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                     <tbody>
                       {weekDays.map((day, index) => {
                         // Buscar turnos para este empleado en este día
-                        const dayShifts = shifts.filter(shift => {
+                        const dayShifts = getWeekShifts().filter(shift => {
                           const shiftDate = new Date(shift.date);
                           return (
                             shift.employeeId === employee.id && 
