@@ -779,62 +779,85 @@ export default function ScheduleTable({
                   </div>
                 </td>
                 
-                {timeSlots.map((time) => {
-                  const isAssigned = isCellAssigned(employee.id, time);
-                  const isFirstCell = isFirstCellInShift(employee.id, time);
-                  const shift = isFirstCell ? getShiftForCell(employee.id, time) : null;
-                  const isSelected = isCellSelected(employee.id, time);
+                {(() => {
+                  // Usamos un array temporal para llevar control de las celdas que debemos saltarnos
+                  // porque ya están incluidas en un colSpan
+                  const skipCells: {[key: string]: boolean} = {};
                   
-                  return (
-                    <td 
-                      key={`${employee.id}-${time}`}
-                      data-cell-id={`${employee.id}-${time}`}
-                      className={`time-cell ${
-                        isAssigned ? 'assigned' : ''
-                      } ${isSelected ? 'selected' : ''} ${
-                        time.endsWith(':00') ? 'hour-marker' : ''
-                      }`}
-                      style={{
-                        width: `${cellSize}px`, // Ancho dinámico basado en cellSize
-                        height: `${cellSize}px`, // Altura dinámica basada en cellSize
-                        lineHeight: `${cellSize}px`, // Garantizar altura exacta
-                        padding: "0", // Sin padding para mantener tamaño exacto
-                        boxSizing: "border-box", // Incluir bordes en dimensiones
-                        backgroundColor: isSelected ? 'rgba(76, 175, 80, 0.4)' : 
-                                        isAssigned ? 'rgba(25, 118, 210, 0.2)' : 
-                                        'transparent',
-                        borderTop: isSelected ? '1px solid #4CAF50' : 
-                                 isAssigned ? '1px solid #1976D2' : '1px solid #E0E0E0',
-                        borderRight: isSelected ? '1px solid #4CAF50' : 
-                                    isAssigned ? '1px solid #1976D2' : '1px solid #E0E0E0',
-                        borderBottom: isSelected ? '1px solid #4CAF50' : 
-                                     isAssigned ? '1px solid #1976D2' : '1px solid #E0E0E0',
-                        borderLeft: time.endsWith(':00') ? '2px solid #AAAAAA' : 
-                                   time.endsWith(':30') ? '1px solid #DDDDDD' : 
-                                   '1px dashed #EEEEEE',
-                        cursor: 'pointer',
-                        WebkitUserSelect: 'none',  // Safari
-                        MozUserSelect: 'none',     // Firefox
-                        msUserSelect: 'none',      // IE/Edge
-                        userSelect: 'none',        // Standard
-                        touchAction: 'none',       // Prevenir desplazamiento en celdas
-                        WebkitTapHighlightColor: 'transparent' // Quitar resaltado al tocar
-                      }}
-                      onMouseDown={() => handleMouseDown(employee, time)}
-                      onMouseEnter={() => handleMouseEnter(employee, time)}
-                      onTouchStart={(e) => handleTouchStart(e, employee, time)}
-                    >
-                      {isSelected && !isAssigned && (
-                        <div className="flex justify-center items-center h-full">
-                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        </div>
-                      )}
-                      {isFirstCell && shift && (
-                        <div className="text-xs text-center">{shift.startTime} - {shift.endTime}</div>
-                      )}
-                    </td>
-                  );
-                })}
+                  return timeSlots.map((time, timeIndex) => {
+                    // Si esta celda debe ser saltada, no renderizamos nada
+                    if (skipCells[time]) {
+                      return null;
+                    }
+                    
+                    const isAssigned = isCellAssigned(employee.id, time);
+                    const isFirstCell = isFirstCellInShift(employee.id, time);
+                    const shift = isFirstCell ? getShiftForCell(employee.id, time) : null;
+                    const isSelected = isCellSelected(employee.id, time);
+                    
+                    // Si es la primera celda de un turno, calculamos cuántas celdas debe ocupar
+                    let colSpan = 1;
+                    if (isFirstCell && shift) {
+                      colSpan = getShiftCellSpan(employee.id, time);
+                      
+                      // Marcar las siguientes celdas como "saltadas"
+                      for (let i = 1; i < colSpan && timeIndex + i < timeSlots.length; i++) {
+                        skipCells[timeSlots[timeIndex + i]] = true;
+                      }
+                    }
+                    
+                    return (
+                      <td 
+                        key={`${employee.id}-${time}`}
+                        data-cell-id={`${employee.id}-${time}`}
+                        colSpan={colSpan}
+                        className={`time-cell ${
+                          isAssigned ? 'assigned' : ''
+                        } ${isSelected ? 'selected' : ''} ${
+                          time.endsWith(':00') ? 'hour-marker' : ''
+                        }`}
+                        style={{
+                          width: `${cellSize * colSpan}px`, // Ancho dinámico basado en cellSize y colSpan
+                          height: `${cellSize}px`, // Altura dinámica basada en cellSize
+                          lineHeight: `${cellSize}px`, // Garantizar altura exacta
+                          padding: "0", // Sin padding para mantener tamaño exacto
+                          boxSizing: "border-box", // Incluir bordes en dimensiones
+                          backgroundColor: isSelected ? 'rgba(76, 175, 80, 0.4)' : 
+                                          isAssigned ? 'rgba(25, 118, 210, 0.2)' : 
+                                          'transparent',
+                          borderTop: isSelected ? '1px solid #4CAF50' : 
+                                   isAssigned ? '1px solid #1976D2' : '1px solid #E0E0E0',
+                          borderRight: isSelected ? '1px solid #4CAF50' : 
+                                      isAssigned ? '1px solid #1976D2' : '1px solid #E0E0E0',
+                          borderBottom: isSelected ? '1px solid #4CAF50' : 
+                                       isAssigned ? '1px solid #1976D2' : '1px solid #E0E0E0',
+                          borderLeft: time.endsWith(':00') ? '2px solid #AAAAAA' : 
+                                     time.endsWith(':30') ? '1px solid #DDDDDD' : 
+                                     '1px dashed #EEEEEE',
+                          cursor: 'pointer',
+                          WebkitUserSelect: 'none',  // Safari
+                          MozUserSelect: 'none',     // Firefox
+                          msUserSelect: 'none',      // IE/Edge
+                          userSelect: 'none',        // Standard
+                          touchAction: 'none',       // Prevenir desplazamiento en celdas
+                          WebkitTapHighlightColor: 'transparent' // Quitar resaltado al tocar
+                        }}
+                        onMouseDown={() => handleMouseDown(employee, time)}
+                        onMouseEnter={() => handleMouseEnter(employee, time)}
+                        onTouchStart={(e) => handleTouchStart(e, employee, time)}
+                      >
+                        {isSelected && !isAssigned && (
+                          <div className="flex justify-center items-center h-full">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          </div>
+                        )}
+                        {isFirstCell && shift && (
+                          <div className="text-xs text-center font-semibold">{shift.startTime} - {shift.endTime}</div>
+                        )}
+                      </td>
+                    );
+                  }).filter(Boolean); // Filtrar los elementos null
+                })()}
               </tr>
             ))}
             
