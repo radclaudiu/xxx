@@ -286,40 +286,8 @@ export default function ScheduleTable({
   };
   
   // Touch move handler
-  const handleTouchMove = (e: React.TouchEvent) => {
-    // Si hay 2 o más dedos, permitir el desplazamiento (scroll) nativo
-    if (e.touches.length >= 2) {
-      return; // No prevenir el comportamiento por defecto para permitir desplazamiento con dos dedos
-    }
-    
-    // Solo prevenir el comportamiento predeterminado si estamos en modo selección/arrastre
-    if (isDragging && activeEmployee) {
-      // Para un solo dedo, prevenir el desplazamiento durante la selección activa
-      e.preventDefault();
-      
-      // Get touch position
-      const touch = e.touches[0];
-      const element = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement;
-    } else {
-      // Si no estamos arrastrando, permitir el comportamiento normal (scroll)
-      return;
-    }
-    
-    // Check if touch is over a cell
-    if (element && element.tagName === 'TD') {
-      // Try to get employee and time from data attributes
-      const cellId = element.getAttribute('data-cell-id');
-      if (cellId) {
-        const [empId, time] = cellId.split('-');
-        const employeeId = parseInt(empId, 10);
-        const employee = employees.find(e => e.id === employeeId);
-        
-        if (employee && time) {
-          handleCellInteraction(employee, time);
-        }
-      }
-    }
-  };
+  // Dejamos de usar el evento global touchMove ya que estaba causando problemas con el scroll
+  // Ahora cada celda manejará sus propios eventos de interacción táctil
   
   // Check if a cell is selected
   const isCellSelected = (employeeId: number, time: string) => {
@@ -635,20 +603,10 @@ export default function ScheduleTable({
       <div 
         className="overflow-x-auto border border-neutral-200 rounded select-none w-full"
         style={{ 
-          touchAction: "pan-y pinch-zoom", // Permitir scroll vertical y pellizcar para zoom
+          touchAction: "auto", // Permitir todos los comportamientos táctiles por defecto
           WebkitOverflowScrolling: "touch", // Mejorar el desplazamiento suave
           width: "100%",
           maxWidth: "100vw"
-        }}
-        onTouchMove={handleTouchMove}
-        onTouchStart={(e) => {
-          // Solo detener la propagación para eventos de un dedo en celdas, no en el contenedor
-          if (e.touches.length === 1) {
-            // No detener propagación aquí para permitir scroll normal con un dedo
-          } else if (e.touches.length === 2) {
-            // Para dos dedos, permitir desplazamiento/zoom
-            e.stopPropagation();
-          }
         }}>
         <table className="w-full border-collapse table-fixed" style={{ minWidth: "100%" }}>
           {/* Table Header - Estructura de dos filas */}
