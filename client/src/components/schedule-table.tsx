@@ -11,7 +11,7 @@ import {
   getEndOfWeek,
   isInSameWeek
 } from "@/lib/date-helpers";
-import { Edit, Save, Clock, DollarSign, Trash } from "lucide-react";
+import { Edit, Save, Clock, DollarSign, Trash, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ExportsModal from "@/components/exports-modal";
@@ -483,6 +483,18 @@ export default function ScheduleTable({
   
   return (
     <div className="space-y-4">
+      {/* Help message for touch users */}
+      <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-2 rounded-md mb-3 text-sm">
+        <div className="flex items-center gap-2">
+          <Info className="h-4 w-4" />
+          <span className="font-medium">Modo táctil:</span> 
+        </div>
+        <div className="mt-1 ml-6 text-xs">
+          • <strong>Un dedo:</strong> Selecciona celdas/turnos - arrastre para seleccionar varias
+          <br/>• <strong>Dos dedos:</strong> Desplaza la tabla lateralmente
+        </div>
+      </div>
+      
       {/* Control buttons */}
       <div className="flex justify-between flex-wrap gap-3 mb-2">
         <div className="flex items-center space-x-4 flex-wrap gap-y-2">
