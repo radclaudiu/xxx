@@ -215,6 +215,7 @@ export default function ScheduleTable({
     // If cell is already assigned, don't allow selection
     if (isCellAssigned(employee.id, time)) return;
     
+    // Establecer estado de arrastre
     mouseDownRef.current = true;
     setIsDragging(true);
     setStartTime(time);
@@ -222,6 +223,9 @@ export default function ScheduleTable({
     
     // Select or deselect the time slot immediately
     toggleSingleCell(employee, time);
+    
+    // Inicializar el batch para arrastre
+    batchedSelectionsRef.current = new Map(selectedCellsByEmployee);
   };
   
   // Mouse down handler
@@ -248,6 +252,10 @@ export default function ScheduleTable({
     // SIMPLEMENTE USAR TOGGLE - funciona tanto para seleccionar como para deseleccionar
     console.log(`Toggling celda ${time} para empleado ${employee.id}`);
     toggleSingleCell(employee, time);
+    
+    // Inicializar el batch para arrastre
+    batchedSelectionsRef.current = new Map(selectedCellsByEmployee);
+    lastTouchUpdateRef.current = Date.now();
   };
   
   // Handler for cell interaction during drag
