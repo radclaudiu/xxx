@@ -105,10 +105,10 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                         totalHours += calculateHoursBetween(shift.startTime, shift.endTime);
                       });
                       
-                      // Formatear los detalles de turnos
+                      // Formatear los detalles de turnos como array
                       const shiftsDetails = dayShifts.map(shift => 
                         `${shift.startTime} - ${shift.endTime}`
-                      ).join(", ");
+                      );
                       
                       return { totalHours, shiftsDetails };
                     });
@@ -126,9 +126,11 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                         
                         {weeklyHours.map((day, index) => (
                           <td key={index} className="border p-1 text-center text-xs">
-                            {day.shiftsDetails ? (
-                              <div className="text-xs text-gray-700">
-                                {day.shiftsDetails}
+                            {day.shiftsDetails?.length > 0 ? (
+                              <div className="flex flex-col gap-1 text-xs text-gray-700">
+                                {day.shiftsDetails.map((shift, idx) => (
+                                  <div key={idx}>{shift}</div>
+                                ))}
                               </div>
                             ) : (
                               <span className="text-gray-500 italic text-[0.6rem]">Libre</span>
@@ -235,15 +237,23 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                         });
                         
                         // Formatear horarios
-                        const shiftsText = dayShifts.map(shift => 
+                        const shiftsArray = dayShifts.map(shift => 
                           `${shift.startTime} - ${shift.endTime}`
-                        ).join(", ");
+                        );
                         
                         return (
                           <tr key={index} className={index % 2 === 0 ? "bg-gray-50" : ""}>
                             <td className="py-1 px-2 font-medium w-1/2">{dayNames[index]} {day.getDate()}</td>
                             <td className="py-1 px-2 w-1/2">
-                              {shiftsText || <span className="text-gray-400 italic">Libre</span>}
+                              {shiftsArray.length > 0 ? (
+                                <div className="flex flex-col gap-1">
+                                  {shiftsArray.map((shift, idx) => (
+                                    <div key={idx}>{shift}</div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="text-gray-400 italic">Libre</span>
+                              )}
                             </td>
                           </tr>
                         );
