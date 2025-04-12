@@ -44,8 +44,11 @@ export function getNextDay(date: Date): Date {
 export function generateTimeSlots(startHour: number, endHour: number): string[] {
   const slots: string[] = [];
   
-  // Asegurar que generamos todas las horas, incluyendo la última con todos sus intervalos
-  for (let hour = startHour; hour <= endHour; hour++) {
+  // Manejo especial para hora 24 (medianoche)
+  const adjustedEndHour = endHour === 24 ? 23 : endHour;
+  
+  // Generar para todas las horas completas entre startHour y adjustedEndHour
+  for (let hour = startHour; hour <= adjustedEndHour; hour++) {
     // Normalizar las horas para manejar horas > 23 (día siguiente)
     const normalizedHour = hour % 24;
     
@@ -55,12 +58,19 @@ export function generateTimeSlots(startHour: number, endHour: number): string[] 
     // Add :00 slot para todas las horas
     slots.push(`${formattedHour}:00`);
     
-    // Add :15, :30, and :45 slots para todas las horas excepto la última del rango
-    if (hour < endHour) {
+    // Añadir los intervalos de 15, 30 y 45 minutos
+    // Si es la última hora del rango y es la hora 23, o si no es la última hora del rango
+    if ((hour === adjustedEndHour && normalizedHour === 23) || hour < adjustedEndHour) {
       slots.push(`${formattedHour}:15`);
       slots.push(`${formattedHour}:30`);
       slots.push(`${formattedHour}:45`);
     }
+  }
+  
+  // Si estamos generando hasta la hora 24 (00:00 del día siguiente)
+  // Usamos un formato ligeramente diferente para evitar duplicación de claves
+  if (endHour === 24) {
+    slots.push('24:00'); // Añadir 00:00 como 24:00 para evitar duplicación de claves
   }
   
   return slots;
@@ -79,6 +89,10 @@ export function isTimeBetween(time: string, startTime: string, endTime: string):
 // Convert time (HH:MM) to minutes since midnight
 export function convertTimeToMinutes(time: string): number {
   const [hours, minutes] = time.split(':').map(Number);
+  // Si es 24:00, es medianoche (igual que 00:00)
+  if (hours === 24 && minutes === 0) {
+    return 0; // Medianoche (0 minutos desde medianoche)
+  }
   return hours * 60 + minutes;
 }
 

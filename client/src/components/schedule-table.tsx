@@ -56,8 +56,8 @@ export default function ScheduleTable({
       // Convertir el endHour a formato 0-23 si está después de medianoche
       const earlyMorningEnd = endHour - 24; // Por ejemplo, 26 se convierte en 2 (2:00 AM)
       
-      // Generar slots desde la hora inicial hasta medianoche
-      const morningToMidnight = generateTimeSlots(startHour, 23);
+      // Generar slots desde la hora inicial hasta medianoche (24:00) - incluye todas las subdivisiones de 23h
+      const morningToMidnight = generateTimeSlots(startHour, 24);
       
       // Generar slots desde medianoche hasta la hora final
       const midnightToEarly = generateTimeSlots(0, earlyMorningEnd);
