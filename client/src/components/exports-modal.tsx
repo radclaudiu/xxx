@@ -71,23 +71,23 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
               <table className="w-full border-collapse">
                 <thead>
                   <tr>
-                    <th className="border p-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="border p-1 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">
                       Empleado
                     </th>
                     {dayNames.map((day, index) => (
-                      <th key={day} className="border p-2 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase">
+                      <th key={day} className="border p-1 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase">
                         {day}
                         <div className="text-[0.6rem] font-normal text-gray-400">
                           {formatDate(weekDays[index])}
                         </div>
                       </th>
                     ))}
-                    <th className="border p-2 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase">
+                    <th className="border p-1 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase">
                       Total
                     </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="text-xs">
                   {employees.map((employee) => {
                     // Calcular las horas trabajadas para cada día de la semana
                     const weeklyHours = weekDays.map(day => {
@@ -123,24 +123,24 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                     
                     return (
                       <tr key={employee.id} className="hover:bg-gray-50">
-                        <td className="border p-2 text-sm">
+                        <td className="border p-1 text-xs font-medium">
                           {employee.name}
                         </td>
                         
                         {weeklyHours.map((day, index) => (
-                          <td key={index} className="border p-2 text-center text-xs">
+                          <td key={index} className="border p-1 text-center text-xs">
                             {day.shiftsDetails ? (
                               <div>
                                 <div className="font-medium">{formatHours(day.totalHours)}</div>
-                                <div className="text-gray-500 text-[0.65rem]">{day.shiftsDetails}</div>
+                                <div className="text-gray-500 text-[0.6rem]">{day.shiftsDetails}</div>
                               </div>
                             ) : (
-                              <span className="text-gray-500 italic">Libre</span>
+                              <span className="text-gray-500 italic text-[0.6rem]">Libre</span>
                             )}
                           </td>
                         ))}
                         
-                        <td className="border p-2 text-center font-medium">
+                        <td className="border p-1 text-center font-medium">
                           {formatHours(totalWeeklyHours)}
                         </td>
                       </tr>
@@ -256,7 +256,7 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
           Exportaciones
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl w-[90vw]">
+      <DialogContent className="max-w-4xl w-[90vw] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Exportaciones e Informes</DialogTitle>
         </DialogHeader>
@@ -346,7 +346,9 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
         ) : (
           <>
             {/* Mostrar el informe seleccionado */}
-            {renderSelectedReport()}
+            <div className="max-h-[60vh] overflow-y-auto">
+              {renderSelectedReport()}
+            </div>
             
             {/* Botones de acción */}
             <div className="flex justify-between mt-6">
