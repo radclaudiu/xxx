@@ -1106,8 +1106,62 @@ export default function ScheduleTable({
                             handleMouseEnter(employee, time);
                           }
                         }}
+                        onClick={(e) => {
+                          // Manejador directo para quitar selecciones existentes al hacer clic
+                          if (isSelected && !isAssigned) {
+                            console.log('Quitando selección directamente al hacer clic:', time);
+                            
+                            // Crear una copia del mapa actual para mantener inmutabilidad
+                            const newSelectedCellsByEmployee = new Map(selectedCellsByEmployee);
+                            const selectedCells = newSelectedCellsByEmployee.get(employee.id);
+                            
+                            if (selectedCells) {
+                              // Eliminar esta celda
+                              selectedCells.delete(time);
+                              
+                              // Actualizar map según corresponda
+                              if (selectedCells.size > 0) {
+                                newSelectedCellsByEmployee.set(employee.id, selectedCells);
+                              } else {
+                                newSelectedCellsByEmployee.delete(employee.id);
+                              }
+                              
+                              // Actualizar estado
+                              setSelectedCellsByEmployee(newSelectedCellsByEmployee);
+                            }
+                          }
+                        }}
                         onTouchStart={(e) => {
-                          // No activar selección si la celda ya tiene un turno asignado
+                          // Primera prioridad: quitar selecciones ya existentes
+                          if (isSelected && !isAssigned) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            
+                            console.log('Quitando selección desde onTouchStart:', time);
+                            
+                            // Crear una copia del mapa actual para mantener inmutabilidad
+                            const newSelectedCellsByEmployee = new Map(selectedCellsByEmployee);
+                            const selectedCells = newSelectedCellsByEmployee.get(employee.id);
+                            
+                            if (selectedCells) {
+                              // Eliminar esta celda
+                              selectedCells.delete(time);
+                              
+                              // Actualizar map según corresponda
+                              if (selectedCells.size > 0) {
+                                newSelectedCellsByEmployee.set(employee.id, selectedCells);
+                              } else {
+                                newSelectedCellsByEmployee.delete(employee.id);
+                              }
+                              
+                              // Actualizar estado
+                              setSelectedCellsByEmployee(newSelectedCellsByEmployee);
+                            }
+                            
+                            return; // No continuar con otra lógica
+                          }
+                          
+                          // Comportamiento normal de selección si no está ya seleccionada
                           if (!isAssigned) {
                             handleTouchStart(e, employee, time);
                           } else if (isFirstCell && shift && onDeleteShift) {
