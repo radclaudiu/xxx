@@ -15,6 +15,12 @@ export default function ExportsModal({ employees, shifts, currentDate }: Exports
   const [isOpen, setIsOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
   
+  // Método para abrir el modal directamente con un reporte específico
+  const openWithReport = (reportType: string) => {
+    setSelectedReport(reportType);
+    setIsOpen(true);
+  };
+  
   // Estado para controlar la semana seleccionada
   const [selectedWeekStart, setSelectedWeekStart] = useState(() => getStartOfWeek(currentDate));
   
@@ -119,7 +125,7 @@ export default function ExportsModal({ employees, shifts, currentDate }: Exports
                                 <div className="text-gray-500 text-[0.65rem]">{day.shiftsDetails}</div>
                               </div>
                             ) : (
-                              <span className="text-gray-400">-</span>
+                              <span className="text-gray-500 italic">Libre</span>
                             )}
                           </td>
                         ))}

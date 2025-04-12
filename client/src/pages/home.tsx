@@ -1,21 +1,26 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { formatDate, formatDateForAPI, getPreviousDay, getNextDay } from "@/lib/date-helpers";
+import { formatDate, formatDateForAPI, getPreviousDay, getNextDay, getStartOfWeek } from "@/lib/date-helpers";
 import { useToast } from "@/hooks/use-toast";
 import { Employee, Shift, InsertShift } from "@shared/schema";
 import ScheduleTable from "@/components/schedule-table";
 import EmployeeModal from "@/components/employee-modal";
 import HelpModal from "@/components/help-modal";
+import ExportsModal from "@/components/exports-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChevronLeft, ChevronRight, Save, FolderOpen, HelpCircle, UserPlus, DollarSign, Clock } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save, FolderOpen, HelpCircle, UserPlus, DollarSign, Clock, Calendar } from "lucide-react";
 
 export default function Home() {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  const [isWeekViewOpen, setIsWeekViewOpen] = useState(false);
+  
+  // Referencia para el modal de exportaciones
+  const exportsModalRef = useRef<{ openWithReport: (reportType: string) => void } | null>(null);
   
   // Estados para gestionar los datos financieros
   const [estimatedDailySales, setEstimatedDailySales] = useState<string>('');
@@ -258,6 +263,20 @@ export default function Home() {
                 <ChevronRight className="h-5 w-5" />
                 <span className="sr-only">Día siguiente</span>
               </Button>
+              
+              <Button 
+                variant="outline"
+                className="flex items-center gap-1 ml-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200"
+                onClick={() => {
+                  // Abre el modal de exportaciones directamente con el reporte de semana seleccionado
+                  if (exportsModalRef.current) {
+                    exportsModalRef.current.openWithReport('week-schedule');
+                  }
+                }}
+              >
+                <Calendar className="h-4 w-4" />
+                <span>Ver Semana</span>
+              </Button>
             </div>
             
             <div className="flex items-center gap-3">
@@ -308,6 +327,14 @@ export default function Home() {
       <HelpModal 
         isOpen={isHelpModalOpen} 
         onClose={() => setIsHelpModalOpen(false)} 
+      />
+      
+      {/* Exportaciones Modal con referencia */}
+      <ExportsModal 
+        employees={employees} 
+        shifts={shifts} 
+        currentDate={currentDate}
+        ref={exportsModalRef}
       />
     </div>
   );
