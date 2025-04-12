@@ -315,7 +315,7 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
           Exportaciones
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-[90vw] w-[90vw] h-[70vh] max-h-[70vh] overflow-y-auto p-4 md:p-6">
+      <DialogContent className="max-w-[90vw] w-[90vw] h-[85vh] max-h-[85vh] overflow-y-auto p-4 md:p-6">
         <DialogHeader>
           <DialogTitle>Exportaciones e Informes</DialogTitle>
         </DialogHeader>
