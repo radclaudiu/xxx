@@ -223,13 +223,18 @@ export default function ScheduleTable({
     const startX = touch.clientX;
     const startY = touch.clientY;
     
-    // Almacenamos estas posiciones para compararlas durante el movimiento
+    // Almacenamos estas posiciones para comparar durante el movimiento
     mouseDownRef.current = true;
     
     // Comenzamos el seguimiento de la selección
     const touchEvent = e.nativeEvent;
     touchEvent.stopPropagation();
     
+    // Iniciar selección y marcar el estado de arrastre
+    setIsDragging(true);
+    setActiveEmployee(employee);
+    
+    // Llamar a la función que maneja el inicio de la interacción
     handleInteractionStart(employee, time);
   };
   
@@ -941,11 +946,29 @@ export default function ScheduleTable({
                           // Si no estamos en modo de selección, permitir el comportamiento normal
                           if (!isDragging || !activeEmployee || isAssigned) return;
                           
-                          // Para selección activa, prevenir desplazamiento 
+                          // Para selección activa, prevenir desplazamiento y activar la celda
                           if (activeEmployee.id === employee.id) {
                             e.preventDefault();
                             e.stopPropagation();
-                            handleMouseEnter(employee, time);
+                            
+                            // Obtener el elemento actual bajo el dedo
+                            const touch = e.touches[0];
+                            const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
+                            
+                            // Si el elemento tiene un atributo data-cell-id, extraer employee-id y time
+                            const cellId = elementUnderTouch?.getAttribute('data-cell-id');
+                            if (cellId) {
+                              const [empId, cellTime] = cellId.split('-');
+                              if (empId && cellTime) {
+                                const touchedEmployee = employees.find(e => e.id === parseInt(empId));
+                                if (touchedEmployee) {
+                                  handleMouseEnter(touchedEmployee, cellTime);
+                                }
+                              }
+                            } else {
+                              // Si no tenemos un data-cell-id, usar la celda actual
+                              handleMouseEnter(employee, time);
+                            }
                           }
                         }}
                         onTouchEnd={(e) => {
