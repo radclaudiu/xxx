@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { DragDropContext, Droppable, DropResult } from 'react-beautiful-dnd';
+import React, { useState, useCallback, useEffect } from 'react';
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
@@ -11,7 +11,6 @@ import {
 } from "@/lib/date-helpers";
 import { useIsMobile } from "@/hooks/use-mobile";
 import ExportsModal from './exports-modal';
-import BeautifulDraggableShift from './beautiful-draggable-shift';
 
 interface BeautifulScheduleTableProps {
   employees: Employee[];
@@ -714,16 +713,61 @@ export default function BeautifulScheduleTable({
                                 className="employee-shifts flex gap-1 overflow-hidden"
                               >
                                 {shiftsByEmployee[employee.id]?.map((shift, index) => (
-                                  <BeautifulDraggableShift
-                                    key={shift.id}
-                                    shift={shift}
-                                    employee={employee}
-                                    index={index}
-                                    cellSize={cellSize}
-                                    timeSlots={timeSlots}
-                                    getShiftWidth={getShiftWidth}
-                                    onDelete={onDeleteShift}
-                                  />
+                                  <Draggable
+                                  key={shift.id}
+                                  draggableId={`shift-${shift.id}`}
+                                  index={index}
+                                >
+                                  {(provided, snapshot) => {
+                                    const width = getShiftWidth(shift.startTime, shift.endTime);
+                                    const hours = calculateHoursBetween(shift.startTime, shift.endTime);
+                                    
+                                    return (
+                                      <div
+                                        ref={provided.innerRef}
+                                        {...provided.draggableProps}
+                                        {...provided.dragHandleProps}
+                                        className={`rounded-md ${snapshot.isDragging ? 'shadow-lg z-50' : 'shadow-sm'}`}
+                                        style={{
+                                          ...provided.draggableProps.style,
+                                          width: `${width}px`,
+                                          backgroundColor: snapshot.isDragging 
+                                            ? 'rgba(14, 165, 233, 0.85)' 
+                                            : 'rgba(14, 165, 233, 0.7)',
+                                          color: 'white',
+                                          padding: '2px 4px',
+                                          fontSize: '0.675rem',
+                                          fontWeight: 'bold',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          cursor: 'grab',
+                                          transform: snapshot.isDragging 
+                                            ? `${provided.draggableProps.style?.transform} scale(1.05)` 
+                                            : provided.draggableProps.style?.transform,
+                                          transition: snapshot.isDragging 
+                                            ? 'none' 
+                                            : 'all 0.2s ease',
+                                          borderLeft: '3px solid #0284c7',
+                                          userSelect: 'none',
+                                          height: `${cellSize - 4}px`,
+                                        }}
+                                        onContextMenu={(e) => {
+                                          e.preventDefault();
+                                          if (onDeleteShift) {
+                                            if (window.confirm(`¿Eliminar el turno de ${shift.startTime} a ${shift.endTime}?`)) {
+                                              onDeleteShift(shift.id);
+                                            }
+                                          }
+                                        }}
+                                      >
+                                        <span>
+                                          {shift.startTime} - {shift.endTime} ({hours}h)
+                                        </span>
+                                      </div>
+                                    );
+                                  }}
+                                </Draggable>
                                 ))}
                                 {provided.placeholder}
                               </div>
