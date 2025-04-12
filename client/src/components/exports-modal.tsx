@@ -86,15 +86,15 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
               <table className="min-w-full w-max-content table-auto border-collapse">
                 <thead>
                   <tr>
-                    <th className="border p-1 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase sticky left-0 z-10">
+                    <th className="border p-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase sticky left-0 z-10" style={{ height: "42px", minHeight: "42px" }}>
                       Empleado
                     </th>
                     {dayNames.map((day, index) => (
-                      <th key={day} className="border p-1 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase">
+                      <th key={day} className="border p-2 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase" style={{ height: "42px", minHeight: "42px" }}>
                         {day} {weekDays[index].getDate()}
                       </th>
                     ))}
-                    <th className="border p-1 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase">
+                    <th className="border p-2 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase" style={{ height: "42px", minHeight: "42px" }}>
                       Total
                     </th>
                   </tr>
@@ -135,12 +135,12 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                     
                     return (
                       <tr key={employee.id} className="hover:bg-gray-50">
-                        <td className="border p-1 text-xs font-medium sticky left-0 z-10 bg-white">
+                        <td className="border p-2 text-xs font-medium sticky left-0 z-10 bg-white" style={{ height: "40px", minHeight: "40px" }}>
                           {employee.name}
                         </td>
                         
                         {weeklyHours.map((day, index) => (
-                          <td key={index} className="border p-1 text-center text-xs">
+                          <td key={index} className="border p-2 text-center text-xs" style={{ height: "40px", minHeight: "40px" }}>
                             {day.shiftsDetails?.length > 0 ? (
                               <div className="flex flex-col gap-1 text-xs text-gray-700">
                                 {day.shiftsDetails.map((shift, idx) => (
@@ -153,7 +153,7 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                           </td>
                         ))}
                         
-                        <td className="border p-1 text-center font-medium">
+                        <td className="border p-2 text-center font-medium" style={{ height: "40px", minHeight: "40px" }}>
                           {formatHours(totalWeeklyHours)}
                         </td>
                       </tr>
