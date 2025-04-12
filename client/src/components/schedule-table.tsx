@@ -958,9 +958,19 @@ export default function ScheduleTable({
                           touchAction: 'none',       // Prevenir desplazamiento en celdas
                           WebkitTapHighlightColor: 'transparent' // Quitar resaltado al tocar
                         }}
-                        onMouseDown={() => handleMouseDown(employee, time)}
+                        onMouseDown={(e) => {
+                          // No activar selección si la celda ya tiene un turno asignado
+                          if (!isAssigned) {
+                            handleMouseDown(employee, time);
+                          }
+                        }}
                         onMouseEnter={() => handleMouseEnter(employee, time)}
-                        onTouchStart={(e) => handleTouchStart(e, employee, time)}
+                        onTouchStart={(e) => {
+                          // No procesar eventos táctiles para celdas con turnos asignados
+                          if (!isAssigned) {
+                            handleTouchStart(e, employee, time);
+                          }
+                        }}
                       >
                         {isSelected && !isAssigned && (
                           <div className="flex justify-center items-center h-full">
@@ -970,13 +980,26 @@ export default function ScheduleTable({
                         {isFirstCell && shift && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <div className="text-xs text-center font-semibold hover:bg-blue-100 w-full h-full cursor-pointer">
-                                {shift.startTime} - {shift.endTime}
-                              </div>
+                              <button 
+                                className="text-xs text-center font-semibold hover:bg-blue-100 w-full h-full cursor-pointer bg-transparent border-none flex items-center justify-center"
+                                onTouchStart={(e) => {
+                                  // Prevenir la propagación para eventos táctiles
+                                  e.stopPropagation();
+                                }}
+                                onTouchEnd={(e) => {
+                                  e.stopPropagation();
+                                }}
+                                onClick={(e) => {
+                                  // Detener la propagación para evitar que active el comportamiento de selección
+                                  e.stopPropagation();
+                                }}
+                              >
+                                <span className="pointer-events-none select-none">{shift.startTime} - {shift.endTime}</span>
+                              </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent>
+                            <DropdownMenuContent className="z-50 bg-white p-2 rounded-lg border shadow-lg">
                               <DropdownMenuItem 
-                                className="text-red-600 cursor-pointer flex items-center gap-2 text-xs"
+                                className="text-red-600 cursor-pointer flex items-center gap-2 text-xs p-3"
                                 onClick={() => handleDeleteShift(shift)}
                               >
                                 <Trash className="h-3.5 w-3.5" />
