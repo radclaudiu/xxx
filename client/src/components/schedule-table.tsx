@@ -670,7 +670,7 @@ export default function ScheduleTable({
       <div 
         className="overflow-x-auto border border-neutral-200 rounded select-none w-full touch-container"
         style={{ 
-          touchAction: "pan-y pinch-zoom", // Permitir scroll vertical y zoom, pero no horizontal con un dedo
+          touchAction: "auto", // Permitir todos los gestos táctiles
           WebkitOverflowScrolling: "touch", // Mejorar el desplazamiento suave
           width: "100%",
           maxWidth: "100vw"

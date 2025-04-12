@@ -104,9 +104,10 @@ thead tr:nth-child(3) th {
 
 /* Prevenir eventos de touch no deseados en dispositivos móviles */
 @media (hover: none) and (pointer: coarse) {
-  /* Contenedor principal: prevenir desplazamiento horizonal con un dedo */
+  /* Contenedor principal: permitir todos los gestos táctiles con 2+ dedos */
   .touch-container {
-    touch-action: pan-y pinch-zoom !important;
+    touch-action: manipulation !important; /* Manipulación (multiples gestos) */
+    -webkit-overflow-scrolling: touch; /* Para iOS */
   }
   
   /* Establecer comportamiento por defecto para todas las celdas:
@@ -118,5 +119,11 @@ thead tr:nth-child(3) th {
   /* Permitir todos los gestos en encabezados */
   th {
     touch-action: auto !important;
+  }
+  
+  /* Reglas para el contenedor de la tabla - este es el que debe desplazarse con 2 dedos */
+  .overflow-x-auto {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
