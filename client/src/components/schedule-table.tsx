@@ -10,7 +10,6 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { Info, Save, Edit } from 'lucide-react';
 import ExportsModal from './exports-modal';
-import DeleteShiftDialog from './delete-shift-dialog';
 import { 
   formatDateForAPI, 
   generateTimeSlots, 
@@ -433,62 +432,69 @@ export default function ScheduleTable({
     return () => {
       document.removeEventListener('touchmove', handleTouchMove);
     };
-  }, [isDragging]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isDragging, activeEmployee, startTime]);
   
-  // Determinar si una celda está seleccionada
+  // Check if a cell is selected
   const isCellSelected = (employeeId: number, time: string) => {
     const selectedCells = selectedCellsByEmployee.get(employeeId);
-    return !!selectedCells && selectedCells.has(time);
+    return selectedCells ? selectedCells.has(time) : false;
   };
   
-  // Guardar selecciones como turnos
+  // Handle save button click
   const handleSaveSelections = () => {
     const selections: { employee: Employee, startTime: string, endTime: string }[] = [];
     
-    for (const [employeeId, times] of selectedCellsByEmployee.entries()) {
-      const employee = employees.find(emp => emp.id === employeeId);
-      if (!employee) continue;
+    // Process each employee's selections
+    selectedCellsByEmployee.forEach((selectedTimes, employeeId) => {
+      if (selectedTimes.size === 0) return;
       
-      // Convertir tiempos seleccionados a array y ordenar
-      const sortedTimes = Array.from(times).sort((a, b) => {
-        return convertTimeToMinutes(a) - convertTimeToMinutes(b);
+      const employee = employees.find(e => e.id === employeeId);
+      if (!employee) return;
+      
+      // Convert selected times to array and sort them
+      const sortedTimes = Array.from(selectedTimes).sort((a, b) => {
+        const [aHour, aMinute] = a.split(':').map(Number);
+        const [bHour, bMinute] = b.split(':').map(Number);
+        return (aHour * 60 + aMinute) - (bHour * 60 + bMinute);
       });
       
-      // Agrupar tiempos consecutivos
+      if (sortedTimes.length === 0) return;
+      
+      // Group consecutive times
       let currentGroup: string[] = [sortedTimes[0]];
       
       for (let i = 1; i < sortedTimes.length; i++) {
         const prevTime = currentGroup[currentGroup.length - 1];
         const currTime = sortedTimes[i];
         
-        // Verificar si los tiempos son consecutivos
+        // Check if times are consecutive
         const prevIndex = timeSlots.indexOf(prevTime);
         const currIndex = timeSlots.indexOf(currTime);
         
         if (currIndex - prevIndex === 1) {
-          // Tiempos consecutivos, agregar al grupo actual
+          // Times are consecutive, add to current group
           currentGroup.push(currTime);
         } else {
-          // Tiempos no consecutivos, crear un nuevo turno con el grupo actual
+          // Times are not consecutive, save current group and start a new one
           const startTime = currentGroup[0];
           const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
+          // For end time, we need the next slot after the last one
           const endTime = lastTimeIndex + 1 < timeSlots.length ? 
                           timeSlots[lastTimeIndex + 1] : 
                           currentGroup[currentGroup.length - 1];
           
-          // Añadir selección
           selections.push({
             employee,
             startTime,
             endTime
           });
           
-          // Iniciar nuevo grupo
+          // Start new group
           currentGroup = [currTime];
         }
       }
       
-      // Procesar el último grupo
+      // Process the last group
       if (currentGroup.length > 0) {
         const startTime = currentGroup[0];
         const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
@@ -496,46 +502,42 @@ export default function ScheduleTable({
                         timeSlots[lastTimeIndex + 1] : 
                         currentGroup[currentGroup.length - 1];
         
-        // Añadir selección del último grupo
         selections.push({
           employee,
           startTime,
           endTime
         });
       }
-    }
-    
-    // Guardar turnos
-    onSaveShifts(selections);
-    
-    // Limpiar selecciones
-    setSelectedCellsByEmployee(new Map());
-    
-    // Mostrar mensaje de éxito
-    toast({
-      title: "Turnos guardados",
-      description: `Se han guardado ${selections.length} turnos.`,
     });
+    
+    // Call the provided save function with the processed selections
+    if (selections.length > 0) {
+      onSaveShifts(selections);
+      
+      // Clear selections after saving
+      setSelectedCellsByEmployee(new Map());
+    }
   };
   
   // Check if there are any selections
   const hasSelections = selectedCellsByEmployee.size > 0;
   
-  // Función para manejar la eliminación de un turno
+  // Manejar la eliminación de un turno
   const handleDeleteShift = (shift: Shift) => {
-    if (onDeleteShift) {
-      onDeleteShift(shift.id);
-      toast({
-        title: "Turno eliminado",
-        description: `Se ha eliminado el turno de ${shift.startTime} a ${shift.endTime}.`,
-      });
-    } else {
+    if (!onDeleteShift) {
       toast({
         title: "Error",
         description: "No se pudo eliminar el turno, función no disponible.",
         variant: "destructive"
       });
+      return;
     }
+    
+    onDeleteShift(shift.id);
+    toast({
+      title: "Turno eliminado",
+      description: `Se ha eliminado el turno de ${shift.startTime} a ${shift.endTime}.`,
+    });
   };
   
   // Calcular las horas semanales trabajadas y restantes para cada empleado
@@ -617,9 +619,131 @@ export default function ScheduleTable({
       remainingHours: parseFloat(remainingHours.toFixed(2))
     };
   };
+  
+  // Estado para menú contextual
+  const [contextMenu, setContextMenu] = useState<{
+    isOpen: boolean;
+    shift: Shift | null;
+    x: number;
+    y: number;
+  }>({
+    isOpen: false,
+    shift: null,
+    x: 0,
+    y: 0
+  });
+  
+  // Manejar apertura de menú contextual
+  const handleOpenContextMenu = (e: React.MouseEvent | React.TouchEvent, shift: Shift) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // En dispositivos táctiles, obtener coordenadas del toque
+    let x = 0;
+    let y = 0;
+    
+    if ('touches' in e) {
+      // Es un evento táctil
+      const touch = e.touches[0];
+      x = touch.clientX;
+      y = touch.clientY;
+    } else {
+      // Es un evento de mouse
+      x = (e as React.MouseEvent).clientX;
+      y = (e as React.MouseEvent).clientY;
+    }
+    
+    // Cerrar cualquier menú contextual abierto previamente
+    setContextMenu(prev => ({
+      isOpen: false,
+      shift: null,
+      x: 0,
+      y: 0
+    }));
+    
+    // Retrasar la apertura para evitar conflictos con los eventos táctiles
+    setTimeout(() => {
+      // Abrir menú contextual
+      setContextMenu({
+        isOpen: true,
+        shift,
+        x,
+        y
+      });
+    }, 50);
+  };
+  
+  // Cerrar menú contextual
+  const closeContextMenu = () => {
+    setContextMenu(prev => ({
+      ...prev,
+      isOpen: false
+    }));
+  };
 
   return (
     <div className="space-y-4">
+      {/* Menú contextual para turnos */}
+      {contextMenu.isOpen && contextMenu.shift && (
+        <div 
+          className="fixed z-50 bg-white shadow-lg rounded-md p-3 border border-gray-200"
+          style={{
+            top: `${contextMenu.y}px`,
+            left: `${contextMenu.x}px`,
+            transform: 'translate(-50%, -120%)',
+            minWidth: '180px',
+            touchAction: 'none' // Prevenir gestos táctiles que cierren el menú
+          }}
+          onClick={(e) => {
+            // Evitar que los clics dentro del menú se propaguen al overlay
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onTouchStart={(e) => {
+            // Evitar que los toques dentro del menú se propaguen
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+        >
+          <div className="text-xs font-semibold mb-2 text-gray-600 border-b pb-1">
+            Turno: {contextMenu.shift.startTime} - {contextMenu.shift.endTime}
+          </div>
+          <button
+            onClick={(e) => {
+              // Evitar propagación al overlay
+              e.preventDefault();
+              e.stopPropagation();
+              
+              // Eliminar turno
+              if (contextMenu.shift && onDeleteShift) {
+                onDeleteShift(contextMenu.shift.id);
+                toast({
+                  title: "Turno eliminado",
+                  description: `Se ha eliminado el turno de ${contextMenu.shift.startTime} a ${contextMenu.shift.endTime}.`,
+                });
+              }
+              closeContextMenu();
+            }}
+            className="w-full text-left text-red-600 hover:bg-red-50 p-2 rounded-sm text-sm flex items-center gap-2"
+          >
+            <span className="text-red-500">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </span>
+            Eliminar turno
+          </button>
+        </div>
+      )}
+      
+      {/* Overlay para cerrar el menú al hacer clic fuera */}
+      {contextMenu.isOpen && (
+        <div 
+          className="fixed inset-0 z-40"
+          onClick={closeContextMenu}
+        />
+      )}
+      
       {/* Help message for touch users */}
       <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-2 rounded-md mb-3 text-sm">
         <div className="flex items-center gap-2">
@@ -629,7 +753,7 @@ export default function ScheduleTable({
         <div className="mt-1 ml-6 text-xs">
           • <strong>Un dedo:</strong> Selecciona celdas/turnos - arrastre para seleccionar varias
           <br/>• <strong>Dos dedos:</strong> Desplaza la tabla lateralmente
-          <br/>• <strong>Tocar celda azul:</strong> Abre el diálogo para eliminar turno
+          <br/>• <strong>Tocar celda azul:</strong> Abre menú para eliminar turno
         </div>
       </div>
       
@@ -838,7 +962,7 @@ export default function ScheduleTable({
                   const shiftStartTime = shift.startTime;
                   const shiftEndTime = shift.endTime;
                   return (
-                    shift.date === formattedDate && 
+                    shift.date === formatDateForAPI(date) && 
                     isTimeBetween(time, shiftStartTime, shiftEndTime)
                   );
                 }).length;
@@ -936,238 +1060,287 @@ export default function ScheduleTable({
                       lineHeight: `${cellSize}px`, // Garantizar altura exacta
                       boxSizing: "border-box", // Incluir bordes en dimensiones
                       borderLeft: time.endsWith(':00') ? '2px solid #AAAAAA' : 
-                               time.endsWith(':30') ? '1px solid #DDDDDD' : 
-                               '1px dashed #EEEEEE'
+                                time.endsWith(':30') ? '1px solid #DDDDDD' : 
+                                '1px dashed #EEEEEE'
                     }}
                   >
-                    <div 
-                      className="text-[0.5rem] font-medium opacity-50"
-                    >
-                      {minutes}
+                    {/* Mostrar minuto para todos los intervalos */}
+                    <div className="flex justify-center items-center h-full">
+                      <div className="text-[0.45rem] tracking-tighter text-gray-500">{minutes}</div>
                     </div>
                   </th>
                 );
               })}
             </tr>
+            
+
           </thead>
+
+          {/* Table Body */}
           <tbody>
-            {employees.map((employee) => {
-              const weeklyHours = calculateWeeklyHours(employee);
-              
-              return (
-                <tr key={employee.id}>
-                  {/* Primera columna: Nombre y datos del empleado */}
-                  <td 
-                    className="border-b border-r border-neutral-200 p-1 bg-white"
-                    style={{
-                      position: 'sticky',
-                      left: 0,
-                      zIndex: 10,
-                      boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
-                      backgroundColor: 'white'
-                    }}
-                  >
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-sm">{employee.name}</span>
-                      <span className="text-xs text-gray-500 truncate">{employee.role || 'Sin rol'}</span>
-                      <div className="mt-1 flex flex-col">
-                        <span className="text-xs text-blue-600">
-                          {weeklyHours.workedHours} / {weeklyHours.maxWeeklyHours}h
-                        </span>
-                        <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                          <div 
-                            className="bg-blue-600 h-1.5 rounded-full" 
-                            style={{ 
-                              width: `${Math.min(100, (weeklyHours.workedHours / weeklyHours.maxWeeklyHours) * 100)}%`,
-                              transition: 'width 0.3s ease-in-out'
-                            }}
-                          />
-                        </div>
-                      </div>
+            {employees.map((employee) => (
+              <tr key={employee.id} className="employee-row">
+                <td 
+                  className="border-b border-r border-neutral-200 p-0 bg-white"
+                  style={{
+                    position: 'sticky',
+                    left: 0,
+                    zIndex: 10,
+                    backgroundColor: 'white',
+                    boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
+                    height: `${cellSize}px`,
+                    minWidth: "150px", // Un poco más ancho para acomodar la información adicional
+                    width: "150px",
+                    padding: 0
+                  }}
+                >
+                  <div className="flex items-center h-full" style={{width: "100%"}}>
+                    {/* Celda principal del empleado */}
+                    <div className="flex justify-between items-center h-full px-1" 
+                      style={{
+                        width: "110px",
+                        borderRight: "1px dashed #EEEEEE",
+                        overflow: "hidden"
+                      }}
+                    >
+                      <span className="truncate text-xs font-medium pr-1" style={{maxWidth: "95px", display: "block"}}>{employee.name}</span>
+                      <button className="text-neutral-400 hover:text-neutral-600 flex-shrink-0 p-0">
+                        <Edit className="h-3 w-3" />
+                      </button>
                     </div>
-                  </td>
+                    
+                    {/* Celda que muestra las horas semanales restantes */}
+                    {(() => {
+                      const { maxWeeklyHours, workedHours, remainingHours } = calculateWeeklyHours(employee);
+                      
+                      // Determinar color basado en horas restantes
+                      const remainingPercentage = (remainingHours / maxWeeklyHours) * 100;
+                      const textColor = 
+                        remainingPercentage <= 10 ? "text-red-600" :
+                        remainingPercentage <= 25 ? "text-amber-600" :
+                        "text-blue-600";
+                      
+                      return (
+                        <div className="flex flex-col justify-center items-center h-full px-1" 
+                          style={{
+                            width: "30px",
+                            boxSizing: "border-box",
+                            overflow: "hidden"
+                          }}
+                        >
+                          <span className={`text-[0.45rem] ${textColor} font-semibold`} 
+                            title={`${remainingHours}h restantes de ${maxWeeklyHours}h semanales`}>
+                            {remainingHours}h
+                          </span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </td>
+                
+                {(() => {
+                  // Usamos un array temporal para llevar control de las celdas que debemos saltarnos
+                  // porque ya están incluidas en un colSpan
+                  const skipCells: {[key: string]: boolean} = {};
                   
-                  {/* Celdas de tiempo */}
-                  {timeSlots.map((time, idx) => {
-                    const isSelected = isCellSelected(employee.id, time);
-                    const isAssigned = isCellAssigned(employee.id, time);
-                    const shift = getShiftForCell(employee.id, time);
-                    const isFirstCell = isFirstCellInShift(employee.id, time);
-                    
-                    // Si ya hay un turno asignado que inicia con esta celda, calcular el colspan
-                    const cellSpan = isFirstCell ? getShiftCellSpan(employee.id, time) : 1;
-                    
-                    // Si no es la primera celda de un turno ya asignado, no renderizar
-                    if (isAssigned && !isFirstCell) {
+                  return timeSlots.map((time, timeIndex) => {
+                    // Si esta celda debe ser saltada, no renderizamos nada
+                    if (skipCells[time]) {
                       return null;
                     }
                     
-                    // Clase para celda seleccionada
-                    const selectedClass = isSelected ? 'bg-blue-100 hover:bg-blue-200' : 'hover:bg-gray-100';
+                    const isAssigned = isCellAssigned(employee.id, time);
+                    const isFirstCell = isFirstCellInShift(employee.id, time);
+                    const shift = isFirstCell ? getShiftForCell(employee.id, time) : null;
+                    const isSelected = isCellSelected(employee.id, time);
                     
-                    // Clase para celda con turno asignado
-                    const assignedClass = isAssigned ? 'bg-blue-500 text-white hover:bg-blue-600' : selectedClass;
-                    
-                    // Borde izquierdo para marcar horas
-                    const borderLeftClass = time.endsWith(':00') 
-                      ? 'border-l-2 border-l-gray-400'
-                      : time.endsWith(':30')
-                        ? 'border-l border-l-gray-300'
-                        : 'border-l border-l-gray-200';
+                    // Si es la primera celda de un turno, calculamos cuántas celdas debe ocupar
+                    let colSpan = 1;
+                    if (isFirstCell && shift) {
+                      colSpan = getShiftCellSpan(employee.id, time);
+                      
+                      // Marcar las siguientes celdas como "saltadas"
+                      for (let i = 1; i < colSpan && timeIndex + i < timeSlots.length; i++) {
+                        skipCells[timeSlots[timeIndex + i]] = true;
+                      }
+                    }
                     
                     return (
                       <td 
                         key={`${employee.id}-${time}`}
                         data-cell-id={`${employee.id}-${time}`}
-                        colSpan={cellSpan}
-                        className={`border-b border-neutral-200 p-0 relative ${assignedClass} ${borderLeftClass} transition-colors`}
+                        colSpan={colSpan}
+                        className={`time-cell ${
+                          isAssigned ? 'assigned' : ''
+                        } ${isSelected ? 'selected' : ''} ${
+                          time.endsWith(':00') ? 'hour-marker' : ''
+                        }`}
                         style={{
-                          width: `${cellSize}px`,
-                          height: `${cellSize * 1.5}px`, // Hacer celdas más altas para empleados
-                          cursor: isAssigned ? 'default' : 'pointer',
-                          userSelect: 'none',
-                          touchAction: 'none' // Disables browser handling of touch events
+                          width: `${cellSize * colSpan}px`, // Ancho dinámico basado en cellSize y colSpan
+                          height: `${cellSize}px`, // Altura dinámica basada en cellSize
+                          lineHeight: `${cellSize}px`, // Garantizar altura exacta
+                          padding: "0", // Sin padding para mantener tamaño exacto
+                          boxSizing: "border-box", // Incluir bordes en dimensiones
+                          backgroundColor: isSelected ? 'rgba(76, 175, 80, 0.4)' : 
+                                          isAssigned ? 'rgba(25, 118, 210, 0.2)' : 
+                                          'transparent',
+                          borderTop: isSelected ? '1px solid #4CAF50' : 
+                                   isAssigned ? '1px solid #1976D2' : '1px solid #E0E0E0',
+                          borderRight: isSelected ? '1px solid #4CAF50' : 
+                                      isAssigned ? '1px solid #1976D2' : '1px solid #E0E0E0',
+                          borderBottom: isSelected ? '1px solid #4CAF50' : 
+                                       isAssigned ? '1px solid #1976D2' : '1px solid #E0E0E0',
+                          borderLeft: time.endsWith(':00') ? '2px solid #AAAAAA' : 
+                                     time.endsWith(':30') ? '1px solid #DDDDDD' : 
+                                     '1px dashed #EEEEEE',
+                          cursor: 'pointer',
+                          WebkitUserSelect: 'none',  // Safari
+                          MozUserSelect: 'none',     // Firefox
+                          msUserSelect: 'none',      // IE/Edge
+                          userSelect: 'none',        // Standard
+                          touchAction: 'none',       // Prevenir desplazamiento en celdas individuales
+                          WebkitTapHighlightColor: 'transparent' // Quitar resaltado al tocar
+                        }}
+                        onMouseDown={(e) => {
+                          // No activar selección si la celda ya tiene un turno asignado
+                          if (!isAssigned) {
+                            handleMouseDown(employee, time);
+                          } else if (isFirstCell && shift && onDeleteShift) {
+                            // Mostrar opciones contextuales si es un turno existente
+                            e.preventDefault();
+                            if (window.confirm(`¿Desea eliminar el turno de ${shift.startTime} a ${shift.endTime}?`)) {
+                              handleDeleteShift(shift);
+                            }
+                          }
+                        }}
+                        onMouseEnter={() => {
+                          if (!isAssigned) {
+                            handleMouseEnter(employee, time);
+                          }
                         }}
                         onClick={(e) => {
-                          // Comportamiento normal de selección para todas las celdas libres
+                          // Usar toggleSingleCell para añadir o quitar celdas
                           if (!isAssigned) {
                             console.log('Click en celda:', time, 'estado actual:', isSelected ? 'seleccionada' : 'no seleccionada');
                             toggleSingleCell(employee, time);
+                          } else if (isFirstCell && shift && onDeleteShift) {
+                            // Mostrar menú contextual para eliminar turno existente
+                            handleOpenContextMenu(e, shift);
                           }
                         }}
-                        onMouseDown={() => {
-                          // Solo iniciar arrastre en celdas libres
-                          if (!isAssigned) {
-                            handleMouseDown(employee, time);
-                          }
-                        }}
-                        onMouseEnter={() => handleMouseEnter(employee, time)}
                         onTouchStart={(e) => {
                           // Comportamiento normal de selección para todas las celdas libres
                           if (!isAssigned) {
                             handleTouchStart(e, employee, time);
+                          } else if (isFirstCell && shift && onDeleteShift) {
+                            // Mostrar menú contextual para eliminar
+                            handleOpenContextMenu(e, shift);
                           }
                         }}
                       >
                         {isFirstCell && shift && (
                           <div 
-                            className="flex items-center justify-between h-full w-full px-1 py-0.5"
+                            className="flex items-center justify-center h-full w-full overflow-hidden"
+                            style={{
+                              fontSize: "0.55rem",
+                              fontWeight: "bold",
+                              color: "#1565C0",
+                              whiteSpace: "nowrap",
+                              textOverflow: "ellipsis",
+                              padding: "0 2px"
+                            }}
                           >
-                            <span className="text-xs font-medium truncate min-w-0 flex-1">
-                              {shift.startTime} - {shift.endTime}
-                            </span>
-                            <DeleteShiftDialog
-                              shift={shift}
-                              onConfirm={handleDeleteShift}
-                            />
+                            {`${shift.startTime} - ${shift.endTime}`}
                           </div>
                         )}
                       </td>
                     );
-                  })}
-                </tr>
-              );
-            })}
+                  });
+                })()}
+              </tr>
+            ))}
+            
+            {/* Fila final con resumen de costos */}
+            {hourlyEmployeeCost > 0 && estimatedDailySales > 0 && (
+              <tr className="totals-row">
+                <td 
+                  className="border-t border-r border-neutral-200 p-1 bg-neutral-50 font-medium text-xs"
+                  style={{
+                    position: 'sticky',
+                    left: 0,
+                    zIndex: 10,
+                    backgroundColor: 'white',
+                    boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
+                    height: `${cellSize}px`,
+                    width: "150px",
+                  }}
+                >
+                  <div className="flex justify-between items-center">
+                    <span>Costo (% Ventas)</span>
+                  </div>
+                </td>
+                
+                {timeSlots.map((time) => {
+                  // Calcular total de empleados en este tiempo
+                  const employeeCount = shifts.filter(shift => 
+                    shift.date === formatDateForAPI(date) && 
+                    isTimeBetween(time, shift.startTime, shift.endTime)
+                  ).length;
+                  
+                  // Costo por 15 minutos (0.25 horas)
+                  const cost = employeeCount * hourlyEmployeeCost * 0.25;
+                  
+                  // Costo como porcentaje de ventas diarias por 15 min
+                  // (asumiendo distribución uniforme durante el día)
+                  const totalSlots = timeSlots.length;
+                  const salesPer15Min = estimatedDailySales / totalSlots;
+                  const costPercentage = salesPer15Min > 0 ? (cost / salesPer15Min) * 100 : 0;
+                  
+                  // Color basado en porcentaje de costo
+                  let bgColor = 'transparent';
+                  let textColor = 'text-gray-500';
+                  
+                  if (employeeCount > 0) {
+                    if (costPercentage <= 20) {
+                      bgColor = 'rgba(220, 252, 231, 0.5)'; // Verde claro
+                      textColor = 'text-green-700';
+                    } else if (costPercentage <= 30) {
+                      bgColor = 'rgba(254, 249, 195, 0.5)'; // Amarillo claro
+                      textColor = 'text-amber-700';
+                    } else {
+                      bgColor = 'rgba(254, 226, 226, 0.5)'; // Rojo claro
+                      textColor = 'text-red-700';
+                    }
+                  }
+                  
+                  return (
+                    <td 
+                      key={`cost-${time}`}
+                      className={`border-t border-neutral-200 p-0 text-center ${
+                        time.endsWith(':00') ? 'hour-marker' : ''
+                      }`}
+                      style={{
+                        backgroundColor: bgColor,
+                        height: `${cellSize}px`,
+                        width: `${cellSize}px`,
+                        borderLeft: time.endsWith(':00') ? '2px solid #AAAAAA' : 
+                                   time.endsWith(':30') ? '1px solid #DDDDDD' : 
+                                   '1px dashed #EEEEEE',
+                      }}
+                    >
+                      {employeeCount > 0 && (
+                        <div className={`text-[0.45rem] font-semibold ${textColor}`}>
+                          {costPercentage.toFixed(0)}%
+                        </div>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
-      
-      {/* Resumen de costes (basado en ventas estimadas y coste por hora) */}
-      {estimatedDailySales > 0 && hourlyEmployeeCost > 0 && (
-        <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-          <h3 className="text-sm font-semibold mb-2">Análisis de Costes (Estimado)</h3>
-          
-          {/* Cálculo de horas totales y coste */}
-          {(() => {
-            // Total de horas asignadas para este día
-            let totalHours = 0;
-            
-            // Sumar horas de turnos ya guardados
-            shifts.forEach(shift => {
-              if (shift.date === formattedDate) {
-                totalHours += calculateHoursBetween(shift.startTime, shift.endTime);
-              }
-            });
-            
-            // Sumar horas de selecciones actuales no guardadas
-            for (const [employeeId, times] of selectedCellsByEmployee.entries()) {
-              // Convertir tiempos seleccionados a array y ordenar
-              const sortedTimes = Array.from(times).sort((a, b) => {
-                return convertTimeToMinutes(a) - convertTimeToMinutes(b);
-              });
-              
-              // Agrupar tiempos consecutivos
-              let currentGroup: string[] = [sortedTimes[0]];
-              
-              for (let i = 1; i < sortedTimes.length; i++) {
-                const prevTime = currentGroup[currentGroup.length - 1];
-                const currTime = sortedTimes[i];
-                
-                // Verificar si los tiempos son consecutivos
-                const prevIndex = timeSlots.indexOf(prevTime);
-                const currIndex = timeSlots.indexOf(currTime);
-                
-                if (currIndex - prevIndex === 1) {
-                  // Tiempos consecutivos, agregar al grupo actual
-                  currentGroup.push(currTime);
-                } else {
-                  // Tiempos no consecutivos, calcular horas para el grupo actual
-                  const startTime = currentGroup[0];
-                  const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
-                  const endTime = lastTimeIndex + 1 < timeSlots.length ? 
-                                timeSlots[lastTimeIndex + 1] : 
-                                currentGroup[currentGroup.length - 1];
-                  
-                  // Sumar horas de este grupo
-                  totalHours += calculateHoursBetween(startTime, endTime);
-                  
-                  // Iniciar nuevo grupo
-                  currentGroup = [currTime];
-                }
-              }
-              
-              // Procesar el último grupo
-              if (currentGroup.length > 0) {
-                const startTime = currentGroup[0];
-                const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
-                const endTime = lastTimeIndex + 1 < timeSlots.length ? 
-                              timeSlots[lastTimeIndex + 1] : 
-                              currentGroup[currentGroup.length - 1];
-                
-                // Sumar horas del último grupo
-                totalHours += calculateHoursBetween(startTime, endTime);
-              }
-            }
-            
-            // Calcular coste total
-            const totalCost = totalHours * hourlyEmployeeCost;
-            
-            // Calcular porcentaje de ventas que va a personal
-            const percentOfSales = estimatedDailySales > 0 
-              ? (totalCost / estimatedDailySales) * 100 
-              : 0;
-            
-            // Determinr color basado en el porcentaje
-            let costColor = "text-green-600";
-            if (percentOfSales > 25) costColor = "text-yellow-600";
-            if (percentOfSales > 35) costColor = "text-orange-600";
-            if (percentOfSales > 40) costColor = "text-red-600";
-            
-            return (
-              <div className="text-sm grid grid-cols-2 gap-2">
-                <div>
-                  <p>Horas totales: <span className="font-semibold">{totalHours.toFixed(2)}</span></p>
-                  <p>Coste estimado: <span className="font-semibold">${totalCost.toFixed(2)}</span></p>
-                </div>
-                <div>
-                  <p>Ventas estimadas: <span className="font-semibold">${estimatedDailySales.toFixed(2)}</span></p>
-                  <p>% de ventas en personal: <span className={`font-semibold ${costColor}`}>{percentOfSales.toFixed(2)}%</span></p>
-                </div>
-              </div>
-            );
-          })()}
-        </div>
-      )}
     </div>
   );
 }
