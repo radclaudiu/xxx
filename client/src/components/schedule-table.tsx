@@ -308,15 +308,15 @@ export default function ScheduleTable({
     handleCellInteraction(employee, time);
   };
   
-  // Touch move handler optimizado para evitar parpadeos
+  // Touch move handler para mostrar selecciones en tiempo real
   const handleTouchMove = (e: TouchEvent) => {
     if (!isDragging || !activeEmployee || !startTime) return;
     e.preventDefault(); // Prevenir desplazamiento de página durante el arrastre
     
-    // Aplicar throttling para limitar la frecuencia de actualizaciones
+    // Aplicar throttling suave para limitar actualizaciones pero mantener feedback visual
     const now = Date.now();
-    if (now - lastTouchUpdateRef.current < 150) {
-      return; // Limitar a actualizar máximo una vez cada 150ms
+    if (now - lastTouchUpdateRef.current < 50) { // Reducido a 50ms para mejor feedback visual
+      return; // Throttling más ligero para que se vean las actualizaciones en tiempo real
     }
     
     lastTouchUpdateRef.current = now;
@@ -339,8 +339,12 @@ export default function ScheduleTable({
       [10, 10],   // Diagonal inferior derecha
     ];
     
+    let foundCell = false;
+    
     // Buscar una celda válida bajo el dedo
     for (const [offsetX, offsetY] of offsets) {
+      if (foundCell) break; // Salir si ya encontramos una celda válida
+      
       const elementUnderTouch = document.elementFromPoint(x + offsetX, y + offsetY);
       
       if (elementUnderTouch?.tagName === 'TD' && elementUnderTouch.hasAttribute('data-cell-id')) {
@@ -351,7 +355,9 @@ export default function ScheduleTable({
           
           // Sólo procesar si es la misma fila/empleado
           if (empIdNum === activeEmployee.id) {
-            // Actualizar en el batch, no directamente en el estado
+            foundCell = true;
+            
+            // Actualizar selecciones
             if (batchedSelectionsRef.current) {
               const batch = batchedSelectionsRef.current;
               const startIndex = timeSlots.indexOf(startTime);
@@ -364,30 +370,27 @@ export default function ScheduleTable({
                 const minIdx = Math.min(startIndex, currentIndex);
                 const maxIdx = Math.max(startIndex, currentIndex);
                 
+                // Bandera para detectar cambios
+                let hasChanges = false;
+                const previousSize = selectedCells.size;
+                
                 for (let i = minIdx; i <= maxIdx; i++) {
                   const timeSlot = timeSlots[i];
-                  if (!isCellAssigned(activeEmployee.id, timeSlot)) {
+                  if (!isCellAssigned(activeEmployee.id, timeSlot) && !selectedCells.has(timeSlot)) {
                     selectedCells.add(timeSlot);
+                    hasChanges = true;
                   }
                 }
                 
-                if (selectedCells.size > 0) {
+                // Si hay cambios o el número de celdas cambió, actualizar
+                if (hasChanges || previousSize !== selectedCells.size) {
                   batch.set(activeEmployee.id, selectedCells);
                   
-                  // Programar una actualización visual con debounce
-                  if (pendingUpdateRef.current) {
-                    clearTimeout(pendingUpdateRef.current);
-                  }
-                  
-                  pendingUpdateRef.current = setTimeout(() => {
-                    if (batchedSelectionsRef.current) {
-                      setSelectedCellsByEmployee(new Map(batchedSelectionsRef.current));
-                    }
-                  }, 200); // Actualizar visualmente cada 200ms durante el arrastre
+                  // Actualizar inmediatamente para feedback visual en tiempo real
+                  setSelectedCellsByEmployee(new Map(batchedSelectionsRef.current));
                 }
               }
             }
-            return; // Terminar después de encontrar una celda válida
           }
         }
       }
