@@ -127,3 +127,43 @@ thead tr:nth-child(3) th {
     -webkit-overflow-scrolling: touch;
   }
 }
+
+/* Estilos para React Beautiful DnD */
+.employee-shifts {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  flex-wrap: nowrap;
+  overflow-x: hidden;
+}
+
+/* Animaciones para el arrastre */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.dragging {
+  animation: pulse 0.5s infinite;
+  z-index: 9999;
+  opacity: 0.8;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
+}
+
+/* Estilo para la celda que está siendo objetivo de un arrastre */
+.drop-target {
+  background-color: rgba(76, 175, 80, 0.2) !important;
+  transition: background-color 0.2s ease;
+}
+
+/* Efecto de elevación durante arrastre */
+.shift-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.shift-card:active {
+  transform: scale(1.05);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+}
