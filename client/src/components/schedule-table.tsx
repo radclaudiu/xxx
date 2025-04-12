@@ -119,18 +119,27 @@ export default function ScheduleTable({
     const shift = getShiftForCell(employeeId, time);
     if (!shift) return 1;
     
+    // Buscar el índice de tiempo de inicio en timeSlots
     const startIndex = timeSlots.indexOf(shift.startTime);
-    const endIndex = timeSlots.findIndex(t => {
-      const [hour, minute] = t.split(':').map(Number);
-      const [shiftEndHour, shiftEndMinute] = shift.endTime.split(':').map(Number);
-      
-      // Comparar horas y minutos
-      if (hour > shiftEndHour) return true;
-      if (hour === shiftEndHour && minute >= shiftEndMinute) return true;
-      return false;
-    });
+    if (startIndex === -1) return 1; // Si no se encuentra, devolver 1
     
-    return endIndex - startIndex > 0 ? endIndex - startIndex : 1;
+    // Convertir tiempos a minutos para comparar
+    const startMinutes = convertTimeToMinutes(shift.startTime);
+    const endMinutes = convertTimeToMinutes(shift.endTime);
+    
+    // Calcular diferencia en minutos
+    let diffMinutes = endMinutes - startMinutes;
+    
+    // Si el horario de fin es anterior al de inicio, asumimos que es del día siguiente
+    if (diffMinutes <= 0) {
+      diffMinutes += 24 * 60; // Añadir 24 horas en minutos
+    }
+    
+    // Convertir a número de intervalos de 15 minutos
+    const intervalCount = Math.ceil(diffMinutes / 15);
+    
+    // Asegurar que devolvemos al menos 1 celda
+    return Math.max(1, intervalCount);
   };
   
   // Handle document-wide mouse/touch up events
