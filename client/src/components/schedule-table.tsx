@@ -245,33 +245,39 @@ export default function ScheduleTable({
     isSwiping: false
   });
   
-  // Manejo simplificado de inicio de toque
+  // Método simplificado para manejar el toque inicial
   const handleTouchStart = (e: React.TouchEvent, employee: Employee, time: string) => {
-    // Si la celda tiene un turno asignado, no hacer nada
+    // No hacer nada si la celda ya tiene un turno asignado
     if (isCellAssigned(employee.id, time)) return;
     
-    // Prevenir comportamiento default solo para celdas (no para contenedor)
+    // Para evitar comportamientos inesperados 
     e.stopPropagation();
     
-    // Iniciar selección
+    // Verificar si es un solo dedo (para selección) o varios (para scroll)
+    if (e.touches.length !== 1) return;
+    
+    // Configurar estado inicial
     mouseDownRef.current = true;
     setIsDragging(true);
     setActiveEmployee(employee);
     setStartTime(time);
     
-    // Seleccionar la celda tocada
+    // Seleccionar inmediatamente la celda tocada
     toggleSingleCell(employee, time);
+    
+    // Agregar clase a document.body para cambiar comportamiento táctil global
+    document.documentElement.classList.add('is-selecting');
   };
   
-  // Simplificación del manejo de celdas
-  const handleCellInteraction = (employee: Employee, time: string) => {
-    // Verificaciones básicas
+  // Método para manejar la selección de celdas (tanto mouse como touch)
+  const handleCellSelection = (employee: Employee, time: string) => {
+    // No hacer nada si la interacción no está activa o es otro empleado
     if (!mouseDownRef.current || !isDragging || !activeEmployee) return;
     if (employee.id !== activeEmployee.id) return;
     if (isCellAssigned(employee.id, time)) return;
     
+    // Realizar selección en rango desde startTime hasta time actual
     if (startTime) {
-      // Crear selección desde startTime hasta el tiempo actual
       const startIndex = timeSlots.indexOf(startTime);
       const currentIndex = timeSlots.indexOf(time);
       
@@ -280,11 +286,11 @@ export default function ScheduleTable({
         const newMap = new Map(selectedCellsByEmployee);
         const newSet = new Set<string>();
         
-        // Selección bidireccional (funciona en ambos sentidos)
+        // Determinar rango (funciona en ambas direcciones)
         const min = Math.min(startIndex, currentIndex);
         const max = Math.max(startIndex, currentIndex);
         
-        // Añadir todas las celdas en el rango
+        // Seleccionar todas las celdas en el rango
         for (let i = min; i <= max; i++) {
           const timeSlot = timeSlots[i];
           if (!isCellAssigned(employee.id, timeSlot)) {
@@ -306,64 +312,79 @@ export default function ScheduleTable({
     }
   };
   
-  // Simplificación del manejo de movimiento táctil
+  // Manejador global para movimiento táctil (con evento pasivo: false)
   const handleTouchMove = (e: TouchEvent) => {
-    // Verificar estado de arrastre
-    if (!isDragging || !activeEmployee) return;
+    // Solo procesar si estamos en modo arrastre con un dedo
+    if (!isDragging || !activeEmployee || e.touches.length !== 1) return;
     
-    // Prevenir scroll durante selección
+    // Importante: prevenir scroll durante selección
     e.preventDefault();
     
-    // Obtener posición actual
+    // Buscar elemento bajo el dedo con puntos alrededor para mejorar detección
     const touch = e.touches[0];
     const x = touch.clientX;
     const y = touch.clientY;
     
-    // Buscar elemento bajo el dedo
-    const element = document.elementFromPoint(x, y);
+    // Puntos de detección: centro y alrededor para mejorar la precisión
+    const points = [
+      [x, y],         // Centro
+      [x-5, y],       // Izquierda
+      [x+5, y],       // Derecha
+      [x, y-5],       // Arriba
+      [x, y+5],       // Abajo
+      [x-5, y-5],     // Diagonal superior izquierda
+      [x+5, y-5],     // Diagonal superior derecha
+      [x-5, y+5],     // Diagonal inferior izquierda
+      [x+5, y+5]      // Diagonal inferior derecha
+    ];
     
-    // Si es una celda válida, procesarla
-    if (element && element.tagName === 'TD' && element.hasAttribute('data-cell-id')) {
-      const cellId = element.getAttribute('data-cell-id');
-      if (cellId) {
-        const [empId, time] = cellId.split('-');
-        const empIdNum = parseInt(empId, 10);
-        
-        // Solo procesar para el mismo empleado
-        if (empIdNum === activeEmployee.id) {
-          // Actualizar selección
-          handleCellInteraction(activeEmployee, time);
+    // Intentar cada punto hasta encontrar una celda
+    for (const [pointX, pointY] of points) {
+      const element = document.elementFromPoint(pointX, pointY);
+      
+      // Si encontramos un elemento con data-cell-id
+      if (element && element.hasAttribute('data-cell-id')) {
+        const cellId = element.getAttribute('data-cell-id');
+        if (cellId) {
+          const [empId, time] = cellId.split('-');
+          const empIdNum = parseInt(empId, 10);
+          
+          // Solo procesar para el mismo empleado
+          if (empIdNum === activeEmployee.id) {
+            handleCellSelection(activeEmployee, time);
+            return; // Salir al encontrar una celda válida
+          }
         }
       }
     }
   };
   
-  // Finalizar interacción táctil
+  // Finalizar cualquier interacción táctil
   const handleTouchEnd = () => {
-    // Limpiar estado
     mouseDownRef.current = false;
     setIsDragging(false);
+    
+    // Quitar clase del document para restaurar comportamiento táctil normal
+    document.documentElement.classList.remove('is-selecting');
   };
   
-  // Configurar manejadores globales
+  // Configurar/limpiar eventos globales según el estado de arrastre
   useEffect(() => {
-    // Manejador global para touch end
-    const handleGlobalTouchEnd = () => {
-      if (isDragging) {
-        handleTouchEnd();
-      }
-    };
+    // Si no estamos arrastrando, no hacer nada
+    if (!isDragging) return;
     
-    // Añadir eventos solo si estamos arrastrando
-    if (isDragging) {
-      document.addEventListener('touchmove', handleTouchMove, { passive: false });
-      document.addEventListener('touchend', handleGlobalTouchEnd);
-      document.addEventListener('touchcancel', handleGlobalTouchEnd);
-    }
+    // Manejadores globales
+    const handleGlobalTouchMove = (e: TouchEvent) => handleTouchMove(e);
+    const handleGlobalTouchEnd = () => handleTouchEnd();
     
-    // Limpiar eventos
+    // Agregar eventos globales
+    document.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
+    document.addEventListener('touchend', handleGlobalTouchEnd);
+    document.addEventListener('touchcancel', handleGlobalTouchEnd);
+    
+    // Limpiar al desmontar o cuando cambia isDragging
     return () => {
-      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchmove', handleGlobalTouchMove);
       document.removeEventListener('touchend', handleGlobalTouchEnd);
       document.removeEventListener('touchcancel', handleGlobalTouchEnd);
     };
@@ -372,7 +393,7 @@ export default function ScheduleTable({
   // Manejador para mouse enter (solo para desktop)
   const handleMouseEnter = (employee: Employee, time: string) => {
     if (!isTouchDevice) {
-      handleCellInteraction(employee, time);
+      handleCellSelection(employee, time);
     }
   };
   
@@ -565,7 +586,7 @@ export default function ScheduleTable({
   };
   
   return (
-    <div className="space-y-4">
+    <div className={`space-y-4 schedule-container ${isDragging ? 'is-dragging' : ''}`}>
       {/* Help message for touch users */}
       <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-2 rounded-md mb-3 text-sm">
         <div className="flex items-center gap-2">
