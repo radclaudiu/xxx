@@ -11,10 +11,17 @@ import {
   getEndOfWeek,
   isInSameWeek
 } from "@/lib/date-helpers";
-import { Edit, Save, Clock, DollarSign } from "lucide-react";
+import { Edit, Save, Clock, DollarSign, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ExportsModal from "@/components/exports-modal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
 
 interface ScheduleTableProps {
   employees: Employee[];
