@@ -44,33 +44,31 @@ export function getNextDay(date: Date): Date {
 export function generateTimeSlots(startHour: number, endHour: number): string[] {
   const slots: string[] = [];
   
-  // Manejo especial para hora 24 (medianoche)
-  const adjustedEndHour = endHour === 24 ? 23 : endHour;
+  // Crear todas las combinaciones de horas y minutos desde startHour hasta endHour
+  // Si endHour es 24, tratamos como un caso especial para incluir las subdivisiones de 23h
+  const actualEndHour = endHour === 24 ? 24 : endHour;
   
-  // Generar para todas las horas completas entre startHour y adjustedEndHour
-  for (let hour = startHour; hour <= adjustedEndHour; hour++) {
-    // Normalizar las horas para manejar horas > 23 (día siguiente)
+  for (let hour = startHour; hour < actualEndHour; hour++) {
+    // Normalizar hora para manejar casos > 23 (día siguiente)
     const normalizedHour = hour % 24;
-    
-    // Format hour with leading zero if needed
     const formattedHour = normalizedHour.toString().padStart(2, '0');
     
-    // Add :00 slot para todas las horas
+    // Para cada hora, añadir todos los intervalos de 15 minutos
     slots.push(`${formattedHour}:00`);
-    
-    // Añadir los intervalos de 15, 30 y 45 minutos
-    // Si es la última hora del rango y es la hora 23, o si no es la última hora del rango
-    if ((hour === adjustedEndHour && normalizedHour === 23) || hour < adjustedEndHour) {
-      slots.push(`${formattedHour}:15`);
-      slots.push(`${formattedHour}:30`);
-      slots.push(`${formattedHour}:45`);
-    }
+    slots.push(`${formattedHour}:15`);
+    slots.push(`${formattedHour}:30`);
+    slots.push(`${formattedHour}:45`);
   }
   
-  // Si estamos generando hasta la hora 24 (00:00 del día siguiente)
-  // Usamos un formato ligeramente diferente para evitar duplicación de claves
+  // Añadir la hora exacta final (sin subdivisiones)
   if (endHour === 24) {
-    slots.push('24:00'); // Añadir 00:00 como 24:00 para evitar duplicación de claves
+    // Si es 24, usamos '24:00' como identificador único para medianoche
+    slots.push('24:00');
+  } else {
+    // Para otras horas finales, añadir la hora en punto
+    const normalizedEndHour = endHour % 24;
+    const formattedEndHour = normalizedEndHour.toString().padStart(2, '0');
+    slots.push(`${formattedEndHour}:00`);
   }
   
   return slots;
