@@ -114,6 +114,25 @@ export default function ScheduleTable({
     return shift && shift.startTime === time;
   };
   
+  // Calcular la duración del turno en número de celdas (15 min cada una)
+  const getShiftCellSpan = (employeeId: number, time: string) => {
+    const shift = getShiftForCell(employeeId, time);
+    if (!shift) return 1;
+    
+    const startIndex = timeSlots.indexOf(shift.startTime);
+    const endIndex = timeSlots.findIndex(t => {
+      const [hour, minute] = t.split(':').map(Number);
+      const [shiftEndHour, shiftEndMinute] = shift.endTime.split(':').map(Number);
+      
+      // Comparar horas y minutos
+      if (hour > shiftEndHour) return true;
+      if (hour === shiftEndHour && minute >= shiftEndMinute) return true;
+      return false;
+    });
+    
+    return endIndex - startIndex > 0 ? endIndex - startIndex : 1;
+  };
+  
   // Handle document-wide mouse/touch up events
   useEffect(() => {
     // Handler for mouse up and touch end events
