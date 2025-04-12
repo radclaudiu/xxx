@@ -1230,9 +1230,13 @@ export default function ScheduleTable({
                           }
                         }}
                         onClick={(e) => {
+                          e.preventDefault(); // Prevenir comportamiento por defecto
                           // Usar toggleSingleCell para añadir o quitar celdas
                           if (!isAssigned) {
                             console.log('Click en celda:', time, 'estado actual:', isSelected ? 'seleccionada' : 'no seleccionada');
+                            
+                            // Importante: ejecutar toggleSingleCell directamente sin pasar por handleInteractionStart
+                            // para que se ejecute el comportamiento de toggle sin iniciar arrastre
                             toggleSingleCell(employee, time);
                           } else if (isFirstCell && shift && onDeleteShift) {
                             // Mostrar menú contextual para eliminar turno existente
