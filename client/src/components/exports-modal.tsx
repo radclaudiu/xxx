@@ -300,7 +300,7 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
           Exportaciones
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl w-[95vw] md:w-[90vw] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[98vw] w-[98vw] h-[98vh] max-h-[98vh] overflow-y-auto p-4 md:p-6">
         <DialogHeader>
           <DialogTitle>Exportaciones e Informes</DialogTitle>
         </DialogHeader>
@@ -399,7 +399,7 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
         ) : (
           <>
             {/* Mostrar el informe seleccionado */}
-            <div className="max-h-[65vh] overflow-y-auto">
+            <div className="max-h-[75vh] overflow-y-auto">
               {renderSelectedReport()}
             </div>
             
