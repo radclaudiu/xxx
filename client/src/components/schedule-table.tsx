@@ -230,6 +230,9 @@ export default function ScheduleTable({
     const touchEvent = e.nativeEvent;
     touchEvent.stopPropagation();
     
+    // Capturar el evento touch para que otros handlers no lo procesen
+    touchEvent.preventDefault();
+    
     // Iniciar selección y marcar el estado de arrastre
     setIsDragging(true);
     setActiveEmployee(employee);
@@ -299,19 +302,32 @@ export default function ScheduleTable({
     const x = touch.clientX;
     const y = touch.clientY;
     
-    // Encontrar el elemento que está bajo el dedo en este momento
-    const elementUnderTouch = document.elementFromPoint(x, y);
+    // Encontrar elementos en la posición y a su alrededor
+    // Esto nos permite encontrar celdas incluso si el dedo se sale ligeramente
+    const offsets = [
+      [0, 0],    // Centro (posición exacta)
+      [-5, 0],   // Un poco a la izquierda
+      [5, 0],    // Un poco a la derecha
+      [0, -10],  // Un poco arriba (para volver a la fila)
+      [0, 10],   // Un poco abajo (para volver a la fila)
+    ];
     
-    // Si es una celda de la tabla, obtener su ID y procesar
-    if (elementUnderTouch && elementUnderTouch.tagName === 'TD' && elementUnderTouch.hasAttribute('data-cell-id')) {
-      const cellId = elementUnderTouch.getAttribute('data-cell-id');
-      if (cellId) {
-        const [empId, time] = cellId.split('-');
-        const empIdNum = parseInt(empId, 10);
-        
-        // Solo procesar si es para el mismo empleado que comenzó el arrastre
-        if (empIdNum === activeEmployee.id) {
-          handleCellInteraction(activeEmployee, time);
+    // Intentar encontrar una celda en alguna de estas posiciones
+    for (const [offsetX, offsetY] of offsets) {
+      const elementUnderTouch = document.elementFromPoint(x + offsetX, y + offsetY);
+      
+      // Si encontramos una celda de la tabla, procesarla
+      if (elementUnderTouch && elementUnderTouch.tagName === 'TD' && elementUnderTouch.hasAttribute('data-cell-id')) {
+        const cellId = elementUnderTouch.getAttribute('data-cell-id');
+        if (cellId) {
+          const [empId, time] = cellId.split('-');
+          const empIdNum = parseInt(empId, 10);
+          
+          // Solo procesar si es para el mismo empleado que comenzó el arrastre
+          if (empIdNum === activeEmployee.id) {
+            handleCellInteraction(activeEmployee, time);
+            return; // Salir después de encontrar una celda válida
+          }
         }
       }
     }
