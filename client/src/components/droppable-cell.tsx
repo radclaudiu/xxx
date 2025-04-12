@@ -1,19 +1,8 @@
 import React from 'react';
 import { useDrop } from 'react-dnd';
 import { Employee } from '@shared/schema';
-
-// Interfaz para los datos que se arrastran
-export interface DragItem {
-  id: number;
-  type: string;
-  employeeId: number;
-  startTime: string;
-  endTime: string;
-  date: string;
-  originalX: number;
-  originalY: number;
-  width: number;
-}
+import { DragItem } from './draggable-shift';
+import { convertTimeToMinutes } from '@/lib/date-helpers';
 
 interface DroppableCellProps {
   employee: Employee;
@@ -52,101 +41,90 @@ const DroppableCell: React.FC<DroppableCellProps> = ({
   onDropShift,
   children,
   className = '',
-  style,
+  style = {},
   onMouseDown,
   onMouseEnter,
-  onTouchStart,
+  onTouchStart
 }) => {
-  // Configurar la lógica de soltar con react-dnd
-  const [{ isOver, canDrop }, drop] = useDrop({
+  // Calcular la duración entre dos tiempos en intervalos de 15 minutos
+  const calculateDurationInSlots = (startTime: string, endTime: string): number => {
+    const startIndex = timeSlots.indexOf(startTime);
+    const endIndex = timeSlots.indexOf(endTime);
+    if (startIndex === -1 || endIndex === -1) return 0;
+    return endIndex - startIndex;
+  };
+
+  // Hook para la zona de destino
+  const [{ isOver, canDrop }, drop] = useDrop(() => ({
     accept: 'SHIFT',
-    
-    // Determinar si se puede soltar
     canDrop: (item: DragItem) => {
-      // No permitir soltar en celdas ya asignadas
-      if (isAssigned) return false;
-      
-      // Verificar si el turno cabe en los intervalos disponibles
-      const startIndex = timeSlots.indexOf(time);
-      
-      // Calcular el número de intervalos que ocupa el turno
-      const hoursDuration = item.width / cellSize;
-      const intervalsCount = Math.round(hoursDuration * 4); // 4 intervalos de 15min por hora
-      
-      // Verificar si hay suficientes intervalos después de la posición actual
-      if (startIndex + intervalsCount >= timeSlots.length) {
+      // No permitir soltar en el mismo empleado y hora
+      if (item.employeeId === employee.id && item.startTime === time) {
         return false;
       }
       
-      // Verificar si hay turnos asignados en el rango donde se quiere soltar
-      for (let i = 0; i < intervalsCount; i++) {
-        const checkTime = timeSlots[startIndex + i];
-        // Aquí se debería verificar si hay un turno asignado en este intervalo
-        // Como no tenemos acceso directo al estado de asignaciones, lo dejamos pendiente
+      // No permitir soltar en celdas que ya tienen un turno asignado
+      if (isAssigned) {
+        return false;
       }
       
       return true;
     },
-    
-    // Manejar el evento cuando se suelta
     drop: (item: DragItem) => {
-      // Calcular la hora de finalización basada en la duración original del turno
+      // Calcular la duración del turno original en intervalos de 15 minutos
+      const durationInSlots = calculateDurationInSlots(item.startTime, item.endTime);
+      
+      // Calcular la nueva hora de fin basada en la hora de inicio del destino
+      // y la duración del turno original
       const startIndex = timeSlots.indexOf(time);
-      const originalStartIndex = timeSlots.indexOf(item.startTime);
-      const originalEndIndex = timeSlots.indexOf(item.endTime);
-      const durationInIntervals = originalEndIndex - originalStartIndex;
+      const endIndex = Math.min(startIndex + durationInSlots, timeSlots.length - 1);
+      const newEndTime = timeSlots[endIndex];
       
-      // Nueva hora de finalización
-      const newEndIndex = Math.min(startIndex + durationInIntervals, timeSlots.length - 1);
-      const newEndTime = timeSlots[newEndIndex];
-      
-      // Llamar a la función para actualizar el turno
+      // Llamar a la función para manejar el evento de soltar
       onDropShift({
         shiftId: item.id,
         sourceEmployeeId: item.employeeId,
         targetEmployeeId: employee.id,
         startTime: time,
         endTime: newEndTime,
-        date: date,
+        date: date
       });
       
       return { moved: true };
     },
-    
-    // Propiedades a recopilar
     collect: (monitor) => ({
       isOver: !!monitor.isOver(),
       canDrop: !!monitor.canDrop(),
     }),
-  });
-  
-  // Estilo para la celda
-  const cellStyle: React.CSSProperties = {
-    width: `${cellSize * colSpan}px`,
-    height: `${cellSize}px`,
-    borderLeft: time.endsWith(':00') ? '2px solid #AAAAAA' : 
-              time.endsWith(':30') ? '1px solid #DDDDDD' : 
-              '1px dashed #EEEEEE',
-    padding: 0,
-    position: 'relative',
-    verticalAlign: 'top',
-    backgroundColor: isOver && canDrop 
-      ? 'rgba(76, 175, 80, 0.2)' 
-      : isSelected 
-        ? 'rgba(76, 175, 80, 0.15)' 
-        : 'transparent',
-    cursor: isAssigned ? 'not-allowed' : 'pointer',
-    transition: 'background-color 0.2s',
+  }), [employee.id, time, isAssigned, timeSlots, date, onDropShift]);
+
+  // Estilo para la celda receptora
+  const dropStyle: React.CSSProperties = {
     ...style,
+    backgroundColor: isOver && canDrop 
+      ? 'rgba(76, 175, 80, 0.3)' // Verde claro cuando se está arrastrando sobre y se puede soltar
+      : isOver && !canDrop 
+        ? 'rgba(244, 67, 54, 0.3)' // Rojo claro cuando se está arrastrando sobre pero no se puede soltar
+        : isSelected 
+          ? 'rgba(76, 175, 80, 0.4)' // Verde para celdas seleccionadas
+          : isAssigned 
+            ? 'rgba(25, 118, 210, 0.2)' // Azul para celdas asignadas
+            : 'transparent', // Transparente para celdas vacías
+    borderTop: isSelected ? '1px solid #4CAF50' : 
+                isAssigned ? '1px solid #1976D2' : '1px solid #E0E0E0',
+    borderRight: isSelected ? '1px solid #4CAF50' : 
+                 isAssigned ? '1px solid #1976D2' : '1px solid #E0E0E0',
+    borderBottom: isSelected ? '1px solid #4CAF50' : 
+                  isAssigned ? '1px solid #1976D2' : '1px solid #E0E0E0',
   };
-  
+
   return (
-    <td 
+    <td
       ref={drop}
-      style={cellStyle}
-      className={`time-cell ${isSelected ? 'selected-cell' : ''} ${
-        isOver && canDrop ? 'drop-target' : ''
-      } ${className}`}
+      colSpan={colSpan}
+      className={`time-cell ${className} ${isOver && canDrop ? 'drop-target' : ''} ${isOver && !canDrop ? 'no-drop' : ''}`}
+      style={dropStyle}
+      data-cell-id={`${employee.id}-${time}`}
       onMouseDown={onMouseDown}
       onMouseEnter={onMouseEnter}
       onTouchStart={onTouchStart}

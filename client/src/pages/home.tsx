@@ -5,7 +5,7 @@ import { formatDate, formatDateForAPI, getPreviousDay, getNextDay, getStartOfWee
 import { useToast } from "@/hooks/use-toast";
 import { Employee, Shift, InsertShift } from "@shared/schema";
 import ScheduleTable from "@/components/schedule-table";
-import BeautifulScheduleTable from "@/components/beautiful-schedule-table";
+import DraggableScheduleTable from "@/components/draggable-schedule-table";
 import EmployeeModal from "@/components/employee-modal";
 import HelpModal from "@/components/help-modal";
 import ExportsModal, { ExportsModalRef } from "@/components/exports-modal";
@@ -367,7 +367,7 @@ export default function Home() {
           </div>
           
           {/* Schedule Table with Drag and Drop */}
-          <BeautifulScheduleTable 
+          <DraggableScheduleTable 
             employees={employees} 
             shifts={shifts} 
             date={currentDate}
