@@ -267,37 +267,48 @@ export default function ScheduleTable({
     if (isCellAssigned(employee.id, time)) return;
     
     if (startTime) {
+      // Usar la referencia batch para selecciones de ratón también
+      const batch = batchedSelectionsRef.current || new Map(selectedCellsByEmployee);
+      
       // Select all cells between startTime and current time
       const startIndex = timeSlots.indexOf(startTime);
       const currentIndex = timeSlots.indexOf(time);
       
       if (startIndex >= 0 && currentIndex >= 0) {
-        // Create a new Map from the current state for immutability
-        const newSelectedCellsByEmployee = new Map(selectedCellsByEmployee);
+        const selectedCells = batch.get(employee.id) || new Set<string>();
         
         // Handle selection in either direction (forward or backward)
         const minIdx = Math.min(startIndex, currentIndex);
         const maxIdx = Math.max(startIndex, currentIndex);
         
-        // Create a new set with only the cells in the selected range
-        const newSelectedCells = new Set<string>();
+        // Bandera para detectar cambios
+        let hasChanges = false;
+        const previousSize = selectedCells.size;
         
         for (let i = minIdx; i <= maxIdx; i++) {
           const timeSlot = timeSlots[i];
           // Only add if the cell is not already assigned
-          if (!isCellAssigned(employee.id, timeSlot)) {
-            newSelectedCells.add(timeSlot);
+          if (!isCellAssigned(employee.id, timeSlot) && !selectedCells.has(timeSlot)) {
+            selectedCells.add(timeSlot);
+            hasChanges = true;
           }
         }
         
-        // Update with the new selection
-        if (newSelectedCells.size > 0) {
-          newSelectedCellsByEmployee.set(employee.id, newSelectedCells);
-        } else {
-          newSelectedCellsByEmployee.delete(employee.id);
+        // Si hay cambios, actualizar el estado
+        if (hasChanges || previousSize !== selectedCells.size) {
+          // Update with the new selection
+          if (selectedCells.size > 0) {
+            batch.set(employee.id, selectedCells);
+          } else {
+            batch.delete(employee.id);
+          }
+          
+          // Actualizar la referencia batch
+          batchedSelectionsRef.current = batch;
+          
+          // Actualizar el estado
+          setSelectedCellsByEmployee(new Map(batch));
         }
-        
-        setSelectedCellsByEmployee(newSelectedCellsByEmployee);
       }
     }
   };
