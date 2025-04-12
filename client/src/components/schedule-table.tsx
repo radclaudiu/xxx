@@ -51,7 +51,7 @@ export default function ScheduleTable({
   });
   
   const increaseCellSize = () => {
-    setCellSize(prev => Math.min(prev + 2, 40));
+    setCellSize(prev => Math.min(prev + 2, 60)); // Aumentar límite máximo a 60px
   };
   
   const decreaseCellSize = () => {

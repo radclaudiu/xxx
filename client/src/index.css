@@ -41,6 +41,10 @@
 @layer base {
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    /* Aumentar el zoom de la página en un 10% */
+    zoom: 110%;
+    -webkit-transform: scale(1.1);
+    -webkit-transform-origin: top left;
   }
 }
 
