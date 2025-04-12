@@ -102,30 +102,29 @@ thead tr:nth-child(3) th {
   font-weight: bold;
 }
 
-/* Estilos para dispositivos táctiles - sistema simplificado */
+/* Estilos básicos para el contenedor de la tabla */
 .table-container {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch; /* Desplazamiento suave en iOS */
-  touch-action: pan-x pan-y; /* Permitir desplazamiento natural */
-  width: 100%;
+  overflow-x: auto; 
   max-width: 100vw;
+  width: 100%;
+  -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
 }
 
-/* Cuando se está arrastrando, prevenir desplazamiento de la página */
-.is-dragging {
-  touch-action: none !important;
-  overflow: hidden !important;
-}
-
-/* Celda específica para horarios */
+/* Estilos de celda para evitar selección de texto y efectos táctiles */
 .time-cell {
   user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
+  touch-action: none; /* Prevenir scroll/zoom en celdas */
 }
 
-/* Solo para dispositivos táctiles */
+/* Estilos para dispositivos táctiles */
 @media (hover: none) and (pointer: coarse) {
+  /* Contenedor principal - comportamiento táctil predeterminado */
+  .table-container {
+    touch-action: pan-x pan-y; /* Permitir scroll natural */
+  }
+  
   /* Mensaje de información táctil */
   .touch-info {
     display: block;

@@ -245,73 +245,54 @@ export default function ScheduleTable({
     isSwiping: false
   });
   
-  // Función que maneja el inicio del toque
+  // Manejo simplificado de inicio de toque
   const handleTouchStart = (e: React.TouchEvent, employee: Employee, time: string) => {
-    // Solo procesar un solo toque para selección
-    if (e.touches.length !== 1) return;
+    // Si la celda tiene un turno asignado, no hacer nada
+    if (isCellAssigned(employee.id, time)) return;
     
-    // Evitar comportamiento default que puede causar scroll inesperado
-    // pero solo para un toque (para permitir scroll con 2+ dedos)
-    const touchEvent = e.nativeEvent;
-    touchEvent.stopPropagation();
+    // Prevenir comportamiento default solo para celdas (no para contenedor)
+    e.stopPropagation();
     
-    // Guardar posición inicial
-    const touch = e.touches[0];
-    touchInfoRef.current = {
-      lastTouched: { employeeId: employee.id, time },
-      startX: touch.clientX,
-      startY: touch.clientY,
-      isSwiping: false
-    };
-    
-    // Activar estado de arrastre
+    // Iniciar selección
     mouseDownRef.current = true;
     setIsDragging(true);
     setActiveEmployee(employee);
     setStartTime(time);
     
-    // Añadir clase para prevenir scrolling durante el arrastre
-    document.body.classList.add('is-dragging');
-    
-    // Seleccionar la celda inicial
-    if (!isCellAssigned(employee.id, time)) {
-      toggleSingleCell(employee, time);
-    }
+    // Seleccionar la celda tocada
+    toggleSingleCell(employee, time);
   };
   
-  // Manejador optimizado para interacción de celdas
+  // Simplificación del manejo de celdas
   const handleCellInteraction = (employee: Employee, time: string) => {
-    // Verificar si podemos procesar esta interacción
-    if (!isDragging || !activeEmployee || activeEmployee.id !== employee.id) return;
+    // Verificaciones básicas
+    if (!mouseDownRef.current || !isDragging || !activeEmployee) return;
+    if (employee.id !== activeEmployee.id) return;
     if (isCellAssigned(employee.id, time)) return;
     
-    // Actualizar la última celda tocada
-    if (touchInfoRef.current) {
-      touchInfoRef.current.lastTouched = { employeeId: employee.id, time };
-    }
-    
-    // Si tenemos un tiempo de inicio, seleccionar todo el rango
     if (startTime) {
+      // Crear selección desde startTime hasta el tiempo actual
       const startIndex = timeSlots.indexOf(startTime);
       const currentIndex = timeSlots.indexOf(time);
       
       if (startIndex >= 0 && currentIndex >= 0) {
-        // Crear nuevo mapa de selecciones
+        // Crear nueva selección
         const newMap = new Map(selectedCellsByEmployee);
         const newSet = new Set<string>();
         
-        // Seleccionar todas las celdas en el rango
-        const minIdx = Math.min(startIndex, currentIndex);
-        const maxIdx = Math.max(startIndex, currentIndex);
+        // Selección bidireccional (funciona en ambos sentidos)
+        const min = Math.min(startIndex, currentIndex);
+        const max = Math.max(startIndex, currentIndex);
         
-        for (let i = minIdx; i <= maxIdx; i++) {
+        // Añadir todas las celdas en el rango
+        for (let i = min; i <= max; i++) {
           const timeSlot = timeSlots[i];
           if (!isCellAssigned(employee.id, timeSlot)) {
             newSet.add(timeSlot);
           }
         }
         
-        // Actualizar selecciones
+        // Actualizar mapa de selecciones
         if (newSet.size > 0) {
           newMap.set(employee.id, newSet);
         } else {
@@ -325,113 +306,68 @@ export default function ScheduleTable({
     }
   };
   
-  // Manejador de eventos de movimiento táctil
+  // Simplificación del manejo de movimiento táctil
   const handleTouchMove = (e: TouchEvent) => {
-    // Solo procesar si estamos arrastrando y con un dedo
-    if (!isDragging || !activeEmployee || e.touches.length !== 1) return;
+    // Verificar estado de arrastre
+    if (!isDragging || !activeEmployee) return;
     
-    // Prevenir scrolling durante arrastre
+    // Prevenir scroll durante selección
     e.preventDefault();
     
     // Obtener posición actual
     const touch = e.touches[0];
-    const curX = touch.clientX;
-    const curY = touch.clientY;
+    const x = touch.clientX;
+    const y = touch.clientY;
     
-    // Calcular distancia desde el inicio
-    const deltaX = Math.abs(curX - touchInfoRef.current.startX);
-    const deltaY = Math.abs(curY - touchInfoRef.current.startY);
+    // Buscar elemento bajo el dedo
+    const element = document.elementFromPoint(x, y);
     
-    // Si es movimiento significativo, marcar como arrastre
-    if (deltaX > 5 || deltaY > 5) {
-      touchInfoRef.current.isSwiping = true;
-    }
-    
-    // Si estamos arrastrando, buscar celda bajo el dedo
-    if (touchInfoRef.current.isSwiping) {
-      // Puntos alrededor del toque para mejor detección
-      const points = [
-        [curX, curY],           // Centro
-        [curX - 5, curY],       // Izquierda
-        [curX + 5, curY],       // Derecha
-        [curX, curY - 10],      // Arriba
-        [curX, curY + 10],      // Abajo
-        [curX - 5, curY - 5],   // Diagonal superior izquierda
-        [curX + 5, curY - 5],   // Diagonal superior derecha
-        [curX - 5, curY + 5],   // Diagonal inferior izquierda
-        [curX + 5, curY + 5]    // Diagonal inferior derecha
-      ];
-      
-      // Buscar celda en alguno de estos puntos
-      for (const [x, y] of points) {
-        const element = document.elementFromPoint(x, y);
+    // Si es una celda válida, procesarla
+    if (element && element.tagName === 'TD' && element.hasAttribute('data-cell-id')) {
+      const cellId = element.getAttribute('data-cell-id');
+      if (cellId) {
+        const [empId, time] = cellId.split('-');
+        const empIdNum = parseInt(empId, 10);
         
-        if (element && element.tagName === 'TD' && element.hasAttribute('data-cell-id')) {
-          const cellId = element.getAttribute('data-cell-id');
-          if (cellId) {
-            const [empId, time] = cellId.split('-');
-            const empIdNum = parseInt(empId, 10);
-            
-            // Solo procesar para el mismo empleado
-            if (empIdNum === activeEmployee.id && 
-                // Evitar procesamiento repetido de la misma celda
-                (touchInfoRef.current.lastTouched.employeeId !== empIdNum || 
-                 touchInfoRef.current.lastTouched.time !== time)) {
-              
-              // Actualizar selección
-              handleCellInteraction(activeEmployee, time);
-              return;
-            }
-          }
+        // Solo procesar para el mismo empleado
+        if (empIdNum === activeEmployee.id) {
+          // Actualizar selección
+          handleCellInteraction(activeEmployee, time);
         }
       }
     }
   };
   
-  // Manejador para finalizar interacción táctil
+  // Finalizar interacción táctil
   const handleTouchEnd = () => {
-    // Limpiar estado de arrastre
+    // Limpiar estado
     mouseDownRef.current = false;
     setIsDragging(false);
-    
-    // Eliminar clase para permitir scroll nuevamente
-    document.body.classList.remove('is-dragging');
-    
-    // Resetear información de toque
-    touchInfoRef.current = {
-      lastTouched: { employeeId: 0, time: '' },
-      startX: 0,
-      startY: 0,
-      isSwiping: false
-    };
   };
   
-  // Configurar manejadores globales para eventos táctiles
+  // Configurar manejadores globales
   useEffect(() => {
-    if (isTouchDevice) {
-      // Manejador para terminar arrastre al final del toque
-      const handleGlobalTouchEnd = () => {
-        if (isDragging) {
-          handleTouchEnd();
-        }
-      };
-      
-      // Añadir eventos globales
+    // Manejador global para touch end
+    const handleGlobalTouchEnd = () => {
+      if (isDragging) {
+        handleTouchEnd();
+      }
+    };
+    
+    // Añadir eventos solo si estamos arrastrando
+    if (isDragging) {
+      document.addEventListener('touchmove', handleTouchMove, { passive: false });
       document.addEventListener('touchend', handleGlobalTouchEnd);
       document.addEventListener('touchcancel', handleGlobalTouchEnd);
-      
-      if (isDragging) {
-        document.addEventListener('touchmove', handleTouchMove, { passive: false });
-      }
-      
-      // Limpiar eventos
-      return () => {
-        document.removeEventListener('touchend', handleGlobalTouchEnd);
-        document.removeEventListener('touchcancel', handleGlobalTouchEnd);
-        document.removeEventListener('touchmove', handleTouchMove);
-      };
     }
-  }, [isDragging, isTouchDevice, activeEmployee]);
+    
+    // Limpiar eventos
+    return () => {
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleGlobalTouchEnd);
+      document.removeEventListener('touchcancel', handleGlobalTouchEnd);
+    };
+  }, [isDragging, activeEmployee]);
   
   // Manejador para mouse enter (solo para desktop)
   const handleMouseEnter = (employee: Employee, time: string) => {
@@ -1089,18 +1025,16 @@ export default function ScheduleTable({
                         }}
                         onMouseEnter={() => handleMouseEnter(employee, time)}
                         onTouchStart={(e) => {
-                          // Si la celda ya tiene un turno asignado, permitir el comportamiento normal
+                          // Si la celda ya tiene un turno asignado, no hacer nada
                           if (isAssigned) return;
                           
-                          // Para celdas sin asignar, capturar el evento e iniciar la selección
-                          e.stopPropagation();
+                          // Manejar el toque para selección
                           handleTouchStart(e, employee, time);
                         }}
                         onTouchMove={(e) => {
-                          // Si no estamos en modo de selección, permitir el comportamiento normal
+                          // Permitir que el evento touchmove sea manejado por el listener global
                           if (!isDragging || !activeEmployee || isAssigned) return;
                           
-                          // Para selección activa, prevenir desplazamiento y activar la celda
                           if (activeEmployee.id === employee.id) {
                             e.preventDefault();
                             e.stopPropagation();
