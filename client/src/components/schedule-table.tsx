@@ -218,16 +218,13 @@ export default function ScheduleTable({
   
   // Touch start handler
   const handleTouchStart = (e: React.TouchEvent, employee: Employee, time: string) => {
-    // Si hay 2 o más dedos, permitir el desplazamiento nativo
-    if (e.touches.length >= 2) {
-      return; // No prevenir el comportamiento por defecto
-    }
+    // Ya no prevenimos el comportamiento por defecto aquí,
+    // sino en cada celda donde activamos este handler.
+    // Esto permite usar un dedo para desplazarse cuando no estamos seleccionando celdas
     
-    // Para un solo dedo, prevenir el desplazamiento durante la selección
-    e.preventDefault();
-    e.stopPropagation();
+    // No hacemos e.preventDefault() ni e.stopPropagation() aquí
     
-    // Asegurarnos que no se desplaza la tabla al hacer el gesto de arrastre con un dedo
+    // Comenzamos el seguimiento de la selección
     const touchEvent = e.nativeEvent;
     touchEvent.stopPropagation();
     
@@ -931,9 +928,22 @@ export default function ScheduleTable({
                         }}
                         onMouseEnter={() => handleMouseEnter(employee, time)}
                         onTouchStart={(e) => {
-                          // No procesar eventos táctiles para celdas con turnos asignados
-                          if (!isAssigned) {
+                          // Si la celda ya tiene un turno asignado, permitir el comportamiento normal (scroll)
+                          if (isAssigned) return;
+                          
+                          // Para células sin asignar, iniciar selección y prevenir scroll
+                          if (e.touches.length === 1) {
+                            e.preventDefault(); // Evita el desplazamiento con 1 dedo durante la selección
                             handleTouchStart(e, employee, time);
+                          }
+                        }}
+                        onTouchMove={(e) => {
+                          // No hacer nada para celdas con turnos asignados
+                          if (isAssigned) return;
+                          
+                          // Durante la selección activa, prevenir scroll
+                          if (isDragging && activeEmployee && e.touches.length === 1) {
+                            e.preventDefault();
                           }
                         }}
                       >
