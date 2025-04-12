@@ -2,6 +2,42 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Estilos de impresión para los horarios de empleados */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  .print-employee-schedule,
+  .print-employee-schedule * {
+    visibility: visible;
+  }
+  
+  .print-employee-schedule {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: white;
+    padding: 1rem;
+  }
+  
+  /* Ocultar botones y elementos innecesarios al imprimir */
+  button, 
+  .max-h-\[60vh\],
+  .overflow-y-auto {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  
+  /* Asegurar que cada tarjeta de empleado tenga espacio suficiente */
+  .print-employee-schedule .grid > div {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    margin-bottom: 0.5cm;
+  }
+}
+
 @layer base {
   body {
     @apply font-sans antialiased bg-background text-foreground;

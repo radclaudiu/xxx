@@ -213,16 +213,55 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
         );
       case 'print-template':
         return (
-          <div className="flex flex-col items-center justify-center py-12">
-            <FileText size={48} className="text-gray-500 mb-4" />
-            <div className="text-center text-muted-foreground">
-              <h3 className="text-lg font-medium mb-2">Plantilla para Impresión</h3>
-              <p className="mb-4">
-                Formato optimizado para imprimir los horarios de la semana o distribuir por correo.
-              </p>
-              <div className="text-sm text-gray-500">
-                Próximamente disponible.
-              </div>
+          <div className="print-employee-schedule">
+            <h2 className="text-lg font-medium mb-4 text-center">Horarios Individuales - Semana: {weekRangeText}</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:grid-cols-2">
+              {employees.map(employee => (
+                <div key={employee.id} className="border rounded-md p-3 print:break-inside-avoid">
+                  <div className="border-b-2 border-dashed border-gray-300 pb-2 mb-3">
+                    <h3 className="text-center font-bold text-lg">{employee.name}</h3>
+                    <p className="text-center text-xs text-gray-500">Semana: {weekRangeText}</p>
+                  </div>
+                  
+                  <table className="w-full text-xs">
+                    <tbody>
+                      {weekDays.map((day, index) => {
+                        // Buscar turnos para este empleado en este día
+                        const dayShifts = shifts.filter(shift => {
+                          const shiftDate = new Date(shift.date);
+                          return (
+                            shift.employeeId === employee.id && 
+                            shiftDate.getDate() === day.getDate() &&
+                            shiftDate.getMonth() === day.getMonth() &&
+                            shiftDate.getFullYear() === day.getFullYear()
+                          );
+                        });
+                        
+                        // Formatear horarios
+                        const shiftsText = dayShifts.map(shift => 
+                          `${shift.startTime} - ${shift.endTime}`
+                        ).join(", ");
+                        
+                        return (
+                          <tr key={index} className={index % 2 === 0 ? "bg-gray-50" : ""}>
+                            <td className="py-1 px-2 font-medium w-1/3">{dayNames[index]}</td>
+                            <td className="py-1 px-2 w-1/3">{formatDate(day)}</td>
+                            <td className="py-1 px-2 w-1/3">
+                              {shiftsText || <span className="text-gray-400 italic">Libre</span>}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  
+                  {/* Línea de corte (punteada) */}
+                  <div className="border-t-2 border-dashed border-gray-300 mt-3 pt-1">
+                    <p className="text-center text-[0.6rem] text-gray-400">✂️ Cortar por la línea punteada ✂️</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         );
@@ -340,6 +379,15 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
               >
                 <ClipboardList className="h-8 w-8 text-orange-500" />
                 <div className="text-center">Exportar Datos (CSV)</div>
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="h-28 flex flex-col items-center justify-center gap-2 p-2"
+                onClick={() => setSelectedReport('print-template')}
+              >
+                <FileText className="h-8 w-8 text-teal-500" />
+                <div className="text-center">Horario por Empleado</div>
               </Button>
             </div>
           </>
