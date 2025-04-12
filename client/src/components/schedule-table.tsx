@@ -28,6 +28,7 @@ interface ScheduleTableProps {
   shifts: Shift[];
   date: Date;
   onSaveShifts: (selections: {employee: Employee, startTime: string, endTime: string}[]) => void;
+  onDeleteShift?: (shiftId: number) => void;
   estimatedDailySales?: number;
   hourlyEmployeeCost?: number;
 }
@@ -37,9 +38,12 @@ export default function ScheduleTable({
   shifts, 
   date, 
   onSaveShifts,
+  onDeleteShift,
   estimatedDailySales = 0,
   hourlyEmployeeCost = 0
 }: ScheduleTableProps) {
+  // Para mostrar notificaciones
+  const { toast } = useToast();
   // Estado para controlar el tamaño de las celdas
   const [cellSize, setCellSize] = useState(30);
   
@@ -402,6 +406,24 @@ export default function ScheduleTable({
   
   // Check if there are any selections
   const hasSelections = selectedCellsByEmployee.size > 0;
+  
+  // Manejar la eliminación de un turno
+  const handleDeleteShift = (shift: Shift) => {
+    if (!onDeleteShift) {
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar el turno, función no disponible.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    onDeleteShift(shift.id);
+    toast({
+      title: "Turno eliminado",
+      description: `Se ha eliminado el turno de ${shift.startTime} a ${shift.endTime}.`,
+    });
+  };
   
   // Calcular las horas semanales trabajadas y restantes para cada empleado
   const calculateWeeklyHours = (employee: Employee) => {
@@ -855,7 +877,22 @@ export default function ScheduleTable({
                           </div>
                         )}
                         {isFirstCell && shift && (
-                          <div className="text-xs text-center font-semibold">{shift.startTime} - {shift.endTime}</div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <div className="text-xs text-center font-semibold hover:bg-blue-100 w-full h-full cursor-pointer">
+                                {shift.startTime} - {shift.endTime}
+                              </div>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                              <DropdownMenuItem 
+                                className="text-red-600 cursor-pointer flex items-center gap-2 text-xs"
+                                onClick={() => handleDeleteShift(shift)}
+                              >
+                                <Trash className="h-3.5 w-3.5" />
+                                Eliminar turno
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         )}
                       </td>
                     );
