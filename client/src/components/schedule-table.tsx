@@ -620,8 +620,103 @@ export default function ScheduleTable({
     };
   };
   
+  // Estado para menú contextual
+  const [contextMenu, setContextMenu] = useState<{
+    isOpen: boolean;
+    shift: Shift | null;
+    x: number;
+    y: number;
+  }>({
+    isOpen: false,
+    shift: null,
+    x: 0,
+    y: 0
+  });
+  
+  // Manejar apertura de menú contextual
+  const handleOpenContextMenu = (e: React.MouseEvent | React.TouchEvent, shift: Shift) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // En dispositivos táctiles, obtener coordenadas del toque
+    let x = 0;
+    let y = 0;
+    
+    if ('touches' in e) {
+      // Es un evento táctil
+      const touch = e.touches[0];
+      x = touch.clientX;
+      y = touch.clientY;
+    } else {
+      // Es un evento de mouse
+      x = (e as React.MouseEvent).clientX;
+      y = (e as React.MouseEvent).clientY;
+    }
+    
+    // Abrir menú contextual
+    setContextMenu({
+      isOpen: true,
+      shift,
+      x,
+      y
+    });
+  };
+  
+  // Cerrar menú contextual
+  const closeContextMenu = () => {
+    setContextMenu(prev => ({
+      ...prev,
+      isOpen: false
+    }));
+  };
+
   return (
     <div className="space-y-4">
+      {/* Menú contextual para turnos */}
+      {contextMenu.isOpen && contextMenu.shift && (
+        <div 
+          className="fixed z-50 bg-white shadow-md rounded-md p-2 border border-gray-200"
+          style={{
+            top: `${contextMenu.y}px`,
+            left: `${contextMenu.x}px`,
+            transform: 'translate(-50%, -100%)',
+            minWidth: '150px'
+          }}
+        >
+          <div className="text-xs font-semibold mb-1 text-gray-500">
+            Turno: {contextMenu.shift.startTime} - {contextMenu.shift.endTime}
+          </div>
+          <button
+            onClick={() => {
+              if (contextMenu.shift && onDeleteShift) {
+                onDeleteShift(contextMenu.shift.id);
+                toast({
+                  title: "Turno eliminado",
+                  description: `Se ha eliminado el turno de ${contextMenu.shift.startTime} a ${contextMenu.shift.endTime}.`,
+                });
+              }
+              closeContextMenu();
+            }}
+            className="w-full text-left text-red-600 hover:bg-red-50 p-2 rounded-sm text-sm flex items-center gap-2"
+          >
+            <span className="text-red-500">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </span>
+            Eliminar turno
+          </button>
+        </div>
+      )}
+      
+      {/* Overlay para cerrar el menú al hacer clic fuera */}
+      {contextMenu.isOpen && (
+        <div 
+          className="fixed inset-0 z-40"
+          onClick={closeContextMenu}
+        />
+      )}
+      
       {/* Help message for touch users */}
       <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-2 rounded-md mb-3 text-sm">
         <div className="flex items-center gap-2">
@@ -631,6 +726,7 @@ export default function ScheduleTable({
         <div className="mt-1 ml-6 text-xs">
           • <strong>Un dedo:</strong> Selecciona celdas/turnos - arrastre para seleccionar varias
           <br/>• <strong>Dos dedos:</strong> Desplaza la tabla lateralmente
+          <br/>• <strong>Tocar celda azul:</strong> Abre menú para eliminar turno
         </div>
       </div>
       
@@ -1113,12 +1209,8 @@ export default function ScheduleTable({
                           if (!isAssigned) {
                             handleTouchStart(e, employee, time);
                           } else if (isFirstCell && shift && onDeleteShift) {
-                            // Mostrar opciones contextuales si es un turno existente
-                            e.preventDefault();
-                            // Solo una confirmación simple para eliminación en móvil
-                            if (window.confirm(`¿Desea eliminar el turno de ${shift.startTime} a ${shift.endTime}?`)) {
-                              handleDeleteShift(shift);
-                            }
+                            // Mostrar menú contextual para eliminar
+                            handleOpenContextMenu(e, shift);
                           }
                         }}
                       >
