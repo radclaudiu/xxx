@@ -273,15 +273,42 @@ export default function ScheduleTable({
           }
         }
         
-        // Update with the new selection
-        if (newSelectedCells.size > 0) {
-          newSelectedCellsByEmployee.set(employee.id, newSelectedCells);
-        } else {
-          newSelectedCellsByEmployee.delete(employee.id);
+        // Optimización para prevenir parpadeos:
+        // 1. Comparar la selección actual con la nueva selección
+        const currentCells = selectedCellsByEmployee.get(employee.id) || new Set<string>();
+        
+        // 2. Verificar si realmente hay cambios antes de actualizar el estado
+        let hasChanges = newSelectedCells.size !== currentCells.size;
+        
+        if (!hasChanges && newSelectedCells.size > 0) {
+          // Comparar contenido si tienen el mismo tamaño
+          for (const time of newSelectedCells) {
+            if (!currentCells.has(time)) {
+              hasChanges = true;
+              break;
+            }
+          }
         }
         
-        setSelectedCellsByEmployee(newSelectedCellsByEmployee);
-        // Incrementar contador para forzar actualización inmediata de la UI
+        // 3. Solo actualizar si hay cambios reales
+        if (hasChanges) {
+          if (newSelectedCells.size > 0) {
+            newSelectedCellsByEmployee.set(employee.id, newSelectedCells);
+          } else {
+            newSelectedCellsByEmployee.delete(employee.id);
+          }
+          
+          // Usar función de actualización para evitar condiciones de carrera
+          setSelectedCellsByEmployee(prev => {
+            const result = new Map(prev);
+            if (newSelectedCells.size > 0) {
+              result.set(employee.id, newSelectedCells);
+            } else {
+              result.delete(employee.id);
+            }
+            return result;
+          });
+        }
         setUpdateCounter(prev => prev + 1);
       }
     }
@@ -310,6 +337,10 @@ export default function ScheduleTable({
       [5, 0],    // Un poco a la derecha
       [0, -10],  // Un poco arriba (para volver a la fila)
       [0, 10],   // Un poco abajo (para volver a la fila)
+      [-10, -10], // Diagonal superior izquierda
+      [10, -10],  // Diagonal superior derecha
+      [-10, 10],  // Diagonal inferior izquierda
+      [10, 10],   // Diagonal inferior derecha
     ];
     
     // Intentar encontrar una celda en alguna de estas posiciones
@@ -325,7 +356,58 @@ export default function ScheduleTable({
           
           // Solo procesar si es para el mismo empleado que comenzó el arrastre
           if (empIdNum === activeEmployee.id) {
-            handleCellInteraction(activeEmployee, time);
+            // Usar un modo de selección más fino, sin alterar selecciones existentes
+            if (startTime) {
+              const startIndex = timeSlots.indexOf(startTime);
+              const currentIndex = timeSlots.indexOf(time);
+              
+              if (startIndex >= 0 && currentIndex >= 0) {
+                // En lugar de restablecer todas las selecciones, solo modificamos las que están entre
+                // startTime y time, preservando las demás
+                const newSelectedCellsByEmployee = new Map(selectedCellsByEmployee);
+                const selectedCells = newSelectedCellsByEmployee.get(activeEmployee.id) || new Set<string>();
+                
+                // Determinar rango a seleccionar
+                const minIdx = Math.min(startIndex, currentIndex);
+                const maxIdx = Math.max(startIndex, currentIndex);
+                
+                // Solo modificar celdas en este rango
+                for (let i = minIdx; i <= maxIdx; i++) {
+                  const timeSlot = timeSlots[i];
+                  if (!isCellAssigned(activeEmployee.id, timeSlot)) {
+                    selectedCells.add(timeSlot);
+                  }
+                }
+                
+                // Optimización para prevenir parpadeos: comparar antes de actualizar
+                const currentCells = selectedCellsByEmployee.get(activeEmployee.id) || new Set<string>();
+                let hasChanges = selectedCells.size !== currentCells.size;
+                
+                if (!hasChanges && selectedCells.size > 0) {
+                  // Verificar el contenido solo si tienen el mismo tamaño
+                  // Convertir a Array para evitar problemas de compatibilidad
+                  const selectedArray = Array.from(selectedCells);
+                  for (const time of selectedArray) {
+                    if (!currentCells.has(time)) {
+                      hasChanges = true;
+                      break;
+                    }
+                  }
+                }
+                
+                // Solo actualizar el estado si hay cambios reales
+                if (hasChanges && selectedCells.size > 0) {
+                  newSelectedCellsByEmployee.set(activeEmployee.id, selectedCells);
+                  // Usar función actualizadora para evitar condiciones de carrera
+                  setSelectedCellsByEmployee(prev => {
+                    const newMap = new Map(prev);
+                    newMap.set(activeEmployee.id, selectedCells);
+                    return newMap;
+                  });
+                  // No actualizamos el contador con cada pequeño cambio, solo al final del arrastre
+                }
+              }
+            }
             return; // Salir después de encontrar una celda válida
           }
         }
