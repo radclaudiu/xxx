@@ -289,9 +289,44 @@ export default function ScheduleTable({
     handleCellInteraction(employee, time);
   };
   
-  // Touch move handler
-  // Dejamos de usar el evento global touchMove ya que estaba causando problemas con el scroll
-  // Ahora cada celda manejará sus propios eventos de interacción táctil
+  // Touch move handler para manejar el arrastre sobre múltiples celdas
+  const handleTouchMove = (e: TouchEvent) => {
+    if (!isDragging || !activeEmployee) return;
+    e.preventDefault(); // Prevenir desplazamiento de página durante el arrastre
+    
+    // Obtener la posición actual del toque
+    const touch = e.touches[0];
+    const x = touch.clientX;
+    const y = touch.clientY;
+    
+    // Encontrar el elemento que está bajo el dedo en este momento
+    const elementUnderTouch = document.elementFromPoint(x, y);
+    
+    // Si es una celda de la tabla, obtener su ID y procesar
+    if (elementUnderTouch && elementUnderTouch.tagName === 'TD' && elementUnderTouch.hasAttribute('data-cell-id')) {
+      const cellId = elementUnderTouch.getAttribute('data-cell-id');
+      if (cellId) {
+        const [empId, time] = cellId.split('-');
+        const empIdNum = parseInt(empId, 10);
+        
+        // Solo procesar si es para el mismo empleado que comenzó el arrastre
+        if (empIdNum === activeEmployee.id) {
+          handleCellInteraction(activeEmployee, time);
+        }
+      }
+    }
+  };
+  
+  // Añadir manejador global para touchmove cuando se está arrastrando
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    }
+    
+    return () => {
+      document.removeEventListener('touchmove', handleTouchMove);
+    };
+  }, [isDragging, activeEmployee]);
   
   // Check if a cell is selected
   const isCellSelected = (employeeId: number, time: string) => {
@@ -617,9 +652,9 @@ export default function ScheduleTable({
       
       {/* Schedule table */}
       <div 
-        className="overflow-x-auto border border-neutral-200 rounded select-none w-full"
+        className="overflow-x-auto border border-neutral-200 rounded select-none w-full touch-container"
         style={{ 
-          touchAction: "auto", // Permitir todos los comportamientos táctiles en el contenedor
+          touchAction: "pan-y pinch-zoom", // Permitir scroll vertical y zoom, pero no horizontal con un dedo
           WebkitOverflowScrolling: "touch", // Mejorar el desplazamiento suave
           width: "100%",
           maxWidth: "100vw"

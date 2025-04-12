@@ -104,31 +104,19 @@ thead tr:nth-child(3) th {
 
 /* Prevenir eventos de touch no deseados en dispositivos móviles */
 @media (hover: none) and (pointer: coarse) {
-  /* Contenedor principal: permitir todo tipo de desplazamiento */
-  .overflow-x-auto {
-    touch-action: auto !important;
+  /* Contenedor principal: prevenir desplazamiento horizonal con un dedo */
+  .touch-container {
+    touch-action: pan-y pinch-zoom !important;
   }
   
-  /* Establecer comportamiento por defecto para todas las celdas */
+  /* Establecer comportamiento por defecto para todas las celdas:
+     Prevenir todos los gestos para permitir arrastrar sin desplazar */
   .time-cell {
-    touch-action: pan-x pan-y !important;
+    touch-action: none !important;
   }
   
   /* Permitir todos los gestos en encabezados */
   th {
     touch-action: auto !important;
-  }
-  
-  /* Agregar una instrucción visual para ayudar al usuario */
-  .select-none::before {
-    content: "Usa un dedo para seleccionar celdas y dos dedos para desplazarte";
-    display: block;
-    padding: 8px;
-    background-color: rgba(0,0,0,0.05);
-    text-align: center;
-    font-size: 0.8rem;
-    color: #666;
-    margin-bottom: 8px;
-    border-radius: 4px;
   }
 }
