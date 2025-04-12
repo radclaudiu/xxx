@@ -1231,22 +1231,66 @@ export default function ScheduleTable({
                         }}
                         onClick={(e) => {
                           e.preventDefault(); // Prevenir comportamiento por defecto
-                          // Usar toggleSingleCell para añadir o quitar celdas
+                          e.stopPropagation(); // Detener propagación
+                          
+                          // Celda no asignada: alternar selección
                           if (!isAssigned) {
                             console.log('Click en celda:', time, 'estado actual:', isSelected ? 'seleccionada' : 'no seleccionada');
                             
-                            // Importante: ejecutar toggleSingleCell directamente sin pasar por handleInteractionStart
-                            // para que se ejecute el comportamiento de toggle sin iniciar arrastre
-                            toggleSingleCell(employee, time);
+                            // Forzar una nueva copia del estado para evitar problemas de referencia
+                            const newSelectedCellsByEmployee = new Map(selectedCellsByEmployee);
+                            const selectedCells = newSelectedCellsByEmployee.get(employee.id) || new Set<string>();
+                            
+                            // Alternar la selección de forma directa
+                            if (selectedCells.has(time)) {
+                              selectedCells.delete(time);
+                              console.log('Quitando manualmente selección de celda:', time);
+                            } else {
+                              selectedCells.add(time);
+                              console.log('Añadiendo manualmente selección de celda:', time);
+                            }
+                            
+                            // Actualizar el Map con el Set modificado
+                            if (selectedCells.size > 0) {
+                              newSelectedCellsByEmployee.set(employee.id, selectedCells);
+                            } else {
+                              newSelectedCellsByEmployee.delete(employee.id);
+                            }
+                            
+                            // Actualizar el estado
+                            setSelectedCellsByEmployee(newSelectedCellsByEmployee);
                           } else if (isFirstCell && shift && onDeleteShift) {
                             // Mostrar menú contextual para eliminar turno existente
                             handleOpenContextMenu(e, shift);
                           }
                         }}
                         onTouchStart={(e) => {
+                          e.stopPropagation(); // Detener propagación
+                          
                           // Comportamiento normal de selección para todas las celdas libres
                           if (!isAssigned) {
-                            handleTouchStart(e, employee, time);
+                            // Verificar si ya está seleccionada para alternar
+                            if (isSelected) {
+                              // Si ya está seleccionada, hacer lo mismo que onClick
+                              const newSelectedCellsByEmployee = new Map(selectedCellsByEmployee);
+                              const selectedCells = newSelectedCellsByEmployee.get(employee.id) || new Set<string>();
+                              
+                              // Quitar la selección
+                              selectedCells.delete(time);
+                              
+                              // Actualizar el Map
+                              if (selectedCells.size > 0) {
+                                newSelectedCellsByEmployee.set(employee.id, selectedCells);
+                              } else {
+                                newSelectedCellsByEmployee.delete(employee.id);
+                              }
+                              
+                              // Actualizar el estado
+                              setSelectedCellsByEmployee(newSelectedCellsByEmployee);
+                            } else {
+                              // Si no está seleccionada, usar el manejador táctil estándar
+                              handleTouchStart(e, employee, time);
+                            }
                           } else if (isFirstCell && shift && onDeleteShift) {
                             // Mostrar menú contextual para eliminar
                             handleOpenContextMenu(e, shift);
