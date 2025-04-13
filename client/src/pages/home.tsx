@@ -275,26 +275,28 @@ export default function Home() {
 
           {/* Controls */}
           <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                className="bg-neutral-100 hover:bg-neutral-200 p-2 rounded-full"
-                onClick={handlePreviousDay}
-              >
-                <ChevronLeft className="h-5 w-5" />
-                <span className="sr-only">Día anterior</span>
-              </Button>
-              <div className="text-xl font-medium px-4 min-w-[200px] text-center">
-                {formatDate(currentDate)}
+            <div className="flex items-center">
+              <div className="flex items-center justify-between w-[300px]">
+                <Button 
+                  variant="outline" 
+                  className="bg-neutral-100 hover:bg-neutral-200 p-2 rounded-full"
+                  onClick={handlePreviousDay}
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                  <span className="sr-only">Día anterior</span>
+                </Button>
+                <div className="text-xl font-medium px-4 w-[200px] text-center flex justify-center items-center">
+                  <span>{formatDate(currentDate)}</span>
+                </div>
+                <Button 
+                  variant="outline" 
+                  className="bg-neutral-100 hover:bg-neutral-200 p-2 rounded-full"
+                  onClick={handleNextDay}
+                >
+                  <ChevronRight className="h-5 w-5" />
+                  <span className="sr-only">Día siguiente</span>
+                </Button>
               </div>
-              <Button 
-                variant="outline" 
-                className="bg-neutral-100 hover:bg-neutral-200 p-2 rounded-full"
-                onClick={handleNextDay}
-              >
-                <ChevronRight className="h-5 w-5" />
-                <span className="sr-only">Día siguiente</span>
-              </Button>
               
               <Button 
                 variant="outline"
