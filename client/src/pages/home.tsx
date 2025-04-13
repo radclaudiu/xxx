@@ -29,6 +29,12 @@ export default function Home() {
   const [hourlyEmployeeCost, setHourlyEmployeeCost] = useState<string>('');
   
   const { toast } = useToast();
+  const { user } = useAuth();
+  
+  // Obtener las empresas asociadas al usuario
+  const { data: companies = [] } = useQuery({
+    queryKey: ["/api/companies"],
+  });
   
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -201,8 +207,26 @@ export default function Home() {
       {/* Header */}
       <header className="bg-primary text-white p-2 md:p-4 shadow-md w-full">
         <div className="w-full px-1 md:px-2 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Sistema de Turnos de Trabajo</h1>
+          <div className="flex flex-col">
+            <h1 className="text-2xl font-bold">Sistema de Turnos de Trabajo</h1>
+            {companies.length > 0 && (
+              <div className="text-sm font-medium opacity-90">
+                Empresa: {companies[0].name}
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-2">
+            {user?.role === 'admin' && (
+              <Link href="/admin">
+                <Button 
+                  variant="secondary" 
+                  className="bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200 px-3 py-1 rounded flex items-center gap-1 text-sm font-medium"
+                >
+                  <Settings className="h-4 w-4" />
+                  Administración
+                </Button>
+              </Link>
+            )}
             <Button 
               variant="secondary" 
               className="bg-white text-primary px-3 py-1 rounded flex items-center gap-1 text-sm font-medium hover:bg-gray-100"

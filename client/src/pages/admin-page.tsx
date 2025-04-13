@@ -90,6 +90,12 @@ export default function AdminPage() {
     queryKey: ["/api/users"],
     queryFn: getQueryFn(),
   });
+  
+  // Consultar relaciones usuario-empresa
+  const { data: userCompanies = [] } = useQuery({
+    queryKey: ["/api/user-companies"],
+    queryFn: getQueryFn(),
+  });
 
   // Formulario para crear/editar empresa
   const companyForm = useForm<z.infer<typeof companyFormSchema>>({
@@ -408,7 +414,7 @@ export default function AdminPage() {
                       <TableCell>{user.email}</TableCell>
                       <TableCell>{user.role}</TableCell>
                       <TableCell>
-                        {user.companies?.length || 0} empresas
+                        {userCompanies.filter(uc => uc.userId === user.id).length} empresas
                       </TableCell>
                       <TableCell>
                         {new Date(user.createdAt || "").toLocaleDateString()}
