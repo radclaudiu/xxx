@@ -136,16 +136,6 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
       case 'week-schedule':
         return (
           <div className="rounded-md border" ref={weeklyScheduleRef}>
-            <div className="flex justify-end mb-4">
-              <Button 
-                variant="outline" 
-                className="text-blue-600 border-blue-300"
-                onClick={generateWeeklySchedulePDF}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Exportar a PDF
-              </Button>
-            </div>
             <div className="overflow-x-auto print:overflow-visible">
               <table className="min-w-full w-max-content table-auto border-collapse print:text-[8pt] print:w-full">
                 <thead>
@@ -500,10 +490,7 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                 </Button>
                 
                 <Button 
-                  onClick={() => {
-                    // Aquí iría la funcionalidad para imprimir o exportar a PDF
-                    window.print();
-                  }}
+                  onClick={generateWeeklySchedulePDF}
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Exportar PDF
