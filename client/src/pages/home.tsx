@@ -13,7 +13,7 @@ import ExportsModal, { ExportsModalRef } from "@/components/exports-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChevronLeft, ChevronRight, Save, FolderOpen, HelpCircle, UserPlus, DollarSign, Clock, Calendar, FileText, Settings } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save, FolderOpen, HelpCircle, UserPlus, DollarSign, Clock, Calendar, FileText, Settings, LogOut } from "lucide-react";
 
 export default function Home() {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
@@ -29,7 +29,7 @@ export default function Home() {
   const [hourlyEmployeeCost, setHourlyEmployeeCost] = useState<string>('');
   
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, logoutMutation } = useAuth();
   
   // Obtener las empresas asociadas al usuario
   const { data: companies = [] } = useQuery({
@@ -242,6 +242,14 @@ export default function Home() {
             >
               <FolderOpen className="h-4 w-4" />
               Cargar
+            </Button>
+            <Button 
+              variant="secondary" 
+              className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200 px-3 py-1 rounded flex items-center gap-1 text-sm font-medium ml-2"
+              onClick={() => logoutMutation.mutate()}
+            >
+              <LogOut className="h-4 w-4" />
+              Cerrar Sesión
             </Button>
           </div>
         </div>
