@@ -863,11 +863,8 @@ export default function ScheduleTable({
               
               // Eliminar turno
               if (contextMenu.shift && onDeleteShift) {
+                // Eliminar turno sin mostrar notificación
                 onDeleteShift(contextMenu.shift.id);
-                toast({
-                  title: "Turno eliminado",
-                  description: `Se ha eliminado el turno de ${contextMenu.shift.startTime} a ${contextMenu.shift.endTime}.`,
-                });
               }
               closeContextMenu();
             }}
