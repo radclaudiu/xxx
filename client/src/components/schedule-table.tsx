@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { 
   Select,
@@ -88,6 +88,21 @@ export default function ScheduleTable({
     setSelectedCellsByEmployee(new Map());
   }, [date]);
   
+  // Efecto para calcular y actualizar las horas restantes de cada empleado
+  useEffect(() => {
+    // Crear un nuevo objeto para almacenar las horas restantes
+    const newRemainingHours: Record<number, number> = {};
+    
+    // Calcular las horas restantes para cada empleado
+    employees.forEach(employee => {
+      const { remainingHours } = calculateWeeklyHours(employee);
+      newRemainingHours[employee.id] = remainingHours;
+    });
+    
+    // Actualizar el estado con los nuevos valores
+    setEmployeeRemainingHours(newRemainingHours);
+  }, [employees, shifts, date, selectedCellsByEmployee, calculateWeeklyHours]);
+  
   // Actualizar estados cuando cambian los props
   useEffect(() => {
     setStartHour(initialStartHour);
@@ -104,6 +119,9 @@ export default function ScheduleTable({
   const lastTouchUpdateRef = useRef<number>(0);
   const batchedSelectionsRef = useRef<Map<number, Set<string>> | null>(null);
   const pendingUpdateRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Estado para almacenar las horas restantes calculadas por empleado
+  const [employeeRemainingHours, setEmployeeRemainingHours] = useState<Record<number, number>>({});
   
   // Function to check if a cell should be marked as assigned
   const isCellAssigned = (employeeId: number, time: string) => {
@@ -716,7 +734,8 @@ export default function ScheduleTable({
   };
   
   // Calcular las horas semanales trabajadas y restantes para cada empleado
-  const calculateWeeklyHours = (employee: Employee) => {
+  // Función para calcular horas de la semana (memoizada para mejor rendimiento)
+  const calculateWeeklyHours = useCallback((employee: Employee) => {
     const currentWeekStart = getStartOfWeek(date);
     const currentWeekEnd = getEndOfWeek(date);
     
@@ -793,7 +812,7 @@ export default function ScheduleTable({
       workedHours: parseFloat(workedHours.toFixed(2)),
       remainingHours: parseFloat(remainingHours.toFixed(2))
     };
-  };
+  }, [date, shifts, selectedCellsByEmployee, timeSlots]);
   
   // Estado para menú contextual
   const [contextMenu, setContextMenu] = useState<{
