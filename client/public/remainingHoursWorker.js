@@ -10,7 +10,13 @@ self.onmessage = function(e) {
   const remainingHours = {};
   
   employees.forEach(employee => {
-    if (!employee.maxHoursPerWeek) {
+    // console.log de depuración para ver el objeto empleado
+    console.log('Procesando empleado en Worker:', employee);
+    
+    // Obtener las horas máximas semanales (por defecto 40 si no está definido)
+    const maxHours = employee.max_hours_per_week || 40;
+    
+    if (!maxHours) {
       remainingHours[employee.id] = 0;
       return;
     }
@@ -25,6 +31,8 @@ self.onmessage = function(e) {
       // Verificar si la fecha del turno está dentro de la semana
       return shiftDate >= weekStartDate && shiftDate <= weekEndDate;
     });
+    
+    console.log('Turnos encontrados para la semana:', employeeWeekShifts);
     
     // Calcular horas totales asignadas
     const totalAssignedHours = employeeWeekShifts.reduce((total, shift) => {
@@ -46,8 +54,10 @@ self.onmessage = function(e) {
       return total + (diffMinutes / 60);
     }, 0);
     
+    console.log('Horas totales asignadas:', totalAssignedHours);
+    
     // Guardar las horas restantes (horas contratadas - asignadas)
-    remainingHours[employee.id] = employee.maxHoursPerWeek - totalAssignedHours;
+    remainingHours[employee.id] = maxHours - totalAssignedHours;
   });
   
   // Enviar los resultados de vuelta al hilo principal
