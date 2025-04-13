@@ -810,8 +810,8 @@ export default function ScheduleTable({
   const calculateWeeklyHours = (employee: Employee) => {
     // Primero verificar si tenemos el valor pre-calculado por el Worker
     if (employeeRemainingHours[employee.id] !== undefined) {
-      // Obtener las horas máximas para este empleado (utilizando snake_case como está en la base de datos)
-      const maxWeeklyHours = employee.max_hours_per_week || 40;
+      // Obtener las horas máximas para este empleado
+      const maxWeeklyHours = employee.maxHoursPerWeek || 40;
       const remainingHours = employeeRemainingHours[employee.id];
       const workedHours = maxWeeklyHours - remainingHours;
       
@@ -894,8 +894,8 @@ export default function ScheduleTable({
       }
     }
     
-    // Calcular horas restantes (con snake_case)
-    const maxWeeklyHours = employee.max_hours_per_week || 40; // Default 40 si no está definido
+    // Calcular horas restantes
+    const maxWeeklyHours = employee.maxHoursPerWeek || 40; // Default 40 si no está definido
     const remainingHours = Math.max(0, maxWeeklyHours - workedHours);
     
     return {

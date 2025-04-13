@@ -14,7 +14,7 @@ self.onmessage = function(e) {
     console.log('Procesando empleado en Worker:', employee);
     
     // Obtener las horas máximas semanales (por defecto 40 si no está definido)
-    const maxHours = employee.max_hours_per_week || 40;
+    const maxHours = employee.maxHoursPerWeek || 40;
     
     if (!maxHours) {
       remainingHours[employee.id] = 0;
