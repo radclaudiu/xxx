@@ -614,6 +614,7 @@ export default function Home() {
                 });
               }
             }}
+            isReadOnly={user?.role === 'employee'}
           />
         </div>
       </main>

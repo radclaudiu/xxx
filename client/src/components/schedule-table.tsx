@@ -369,6 +369,9 @@ export default function ScheduleTable({
   
   // Touch start handler: añadir o quitar celdas individuales cuando se usa el arrastre
   const handleTouchStart = (e: React.TouchEvent, employee: Employee, time: string) => {
+    // Si el componente está en modo de solo lectura, no permitir interacción
+    if (isReadOnly) return;
+    
     // No permitir selección en celdas ya asignadas
     if (isCellAssigned(employee.id, time)) return;
     
