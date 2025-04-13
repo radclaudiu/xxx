@@ -351,6 +351,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Database configuration
+  async getDbConfig(): Promise<{
+    DATABASE_URL: string;
+    PGDATABASE?: string;
+    PGHOST?: string;
+    PGPORT?: string;
+    PGPASSWORD?: string;
+    PGUSER?: string;
+  }> {
+    return getDbConfig();
+  }
+  
   async updateDatabaseConfig(config: {
     DATABASE_URL: string;
     PGDATABASE?: string;
@@ -369,8 +380,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Employee operations
-  async getEmployees(): Promise<Employee[]> {
-    return await db.select().from(employees).orderBy(asc(employees.name));
+  async getEmployees(companyId?: number): Promise<Employee[]> {
+    let query = db.select().from(employees);
+    
+    if (companyId) {
+      query = query.where(eq(employees.companyId, companyId));
+    }
+    
+    return await query.orderBy(asc(employees.name));
   }
   
   async getEmployee(id: number): Promise<Employee | undefined> {
@@ -490,8 +507,14 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Schedule operations
-  async getSchedules(): Promise<Schedule[]> {
-    return await db.select().from(schedules).orderBy(desc(schedules.createdAt));
+  async getSchedules(companyId?: number): Promise<Schedule[]> {
+    let query = db.select().from(schedules);
+    
+    if (companyId) {
+      query = query.where(eq(schedules.companyId, companyId));
+    }
+    
+    return await query.orderBy(desc(schedules.createdAt));
   }
   
   async getSchedule(id: number): Promise<Schedule | undefined> {
