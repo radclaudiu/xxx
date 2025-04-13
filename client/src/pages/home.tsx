@@ -1,94 +1,92 @@
-import { useState, useEffect, useRef } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
-import { formatDate, formatDateForAPI, getPreviousDay, getNextDay, getStartOfWeek, calculateHoursBetween } from "@/lib/date-helpers";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth";
-import { Link } from "wouter";
-import { Employee, Shift, InsertShift } from "@shared/schema";
+import { useEffect, useRef, useState } from 'react';
+import { Link } from 'wouter';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { 
+  useToast 
+} from "@/hooks/use-toast";
+import { 
+  Button 
+} from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { 
+  Calendar,
+  ChevronLeft, 
+  ChevronRight, 
+  Clock, 
+  DollarSign,
+  FileText,
+  FolderOpen,
+  HelpCircle,
+  LogOut,
+  Save,
+  Settings,
+  UserPlus
+} from "lucide-react";
 import ScheduleTable from "@/components/schedule-table";
 import EmployeeModal from "@/components/employee-modal";
 import HelpModal from "@/components/help-modal";
 import ExportsModal, { ExportsModalRef } from "@/components/exports-modal";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ChevronLeft, ChevronRight, Save, FolderOpen, HelpCircle, UserPlus, DollarSign, Clock, Calendar, FileText, Settings, LogOut } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { 
+  formatDateForAPI, 
+  formatDate,
+  getPreviousDay,
+  getNextDay,
+  calculateHoursBetween
+} from "@/lib/date-helpers";
+import { useAuth } from '@/hooks/use-auth';
+import { Employee, InsertEmployee, InsertShift } from '@shared/schema';
 
 export default function Home() {
-  const [currentDate, setCurrentDate] = useState<Date>(new Date());
-  const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
-  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
-  const [isWeekViewOpen, setIsWeekViewOpen] = useState(false);
-  
-  // Referencia para el modal de exportaciones
-  const exportsModalRef = useRef<ExportsModalRef>(null);
-  
-  // Estados para gestionar los datos financieros
-  const [estimatedDailySales, setEstimatedDailySales] = useState<string>('');
-  const [hourlyEmployeeCost, setHourlyEmployeeCost] = useState<string>('');
-  
   const { toast } = useToast();
   const { user, logoutMutation } = useAuth();
   
-  // Obtener las empresas asociadas al usuario
-  const { data: companies = [] } = useQuery({
-    queryKey: ["/api/companies"],
-  });
+  // States
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  const [estimatedDailySales, setEstimatedDailySales] = useState("0");
+  const [hourlyEmployeeCost, setHourlyEmployeeCost] = useState("0");
   
-  // Handle keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Prevent handling shortcuts when modals are open or in input fields
-      if (
-        isEmployeeModalOpen || 
-        isHelpModalOpen || 
-        e.target instanceof HTMLInputElement || 
-        e.target instanceof HTMLTextAreaElement
-      ) {
-        return;
-      }
-      
-      if (e.key === "ArrowLeft") {
-        handlePreviousDay();
-      } else if (e.key === "ArrowRight") {
-        handleNextDay();
-      } else if (e.ctrlKey && e.key.toLowerCase() === "s") {
-        e.preventDefault();
-        // Save functionality could be implemented here
-        toast({
-          title: "Función no implementada",
-          description: "La funcionalidad de guardar está en desarrollo.",
-        });
-      } else if (e.ctrlKey && e.key.toLowerCase() === "l") {
-        e.preventDefault();
-        // Load functionality could be implemented here
-        toast({
-          title: "Función no implementada",
-          description: "La funcionalidad de cargar está en desarrollo.",
-        });
-      } else if (e.ctrlKey && e.key.toLowerCase() === "e") {
-        e.preventDefault();
-        setIsEmployeeModalOpen(true);
-      }
-    };
-    
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isEmployeeModalOpen, isHelpModalOpen, toast]);
+  // Refs
+  const exportsModalRef = useRef<ExportsModalRef>(null);
   
   // Fetch employees
-  const { data: employees = [] } = useQuery<Employee[]>({
+  const {
+    data: employees = [],
+    isLoading: isLoadingEmployees,
+  } = useQuery<Employee[]>({
     queryKey: ["/api/employees"],
+    select: (data) => {
+      return data.sort((a, b) => a.name.localeCompare(b.name));
+    },
   });
   
-  // Fetch all shifts (without date filter) for use in exports
-  const { data: allShifts = [] } = useQuery<Shift[]>({
+  // Fetch shifts
+  const {
+    data: allShifts = [],
+    isLoading: isLoadingShifts,
+  } = useQuery<any[]>({
     queryKey: ["/api/shifts"],
-    queryFn: async () => {
-      const response = await fetch(`/api/shifts`);
-      if (!response.ok) throw new Error("Failed to fetch shifts");
-      return response.json();
+    select: (data) => {
+      return data.map((item) => {
+        if (item.shifts) {
+          return item.shifts; // Si los turnos están anidados dentro de un objeto
+        }
+        return item; // Si los turnos están en el primer nivel
+      });
+    },
+  });
+  
+  // Fetch companies
+  const {
+    data: companies = [],
+    isLoading: isLoadingCompanies,
+  } = useQuery<any[]>({
+    queryKey: ["/api/companies"],
+    select: (data) => {
+      return data;
     },
   });
   
@@ -99,6 +97,12 @@ export default function Home() {
   // Filtramos los turnos por fecha directamente comparando strings en formato YYYY-MM-DD
   const shifts = allShifts.filter(shift => {
     try {
+      // Verificamos primero si shift o shift.date son undefined o null
+      if (!shift || !shift.date) {
+        console.warn("Turno sin fecha válida:", shift);
+        return false;
+      }
+      
       // Si shift.date ya es un string en formato YYYY-MM-DD, no necesitamos convertirlo
       const formattedShiftDate = formatDateForAPI(shift.date);
       console.log("Comparando turno:", shift.id, "fecha:", formattedShiftDate, "con:", currentDateFormatted);
@@ -326,10 +330,8 @@ export default function Home() {
                       {(() => {
                         // Calcular horas totales programadas para el día
                         const totalHours = shifts.reduce((acc, shift) => {
-                          if (shift.date === formatDateForAPI(currentDate)) {
-                            return acc + calculateHoursBetween(shift.startTime, shift.endTime);
-                          }
-                          return acc;
+                          // Los turnos ya están filtrados por fecha anteriormente
+                          return acc + calculateHoursBetween(shift.startTime, shift.endTime);
                         }, 0);
                         
                         // Calcular coste total
@@ -346,10 +348,8 @@ export default function Home() {
                     <span className={`bg-white px-2 py-0.5 rounded text-sm font-medium ${(() => {
                       // Calcular horas totales programadas para el día
                       const totalHours = shifts.reduce((acc, shift) => {
-                        if (shift.date === formatDateForAPI(currentDate)) {
-                          return acc + calculateHoursBetween(shift.startTime, shift.endTime);
-                        }
-                        return acc;
+                        // Los turnos ya están filtrados por fecha anteriormente
+                        return acc + calculateHoursBetween(shift.startTime, shift.endTime);
                       }, 0);
                       
                       // Calcular coste total y porcentaje
@@ -364,10 +364,8 @@ export default function Home() {
                       {(() => {
                         // Calcular horas totales programadas para el día
                         const totalHours = shifts.reduce((acc, shift) => {
-                          if (shift.date === formatDateForAPI(currentDate)) {
-                            return acc + calculateHoursBetween(shift.startTime, shift.endTime);
-                          }
-                          return acc;
+                          // Los turnos ya están filtrados por fecha anteriormente
+                          return acc + calculateHoursBetween(shift.startTime, shift.endTime);
                         }, 0);
                         
                         // Calcular coste total y porcentaje
@@ -486,12 +484,12 @@ export default function Home() {
         onClose={() => setIsHelpModalOpen(false)} 
       />
       
-      {/* Exportaciones Modal con referencia - usando todos los turnos */}
+      {/* Exportaciones Modal con referencia */}
       <ExportsModal 
-        employees={employees} 
-        shifts={allShifts} 
-        currentDate={currentDate}
         ref={exportsModalRef}
+        employees={employees}
+        shifts={allShifts}
+        currentDate={currentDate}
       />
     </div>
   );

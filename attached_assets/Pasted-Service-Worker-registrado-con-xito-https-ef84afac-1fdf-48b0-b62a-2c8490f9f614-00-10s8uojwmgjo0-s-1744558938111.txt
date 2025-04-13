@@ -1,0 +1,438 @@
+Service Worker registrado con éxito: https://ef84afac-1fdf-48b0-b62a-2c8490f9f614-00-10s8uojwmgjo0.spock.replit.dev/
+home.tsx:97 Fecha actual formateada: 2025-04-13
+2home.tsx:97 Fecha actual formateada: 2025-04-13
+date-helpers.ts:44 Error formateando fecha para API: TypeError: Cannot read properties of undefined (reading 'getFullYear')
+    at formatDateForAPI (date-helpers.ts:38:23)
+    at home.tsx:103:34
+    at Array.filter (<anonymous>)
+    at Home (home.tsx:100:28)
+    at renderWithHooks (chunk-WERSD76P.js?v=b100b782:11548:26)
+    at updateFunctionComponent (chunk-WERSD76P.js?v=b100b782:14582:28)
+    at beginWork (chunk-WERSD76P.js?v=b100b782:15924:22)
+    at beginWork$1 (chunk-WERSD76P.js?v=b100b782:19753:22)
+    at performUnitOfWork (chunk-WERSD76P.js?v=b100b782:19198:20)
+    at workLoopSync (chunk-WERSD76P.js?v=b100b782:19137:13)
+formatDateForAPI @ date-helpers.ts:44
+(anonymous) @ home.tsx:103
+Home @ home.tsx:100
+renderWithHooks @ chunk-WERSD76P.js?v=b100b782:11548
+updateFunctionComponent @ chunk-WERSD76P.js?v=b100b782:14582
+beginWork @ chunk-WERSD76P.js?v=b100b782:15924
+beginWork$1 @ chunk-WERSD76P.js?v=b100b782:19753
+performUnitOfWork @ chunk-WERSD76P.js?v=b100b782:19198
+workLoopSync @ chunk-WERSD76P.js?v=b100b782:19137
+renderRootSync @ chunk-WERSD76P.js?v=b100b782:19116
+performSyncWorkOnRoot @ chunk-WERSD76P.js?v=b100b782:18874
+flushSyncCallbacks @ chunk-WERSD76P.js?v=b100b782:9119
+(anonymous) @ chunk-WERSD76P.js?v=b100b782:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=b100b782:555
+flush @ @tanstack_react-query.js?v=b100b782:569
+batch @ @tanstack_react-query.js?v=b100b782:587
+dispatch_fn @ @tanstack_react-query.js?v=b100b782:996
+setData @ @tanstack_react-query.js?v=b100b782:696
+onSuccess @ @tanstack_react-query.js?v=b100b782:897
+resolve @ @tanstack_react-query.js?v=b100b782:456
+Promise.then
+run @ @tanstack_react-query.js?v=b100b782:498
+start @ @tanstack_react-query.js?v=b100b782:536
+fetch @ @tanstack_react-query.js?v=b100b782:926
+executeFetch_fn @ @tanstack_react-query.js?v=b100b782:2211
+onSubscribe @ @tanstack_react-query.js?v=b100b782:1898
+subscribe @ @tanstack_react-query.js?v=b100b782:24
+(anonymous) @ @tanstack_react-query.js?v=b100b782:3022
+subscribeToStore @ chunk-WERSD76P.js?v=b100b782:11984
+commitHookEffectListMount @ chunk-WERSD76P.js?v=b100b782:16915
+commitPassiveMountOnFiber @ chunk-WERSD76P.js?v=b100b782:18156
+commitPassiveMountEffects_complete @ chunk-WERSD76P.js?v=b100b782:18129
+commitPassiveMountEffects_begin @ chunk-WERSD76P.js?v=b100b782:18119
+commitPassiveMountEffects @ chunk-WERSD76P.js?v=b100b782:18109
+flushPassiveEffectsImpl @ chunk-WERSD76P.js?v=b100b782:19490
+flushPassiveEffects @ chunk-WERSD76P.js?v=b100b782:19447
+commitRootImpl @ chunk-WERSD76P.js?v=b100b782:19416
+commitRoot @ chunk-WERSD76P.js?v=b100b782:19277
+performSyncWorkOnRoot @ chunk-WERSD76P.js?v=b100b782:18895
+flushSyncCallbacks @ chunk-WERSD76P.js?v=b100b782:9119
+(anonymous) @ chunk-WERSD76P.js?v=b100b782:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=b100b782:555
+flush @ @tanstack_react-query.js?v=b100b782:569
+batch @ @tanstack_react-query.js?v=b100b782:587
+dispatch_fn @ @tanstack_react-query.js?v=b100b782:996
+setData @ @tanstack_react-query.js?v=b100b782:696
+onSuccess @ @tanstack_react-query.js?v=b100b782:897
+resolve @ @tanstack_react-query.js?v=b100b782:456
+Promise.then
+run @ @tanstack_react-query.js?v=b100b782:498
+start @ @tanstack_react-query.js?v=b100b782:536
+fetch @ @tanstack_react-query.js?v=b100b782:926
+executeFetch_fn @ @tanstack_react-query.js?v=b100b782:2211
+onSubscribe @ @tanstack_react-query.js?v=b100b782:1898
+subscribe @ @tanstack_react-query.js?v=b100b782:24
+(anonymous) @ @tanstack_react-query.js?v=b100b782:3022
+subscribeToStore @ chunk-WERSD76P.js?v=b100b782:11984
+commitHookEffectListMount @ chunk-WERSD76P.js?v=b100b782:16915
+commitPassiveMountOnFiber @ chunk-WERSD76P.js?v=b100b782:18156
+commitPassiveMountEffects_complete @ chunk-WERSD76P.js?v=b100b782:18129
+commitPassiveMountEffects_begin @ chunk-WERSD76P.js?v=b100b782:18119
+commitPassiveMountEffects @ chunk-WERSD76P.js?v=b100b782:18109
+flushPassiveEffectsImpl @ chunk-WERSD76P.js?v=b100b782:19490
+flushPassiveEffects @ chunk-WERSD76P.js?v=b100b782:19447
+performSyncWorkOnRoot @ chunk-WERSD76P.js?v=b100b782:18868
+flushSyncCallbacks @ chunk-WERSD76P.js?v=b100b782:9119
+commitRootImpl @ chunk-WERSD76P.js?v=b100b782:19432
+commitRoot @ chunk-WERSD76P.js?v=b100b782:19277
+finishConcurrentRender @ chunk-WERSD76P.js?v=b100b782:18805
+performConcurrentWorkOnRoot @ chunk-WERSD76P.js?v=b100b782:18718
+workLoop @ chunk-WERSD76P.js?v=b100b782:197
+flushWork @ chunk-WERSD76P.js?v=b100b782:176
+performWorkUntilDeadline @ chunk-WERSD76P.js?v=b100b782:384Understand this errorAI
+home.tsx:104 Comparando turno: undefined fecha: 2025-04-13 con: 2025-04-13
+date-helpers.ts:44 Error formateando fecha para API: TypeError: Cannot read properties of undefined (reading 'getFullYear')
+    at formatDateForAPI (date-helpers.ts:38:23)
+    at home.tsx:103:34
+    at Array.filter (<anonymous>)
+    at Home (home.tsx:100:28)
+    at renderWithHooks (chunk-WERSD76P.js?v=b100b782:11548:26)
+    at updateFunctionComponent (chunk-WERSD76P.js?v=b100b782:14582:28)
+    at beginWork (chunk-WERSD76P.js?v=b100b782:15924:22)
+    at beginWork$1 (chunk-WERSD76P.js?v=b100b782:19753:22)
+    at performUnitOfWork (chunk-WERSD76P.js?v=b100b782:19198:20)
+    at workLoopSync (chunk-WERSD76P.js?v=b100b782:19137:13)
+formatDateForAPI @ date-helpers.ts:44
+(anonymous) @ home.tsx:103
+Home @ home.tsx:100
+renderWithHooks @ chunk-WERSD76P.js?v=b100b782:11548
+updateFunctionComponent @ chunk-WERSD76P.js?v=b100b782:14582
+beginWork @ chunk-WERSD76P.js?v=b100b782:15924
+beginWork$1 @ chunk-WERSD76P.js?v=b100b782:19753
+performUnitOfWork @ chunk-WERSD76P.js?v=b100b782:19198
+workLoopSync @ chunk-WERSD76P.js?v=b100b782:19137
+renderRootSync @ chunk-WERSD76P.js?v=b100b782:19116
+performSyncWorkOnRoot @ chunk-WERSD76P.js?v=b100b782:18874
+flushSyncCallbacks @ chunk-WERSD76P.js?v=b100b782:9119
+(anonymous) @ chunk-WERSD76P.js?v=b100b782:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=b100b782:555
+flush @ @tanstack_react-query.js?v=b100b782:569
+batch @ @tanstack_react-query.js?v=b100b782:587
+dispatch_fn @ @tanstack_react-query.js?v=b100b782:996
+setData @ @tanstack_react-query.js?v=b100b782:696
+onSuccess @ @tanstack_react-query.js?v=b100b782:897
+resolve @ @tanstack_react-query.js?v=b100b782:456
+Promise.then
+run @ @tanstack_react-query.js?v=b100b782:498
+start @ @tanstack_react-query.js?v=b100b782:536
+fetch @ @tanstack_react-query.js?v=b100b782:926
+executeFetch_fn @ @tanstack_react-query.js?v=b100b782:2211
+onSubscribe @ @tanstack_react-query.js?v=b100b782:1898
+subscribe @ @tanstack_react-query.js?v=b100b782:24
+(anonymous) @ @tanstack_react-query.js?v=b100b782:3022
+subscribeToStore @ chunk-WERSD76P.js?v=b100b782:11984
+commitHookEffectListMount @ chunk-WERSD76P.js?v=b100b782:16915
+commitPassiveMountOnFiber @ chunk-WERSD76P.js?v=b100b782:18156
+commitPassiveMountEffects_complete @ chunk-WERSD76P.js?v=b100b782:18129
+commitPassiveMountEffects_begin @ chunk-WERSD76P.js?v=b100b782:18119
+commitPassiveMountEffects @ chunk-WERSD76P.js?v=b100b782:18109
+flushPassiveEffectsImpl @ chunk-WERSD76P.js?v=b100b782:19490
+flushPassiveEffects @ chunk-WERSD76P.js?v=b100b782:19447
+commitRootImpl @ chunk-WERSD76P.js?v=b100b782:19416
+commitRoot @ chunk-WERSD76P.js?v=b100b782:19277
+performSyncWorkOnRoot @ chunk-WERSD76P.js?v=b100b782:18895
+flushSyncCallbacks @ chunk-WERSD76P.js?v=b100b782:9119
+(anonymous) @ chunk-WERSD76P.js?v=b100b782:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=b100b782:555
+flush @ @tanstack_react-query.js?v=b100b782:569
+batch @ @tanstack_react-query.js?v=b100b782:587
+dispatch_fn @ @tanstack_react-query.js?v=b100b782:996
+setData @ @tanstack_react-query.js?v=b100b782:696
+onSuccess @ @tanstack_react-query.js?v=b100b782:897
+resolve @ @tanstack_react-query.js?v=b100b782:456
+Promise.then
+run @ @tanstack_react-query.js?v=b100b782:498
+start @ @tanstack_react-query.js?v=b100b782:536
+fetch @ @tanstack_react-query.js?v=b100b782:926
+executeFetch_fn @ @tanstack_react-query.js?v=b100b782:2211
+onSubscribe @ @tanstack_react-query.js?v=b100b782:1898
+subscribe @ @tanstack_react-query.js?v=b100b782:24
+(anonymous) @ @tanstack_react-query.js?v=b100b782:3022
+subscribeToStore @ chunk-WERSD76P.js?v=b100b782:11984
+commitHookEffectListMount @ chunk-WERSD76P.js?v=b100b782:16915
+commitPassiveMountOnFiber @ chunk-WERSD76P.js?v=b100b782:18156
+commitPassiveMountEffects_complete @ chunk-WERSD76P.js?v=b100b782:18129
+commitPassiveMountEffects_begin @ chunk-WERSD76P.js?v=b100b782:18119
+commitPassiveMountEffects @ chunk-WERSD76P.js?v=b100b782:18109
+flushPassiveEffectsImpl @ chunk-WERSD76P.js?v=b100b782:19490
+flushPassiveEffects @ chunk-WERSD76P.js?v=b100b782:19447
+performSyncWorkOnRoot @ chunk-WERSD76P.js?v=b100b782:18868
+flushSyncCallbacks @ chunk-WERSD76P.js?v=b100b782:9119
+commitRootImpl @ chunk-WERSD76P.js?v=b100b782:19432
+commitRoot @ chunk-WERSD76P.js?v=b100b782:19277
+finishConcurrentRender @ chunk-WERSD76P.js?v=b100b782:18805
+performConcurrentWorkOnRoot @ chunk-WERSD76P.js?v=b100b782:18718
+workLoop @ chunk-WERSD76P.js?v=b100b782:197
+flushWork @ chunk-WERSD76P.js?v=b100b782:176
+performWorkUntilDeadline @ chunk-WERSD76P.js?v=b100b782:384Understand this errorAI
+home.tsx:104 Comparando turno: undefined fecha: 2025-04-13 con: 2025-04-13
+date-helpers.ts:44 Error formateando fecha para API: TypeError: Cannot read properties of undefined (reading 'getFullYear')
+    at formatDateForAPI (date-helpers.ts:38:23)
+    at home.tsx:103:34
+    at Array.filter (<anonymous>)
+    at Home (home.tsx:100:28)
+    at renderWithHooks (chunk-WERSD76P.js?v=b100b782:11548:26)
+    at updateFunctionComponent (chunk-WERSD76P.js?v=b100b782:14582:28)
+    at beginWork (chunk-WERSD76P.js?v=b100b782:15924:22)
+    at beginWork$1 (chunk-WERSD76P.js?v=b100b782:19753:22)
+    at performUnitOfWork (chunk-WERSD76P.js?v=b100b782:19198:20)
+    at workLoopSync (chunk-WERSD76P.js?v=b100b782:19137:13)
+formatDateForAPI @ date-helpers.ts:44
+(anonymous) @ home.tsx:103
+Home @ home.tsx:100
+renderWithHooks @ chunk-WERSD76P.js?v=b100b782:11548
+updateFunctionComponent @ chunk-WERSD76P.js?v=b100b782:14582
+beginWork @ chunk-WERSD76P.js?v=b100b782:15924
+beginWork$1 @ chunk-WERSD76P.js?v=b100b782:19753
+performUnitOfWork @ chunk-WERSD76P.js?v=b100b782:19198
+workLoopSync @ chunk-WERSD76P.js?v=b100b782:19137
+renderRootSync @ chunk-WERSD76P.js?v=b100b782:19116
+performSyncWorkOnRoot @ chunk-WERSD76P.js?v=b100b782:18874
+flushSyncCallbacks @ chunk-WERSD76P.js?v=b100b782:9119
+(anonymous) @ chunk-WERSD76P.js?v=b100b782:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=b100b782:555
+flush @ @tanstack_react-query.js?v=b100b782:569
+batch @ @tanstack_react-query.js?v=b100b782:587
+dispatch_fn @ @tanstack_react-query.js?v=b100b782:996
+setData @ @tanstack_react-query.js?v=b100b782:696
+onSuccess @ @tanstack_react-query.js?v=b100b782:897
+resolve @ @tanstack_react-query.js?v=b100b782:456
+Promise.then
+run @ @tanstack_react-query.js?v=b100b782:498
+start @ @tanstack_react-query.js?v=b100b782:536
+fetch @ @tanstack_react-query.js?v=b100b782:926
+executeFetch_fn @ @tanstack_react-query.js?v=b100b782:2211
+onSubscribe @ @tanstack_react-query.js?v=b100b782:1898
+subscribe @ @tanstack_react-query.js?v=b100b782:24
+(anonymous) @ @tanstack_react-query.js?v=b100b782:3022
+subscribeToStore @ chunk-WERSD76P.js?v=b100b782:11984
+commitHookEffectListMount @ chunk-WERSD76P.js?v=b100b782:16915
+commitPassiveMountOnFiber @ chunk-WERSD76P.js?v=b100b782:18156
+commitPassiveMountEffects_complete @ chunk-WERSD76P.js?v=b100b782:18129
+commitPassiveMountEffects_begin @ chunk-WERSD76P.js?v=b100b782:18119
+commitPassiveMountEffects @ chunk-WERSD76P.js?v=b100b782:18109
+flushPassiveEffectsImpl @ chunk-WERSD76P.js?v=b100b782:19490
+flushPassiveEffects @ chunk-WERSD76P.js?v=b100b782:19447
+commitRootImpl @ chunk-WERSD76P.js?v=b100b782:19416
+commitRoot @ chunk-WERSD76P.js?v=b100b782:19277
+performSyncWorkOnRoot @ chunk-WERSD76P.js?v=b100b782:18895
+flushSyncCallbacks @ chunk-WERSD76P.js?v=b100b782:9119
+(anonymous) @ chunk-WERSD76P.js?v=b100b782:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=b100b782:555
+flush @ @tanstack_react-query.js?v=b100b782:569
+batch @ @tanstack_react-query.js?v=b100b782:587
+dispatch_fn @ @tanstack_react-query.js?v=b100b782:996
+setData @ @tanstack_react-query.js?v=b100b782:696
+onSuccess @ @tanstack_react-query.js?v=b100b782:897
+resolve @ @tanstack_react-query.js?v=b100b782:456
+Promise.then
+run @ @tanstack_react-query.js?v=b100b782:498
+start @ @tanstack_react-query.js?v=b100b782:536
+fetch @ @tanstack_react-query.js?v=b100b782:926
+executeFetch_fn @ @tanstack_react-query.js?v=b100b782:2211
+onSubscribe @ @tanstack_react-query.js?v=b100b782:1898
+subscribe @ @tanstack_react-query.js?v=b100b782:24
+(anonymous) @ @tanstack_react-query.js?v=b100b782:3022
+subscribeToStore @ chunk-WERSD76P.js?v=b100b782:11984
+commitHookEffectListMount @ chunk-WERSD76P.js?v=b100b782:16915
+commitPassiveMountOnFiber @ chunk-WERSD76P.js?v=b100b782:18156
+commitPassiveMountEffects_complete @ chunk-WERSD76P.js?v=b100b782:18129
+commitPassiveMountEffects_begin @ chunk-WERSD76P.js?v=b100b782:18119
+commitPassiveMountEffects @ chunk-WERSD76P.js?v=b100b782:18109
+flushPassiveEffectsImpl @ chunk-WERSD76P.js?v=b100b782:19490
+flushPassiveEffects @ chunk-WERSD76P.js?v=b100b782:19447
+performSyncWorkOnRoot @ chunk-WERSD76P.js?v=b100b782:18868
+flushSyncCallbacks @ chunk-WERSD76P.js?v=b100b782:9119
+commitRootImpl @ chunk-WERSD76P.js?v=b100b782:19432
+commitRoot @ chunk-WERSD76P.js?v=b100b782:19277
+finishConcurrentRender @ chunk-WERSD76P.js?v=b100b782:18805
+performConcurrentWorkOnRoot @ chunk-WERSD76P.js?v=b100b782:18718
+workLoop @ chunk-WERSD76P.js?v=b100b782:197
+flushWork @ chunk-WERSD76P.js?v=b100b782:176
+performWorkUntilDeadline @ chunk-WERSD76P.js?v=b100b782:384Understand this errorAI
+home.tsx:104 Comparando turno: undefined fecha: 2025-04-13 con: 2025-04-13
+date-helpers.ts:44 Error formateando fecha para API: TypeError: Cannot read properties of undefined (reading 'getFullYear')
+    at formatDateForAPI (date-helpers.ts:38:23)
+    at home.tsx:103:34
+    at Array.filter (<anonymous>)
+    at Home (home.tsx:100:28)
+    at renderWithHooks (chunk-WERSD76P.js?v=b100b782:11548:26)
+    at updateFunctionComponent (chunk-WERSD76P.js?v=b100b782:14582:28)
+    at beginWork (chunk-WERSD76P.js?v=b100b782:15924:22)
+    at beginWork$1 (chunk-WERSD76P.js?v=b100b782:19753:22)
+    at performUnitOfWork (chunk-WERSD76P.js?v=b100b782:19198:20)
+    at workLoopSync (chunk-WERSD76P.js?v=b100b782:19137:13)
+formatDateForAPI @ date-helpers.ts:44
+(anonymous) @ home.tsx:103
+Home @ home.tsx:100
+renderWithHooks @ chunk-WERSD76P.js?v=b100b782:11548
+updateFunctionComponent @ chunk-WERSD76P.js?v=b100b782:14582
+beginWork @ chunk-WERSD76P.js?v=b100b782:15924
+beginWork$1 @ chunk-WERSD76P.js?v=b100b782:19753
+performUnitOfWork @ chunk-WERSD76P.js?v=b100b782:19198
+workLoopSync @ chunk-WERSD76P.js?v=b100b782:19137
+renderRootSync @ chunk-WERSD76P.js?v=b100b782:19116
+performSyncWorkOnRoot @ chunk-WERSD76P.js?v=b100b782:18874
+flushSyncCallbacks @ chunk-WERSD76P.js?v=b100b782:9119
+(anonymous) @ chunk-WERSD76P.js?v=b100b782:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=b100b782:555
+flush @ @tanstack_react-query.js?v=b100b782:569
+batch @ @tanstack_react-query.js?v=b100b782:587
+dispatch_fn @ @tanstack_react-query.js?v=b100b782:996
+setData @ @tanstack_react-query.js?v=b100b782:696
+onSuccess @ @tanstack_react-query.js?v=b100b782:897
+resolve @ @tanstack_react-query.js?v=b100b782:456
+Promise.then
+run @ @tanstack_react-query.js?v=b100b782:498
+start @ @tanstack_react-query.js?v=b100b782:536
+fetch @ @tanstack_react-query.js?v=b100b782:926
+executeFetch_fn @ @tanstack_react-query.js?v=b100b782:2211
+onSubscribe @ @tanstack_react-query.js?v=b100b782:1898
+subscribe @ @tanstack_react-query.js?v=b100b782:24
+(anonymous) @ @tanstack_react-query.js?v=b100b782:3022
+subscribeToStore @ chunk-WERSD76P.js?v=b100b782:11984
+commitHookEffectListMount @ chunk-WERSD76P.js?v=b100b782:16915
+commitPassiveMountOnFiber @ chunk-WERSD76P.js?v=b100b782:18156
+commitPassiveMountEffects_complete @ chunk-WERSD76P.js?v=b100b782:18129
+commitPassiveMountEffects_begin @ chunk-WERSD76P.js?v=b100b782:18119
+commitPassiveMountEffects @ chunk-WERSD76P.js?v=b100b782:18109
+flushPassiveEffectsImpl @ chunk-WERSD76P.js?v=b100b782:19490
+flushPassiveEffects @ chunk-WERSD76P.js?v=b100b782:19447
+commitRootImpl @ chunk-WERSD76P.js?v=b100b782:19416
+commitRoot @ chunk-WERSD76P.js?v=b100b782:19277
+performSyncWorkOnRoot @ chunk-WERSD76P.js?v=b100b782:18895
+flushSyncCallbacks @ chunk-WERSD76P.js?v=b100b782:9119
+(anonymous) @ chunk-WERSD76P.js?v=b100b782:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=b100b782:555
+flush @ @tanstack_react-query.js?v=b100b782:569
+batch @ @tanstack_react-query.js?v=b100b782:587
+dispatch_fn @ @tanstack_react-query.js?v=b100b782:996
+setData @ @tanstack_react-query.js?v=b100b782:696
+onSuccess @ @tanstack_react-query.js?v=b100b782:897
+resolve @ @tanstack_react-query.js?v=b100b782:456
+Promise.then
+run @ @tanstack_react-query.js?v=b100b782:498
+start @ @tanstack_react-query.js?v=b100b782:536
+fetch @ @tanstack_react-query.js?v=b100b782:926
+executeFetch_fn @ @tanstack_react-query.js?v=b100b782:2211
+onSubscribe @ @tanstack_react-query.js?v=b100b782:1898
+subscribe @ @tanstack_react-query.js?v=b100b782:24
+(anonymous) @ @tanstack_react-query.js?v=b100b782:3022
+subscribeToStore @ chunk-WERSD76P.js?v=b100b782:11984
+commitHookEffectListMount @ chunk-WERSD76P.js?v=b100b782:16915
+commitPassiveMountOnFiber @ chunk-WERSD76P.js?v=b100b782:18156
+commitPassiveMountEffects_complete @ chunk-WERSD76P.js?v=b100b782:18129
+commitPassiveMountEffects_begin @ chunk-WERSD76P.js?v=b100b782:18119
+commitPassiveMountEffects @ chunk-WERSD76P.js?v=b100b782:18109
+flushPassiveEffectsImpl @ chunk-WERSD76P.js?v=b100b782:19490
+flushPassiveEffects @ chunk-WERSD76P.js?v=b100b782:19447
+performSyncWorkOnRoot @ chunk-WERSD76P.js?v=b100b782:18868
+flushSyncCallbacks @ chunk-WERSD76P.js?v=b100b782:9119
+commitRootImpl @ chunk-WERSD76P.js?v=b100b782:19432
+commitRoot @ chunk-WERSD76P.js?v=b100b782:19277
+finishConcurrentRender @ chunk-WERSD76P.js?v=b100b782:18805
+performConcurrentWorkOnRoot @ chunk-WERSD76P.js?v=b100b782:18718
+workLoop @ chunk-WERSD76P.js?v=b100b782:197
+flushWork @ chunk-WERSD76P.js?v=b100b782:176
+performWorkUntilDeadline @ chunk-WERSD76P.js?v=b100b782:384Understand this errorAI
+home.tsx:104 Comparando turno: undefined fecha: 2025-04-13 con: 2025-04-13
+date-helpers.ts:44 Error formateando fecha para API: TypeError: Cannot read properties of undefined (reading 'getFullYear')
+    at formatDateForAPI (date-helpers.ts:38:23)
+    at home.tsx:103:34
+    at Array.filter (<anonymous>)
+    at Home (home.tsx:100:28)
+    at renderWithHooks (chunk-WERSD76P.js?v=b100b782:11548:26)
+    at updateFunctionComponent (chunk-WERSD76P.js?v=b100b782:14582:28)
+    at beginWork (chunk-WERSD76P.js?v=b100b782:15924:22)
+    at beginWork$1 (chunk-WERSD76P.js?v=b100b782:19753:22)
+    at performUnitOfWork (chunk-WERSD76P.js?v=b100b782:19198:20)
+    at workLoopSync (chunk-WERSD76P.js?v=b100b782:19137:13)
+formatDateForAPI @ date-helpers.ts:44
+(anonymous) @ home.tsx:103
+Home @ home.tsx:100
+renderWithHooks @ chunk-WERSD76P.js?v=b100b782:11548
+updateFunctionComponent @ chunk-WERSD76P.js?v=b100b782:14582
+beginWork @ chunk-WERSD76P.js?v=b100b782:15924
+beginWork$1 @ chunk-WERSD76P.js?v=b100b782:19753
+performUnitOfWork @ chunk-WERSD76P.js?v=b100b782:19198
+workLoopSync @ chunk-WERSD76P.js?v=b100b782:19137
+renderRootSync @ chunk-WERSD76P.js?v=b100b782:19116
+performSyncWorkOnRoot @ chunk-WERSD76P.js?v=b100b782:18874
+flushSyncCallbacks @ chunk-WERSD76P.js?v=b100b782:9119
+(anonymous) @ chunk-WERSD76P.js?v=b100b782:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=b100b782:555
+flush @ @tanstack_react-query.js?v=b100b782:569
+batch @ @tanstack_react-query.js?v=b100b782:587
+dispatch_fn @ @tanstack_react-query.js?v=b100b782:996
+setData @ @tanstack_react-query.js?v=b100b782:696
+onSuccess @ @tanstack_react-query.js?v=b100b782:897
+resolve @ @tanstack_react-query.js?v=b100b782:456
+Promise.then
+run @ @tanstack_react-query.js?v=b100b782:498
+start @ @tanstack_react-query.js?v=b100b782:536
+fetch @ @tanstack_react-query.js?v=b100b782:926
+executeFetch_fn @ @tanstack_react-query.js?v=b100b782:2211
+onSubscribe @ @tanstack_react-query.js?v=b100b782:1898
+subscribe @ @tanstack_react-query.js?v=b100b782:24
+(anonymous) @ @tanstack_react-query.js?v=b100b782:3022
+subscribeToStore @ chunk-WERSD76P.js?v=b100b782:11984
+commitHookEffectListMount @ chunk-WERSD76P.js?v=b100b782:16915
+commitPassiveMountOnFiber @ chunk-WERSD76P.js?v=b100b782:18156
+commitPassiveMountEffects_complete @ chunk-WERSD76P.js?v=b100b782:18129
+commitPassiveMountEffects_begin @ chunk-WERSD76P.js?v=b100b782:18119
+commitPassiveMountEffects @ chunk-WERSD76P.js?v=b100b782:18109
+flushPassiveEffectsImpl @ chunk-WERSD76P.js?v=b100b782:19490
+flushPassiveEffects @ chunk-WERSD76P.js?v=b100b782:19447
+commitRootImpl @ chunk-WERSD76P.js?v=b100b782:19416
+commitRoot @ chunk-WERSD76P.js?v=b100b782:19277
+performSyncWorkOnRoot @ chunk-WERSD76P.js?v=b100b782:18895
+flushSyncCallbacks @ chunk-WERSD76P.js?v=b100b782:9119
+(anonymous) @ chunk-WERSD76P.js?v=b100b782:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=b100b782:555
+flush @ @tanstack_react-query.js?v=b100b782:569
+batch @ @tanstack_react-query.js?v=b100b782:587
+dispatch_fn @ @tanstack_react-query.js?v=b100b782:996
+setData @ @tanstack_react-query.js?v=b100b782:696
+onSuccess @ @tanstack_react-query.js?v=b100b782:897
+resolve @ @tanstack_react-query.js?v=b100b782:456
+Promise.then
+run @ @tanstack_react-query.js?v=b100b782:498
+start @ @tanstack_react-query.js?v=b100b782:536
+fetch @ @tanstack_react-query.js?v=b100b782:926
+executeFetch_fn @ @tanstack_react-query.js?v=b100b782:2211
+onSubscribe @ @tanstack_react-query.js?v=b100b782:1898
+subscribe @ @tanstack_react-query.js?v=b100b782:24
+(anonymous) @ @tanstack_react-query.js?v=b100b782:3022
+subscribeToStore @ chunk-WERSD76P.js?v=b100b782:11984
+commitHookEffectListMount @ chunk-WERSD76P.js?v=b100b782:16915
+commitPassiveMountOnFiber @ chunk-WERSD76P.js?v=b100b782:18156
+commitPassiveMountEffects_complete @ chunk-WERSD76P.js?v=b100b782:18129
+commitPassiveMountEffects_begin @ chunk-WERSD76P.js?v=b100b782:18119
+commitPassiveMountEffects @ chunk-WERSD76P.js?v=b100b782:18109
+flushPassiveEffectsImpl @ chunk-WERSD76P.js?v=b100b782:19490
+flushPassiveEffects @ chunk-WERSD76P.js?v=b100b782:19447
+performSyncWorkOnRoot @ chunk-WERSD76P.js?v=b100b782:18868
+flushSyncCallbacks @ chunk-WERSD76P.js?v=b100b782:9119
+commitRootImpl @ chunk-WERSD76P.js?v=b100b782:19432
+commitRoot @ chunk-WERSD76P.js?v=b100b782:19277
+finishConcurrentRender @ chunk-WERSD76P.js?v=b100b782:18805
+performConcurrentWorkOnRoot @ chunk-WERSD76P.js?v=b100b782:18718
+workLoop @ chunk-WERSD76P.js?v=b100b782:197
+flushWork @ chunk-WERSD76P.js?v=b100b782:176
+performWorkUntilDeadline @ chunk-WERSD76P.js?v=b100b782:384Understand this errorAI
+home.tsx:104 Comparando turno: undefined fecha: 2025-04-13 con: 2025-04-13
