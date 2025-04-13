@@ -943,9 +943,10 @@ export default function ScheduleTable({
           touchAction: "auto", // Permitir todos los gestos táctiles
           WebkitOverflowScrolling: "touch", // Mejorar el desplazamiento suave
           width: "100%",
-          maxWidth: "100vw"
+          maxWidth: "100%", // Limitar al ancho del contenedor padre
+          overflowX: "auto" // Scroll horizontal cuando sea necesario
         }}>
-        <table className="w-full border-collapse table-fixed" style={{ minWidth: "100%" }}>
+        <table className="w-full border-collapse" style={{ minWidth: "max-content", tableLayout: "fixed" }}>
           {/* Table Header - Estructura de dos filas */}
           <thead>
             {/* Primera fila: Horas agrupadas */}

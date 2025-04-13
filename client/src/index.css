@@ -2,6 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Estilos generales para evitar desplazamiento horizontal */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden; /* Prevenir desplazamiento horizontal */
+  max-width: 100vw; /* Limitar al ancho de la ventana */
+}
+
+/* Contenedores principales con ancho completo */
+#root {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
 /* Estilos de impresión para los horarios de empleados */
 @media print {
   body * {
