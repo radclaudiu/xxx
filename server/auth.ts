@@ -146,8 +146,8 @@ export function setupAuth(app: Express) {
     
     try {
       const userCompany = await storage.assignUserToCompany({
-        userId: req.user.id,
-        companyId: req.body.companyId,
+        user_id: req.user.id,
+        company_id: req.body.companyId,
         role: req.body.role || "user",
       });
       res.status(201).json(userCompany);
