@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { formatDate, formatDateForAPI, getPreviousDay, getNextDay, getStartOfWeek } from "@/lib/date-helpers";
+import { formatDate, formatDateForAPI, getPreviousDay, getNextDay, getStartOfWeek, calculateHoursBetween } from "@/lib/date-helpers";
 import { useToast } from "@/hooks/use-toast";
 import { Employee, Shift, InsertShift } from "@shared/schema";
 import ScheduleTable from "@/components/schedule-table";
@@ -224,8 +224,9 @@ export default function Home() {
       {/* Main Content */}
       <main className="flex-grow p-2 md:p-4 w-full overflow-x-hidden">
         <div className="w-full bg-white rounded-lg shadow-md p-2 md:p-4 overflow-x-hidden">
-          {/* Financial Inputs */}
-          <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4 bg-blue-50 p-3 rounded-lg">
+          {/* Financial Inputs and Costs Summary */}
+          <div className="flex flex-col mb-4 gap-3 bg-blue-50 p-3 rounded-lg">
+            {/* Inputs Row */}
             <div className="flex flex-wrap items-center gap-4 w-full">
               <div className="flex items-center gap-2">
                 <div className="flex flex-col">
@@ -271,6 +272,72 @@ export default function Home() {
                 </div>
               </div>
             </div>
+            
+            {/* Cost Summary Row */}
+            {(parseFloat(estimatedDailySales) > 0 || parseFloat(hourlyEmployeeCost) > 0) && (
+              <div className="flex flex-wrap items-center gap-6 mt-1 pt-2 border-t border-blue-200">
+                {parseFloat(hourlyEmployeeCost) > 0 && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm font-medium">Coste Total Personal:</span>
+                    <span className="bg-white px-2 py-0.5 rounded text-sm text-blue-700 font-medium">
+                      {(() => {
+                        // Calcular horas totales programadas para el día
+                        const totalHours = shifts.reduce((acc, shift) => {
+                          if (shift.date === formatDateForAPI(currentDate)) {
+                            return acc + calculateHoursBetween(shift.startTime, shift.endTime);
+                          }
+                          return acc;
+                        }, 0);
+                        
+                        // Calcular coste total
+                        const totalCost = totalHours * parseFloat(hourlyEmployeeCost);
+                        return `${totalCost.toFixed(2)} €`;
+                      })()}
+                    </span>
+                  </div>
+                )}
+                
+                {parseFloat(estimatedDailySales) > 0 && parseFloat(hourlyEmployeeCost) > 0 && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm font-medium">% de Ventas:</span>
+                    <span className={`bg-white px-2 py-0.5 rounded text-sm font-medium ${(() => {
+                      // Calcular horas totales programadas para el día
+                      const totalHours = shifts.reduce((acc, shift) => {
+                        if (shift.date === formatDateForAPI(currentDate)) {
+                          return acc + calculateHoursBetween(shift.startTime, shift.endTime);
+                        }
+                        return acc;
+                      }, 0);
+                      
+                      // Calcular coste total y porcentaje
+                      const totalCost = totalHours * parseFloat(hourlyEmployeeCost);
+                      const percentage = (totalCost / parseFloat(estimatedDailySales)) * 100;
+                      
+                      // Determinar color basado en porcentaje
+                      if (percentage <= 20) return "text-green-600";
+                      if (percentage <= 30) return "text-amber-600";
+                      return "text-red-600";
+                    })()}`}>
+                      {(() => {
+                        // Calcular horas totales programadas para el día
+                        const totalHours = shifts.reduce((acc, shift) => {
+                          if (shift.date === formatDateForAPI(currentDate)) {
+                            return acc + calculateHoursBetween(shift.startTime, shift.endTime);
+                          }
+                          return acc;
+                        }, 0);
+                        
+                        // Calcular coste total y porcentaje
+                        const totalCost = totalHours * parseFloat(hourlyEmployeeCost);
+                        const percentage = (totalCost / parseFloat(estimatedDailySales)) * 100;
+                        
+                        return `${percentage.toFixed(1)}%`;
+                      })()}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Controls */}
