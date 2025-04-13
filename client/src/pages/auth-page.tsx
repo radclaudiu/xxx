@@ -44,14 +44,7 @@ export default function AuthPage() {
   const { toast } = useToast();
   const { user, isLoading, loginMutation, registerMutation } = useAuth();
 
-  // Redireccionar si el usuario ya está autenticado
-  console.log("AuthPage state:", { user, isLoading, authenticated: !!user });
-  
-  if (user) {
-    console.log("AuthPage: usuario autenticado, redirigiendo a /");
-    return <Redirect to="/" />;
-  }
-
+  // Definir los formularios primero, antes de cualquier return condicional
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -68,6 +61,14 @@ export default function AuthPage() {
       confirmPassword: "",
     },
   });
+
+  // Redireccionar si el usuario ya está autenticado
+  console.log("AuthPage state:", { user, isLoading, authenticated: !!user });
+  
+  if (user) {
+    console.log("AuthPage: usuario autenticado, redirigiendo a /");
+    return <Redirect to="/" />;
+  }
 
   const onLoginSubmit = (values: LoginFormValues) => {
     loginMutation.mutate(values);
