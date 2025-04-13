@@ -445,9 +445,12 @@ export class DatabaseStorage implements IStorage {
       const pgStoreModule = await import('connect-pg-simple');
       const PostgresStore = pgStoreModule.default(session);
       
+      // Importar pool desde db.ts
+      const { pool } = await import('./db');
+      
       // Inicializar PostgreSQL session store
       this.sessionStore = new PostgresStore({
-        pool, // Importado desde ./db
+        pool,
         createTableIfMissing: true
       });
       

@@ -21,7 +21,27 @@ export async function syncRemoteDataToLocal(): Promise<void> {
   try {
     // 1. Obtener usuarios de la base de datos
     const remoteUsers = await db.select().from(users);
-    console.log(`Sincronizando ${remoteUsers.length} usuarios...`);
+    
+    // Log detallado para depuración
+    if (remoteUsers.length > 0) {
+      console.log(`Sincronizando ${remoteUsers.length} usuarios...`);
+      // Mostrar usuario sin revelar contraseña
+      for (const user of remoteUsers) {
+        const { password, ...userInfo } = user;
+        console.log('Usuario encontrado:', userInfo);
+      }
+    } else {
+      console.log('No se encontraron usuarios en la base de datos remota');
+      
+      // Datos de ejemplo para desarrollo (solo crear si no existen usuarios)
+      console.log('Creando usuario de prueba en memoria: lucia');
+      
+      // Este usuario se crea sólo en memoria, no en la base de datos remota
+      await storage.createUser({
+        username: 'lucia',
+        password: '$2a$10$A3hVMf8MoVyYYXj8zAw9zuugvE5u0LCEoGRXzwBbpuZVRZLhgqGGe', // 'Cory1234'
+      });
+    }
     
     // 2. Obtener empresas de la base de datos
     const remoteCompanies = await db.select().from(companies);
