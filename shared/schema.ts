@@ -154,6 +154,9 @@ export const employees = pgTable("employees", {
   unavailableDays: text("unavailable_days"), // Días que no puede trabajar (formato JSON)
   isActive: boolean("is_active").default(true), // Si el empleado está activo
   notes: text("notes"), // Notas adicionales
+  // Seguimiento de horas semanales
+  weeklyHoursWorked: integer("weekly_hours_worked").default(0), // Horas trabajadas en la semana actual
+  currentWeekNumber: integer("current_week_number").default(0), // Semana actual (para reinicio automático)
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at"),
 });
