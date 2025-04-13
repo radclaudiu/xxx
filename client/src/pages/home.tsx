@@ -637,6 +637,7 @@ export default function Home() {
         isOpen={isEmployeeModalOpen} 
         onClose={() => setIsEmployeeModalOpen(false)} 
         employeeToEdit={null}
+        currentCompanyId={currentCompanyId}
       />
       
       <HelpModal 
