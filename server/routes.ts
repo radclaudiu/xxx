@@ -3,15 +3,22 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
 import { insertEmployeeSchema, insertShiftSchema, insertScheduleSchema } from "@shared/schema";
+import { setupAuth } from "./auth";
+import { WebSocketServer } from "ws";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Configurar la autenticación
+  setupAuth(app);
   // Employee routes
   app.get("/api/employees", async (req, res) => {
     try {
-      const employees = await storage.getEmployees();
+      const companyId = req.query.companyId ? parseInt(req.query.companyId as string) : undefined;
+      console.log("Fetching employees with companyId:", companyId);
+      const employees = await storage.getEmployees(companyId);
       res.json(employees);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch employees" });
+      console.error("Error fetching employees:", error);
+      res.status(500).json({ message: "Failed to fetch employees", error: String(error) });
     }
   });
 
