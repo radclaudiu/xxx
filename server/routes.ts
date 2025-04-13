@@ -5,8 +5,22 @@ import { z } from "zod";
 import { insertEmployeeSchema, insertShiftSchema, insertScheduleSchema } from "@shared/schema";
 import { setupAuth } from "./auth";
 import { WebSocketServer } from "ws";
+import { syncRemoteDataToLocal } from "./sync";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Inicializar el almacenamiento y sincronizar datos
+  if (storage.init) {
+    await storage.init();
+    
+    // Intentar sincronizar datos desde la base de datos remota
+    try {
+      await syncRemoteDataToLocal();
+      console.log("Datos sincronizados correctamente desde la base de datos remota");
+    } catch (error) {
+      console.error("Error al sincronizar datos:", error);
+    }
+  }
+  
   // Configurar la autenticación
   setupAuth(app);
   // Employee routes
@@ -234,5 +248,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  
+  // Configurar WebSocket Server (separado de la ruta de HMR de Vite)
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  
+  wss.on('connection', (ws) => {
+    console.log('Cliente WebSocket conectado');
+    
+    // Enviar mensaje de bienvenida
+    ws.send(JSON.stringify({
+      type: 'welcome',
+      message: 'Conectado al servidor WebSocket'
+    }));
+    
+    // Manejar mensajes del cliente
+    ws.on('message', (message) => {
+      try {
+        const data = JSON.parse(message.toString());
+        console.log('Mensaje recibido:', data);
+        
+        // Aquí puedes implementar lógica específica basada en el tipo de mensaje
+        // Por ejemplo, sincronización en tiempo real de turnos
+        if (data.type === 'shift_update') {
+          // Broadcast a todos los clientes conectados excepto al remitente
+          wss.clients.forEach((client) => {
+            if (client !== ws && client.readyState === WebSocket.OPEN) {
+              client.send(JSON.stringify({
+                type: 'shift_updated',
+                data: data.data
+              }));
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error al procesar mensaje WebSocket:', error);
+      }
+    });
+    
+    // Manejar desconexión
+    ws.on('close', () => {
+      console.log('Cliente WebSocket desconectado');
+    });
+  });
+  
   return httpServer;
 }

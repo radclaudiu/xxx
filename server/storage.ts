@@ -63,28 +63,52 @@ export interface IStorage {
     PGPASSWORD?: string;
     PGUSER?: string;
   }): Promise<boolean>;
+  
+  // Session store
+  sessionStore: any;
+  
+  // Inicialización
+  init?: () => Promise<void>;
 }
 
 export class MemStorage implements IStorage {
+  private users: Map<number, User>;
+  private companies: Map<number, Company>;
+  private userCompanies: Map<string, UserCompany>; // clave compuesta userId-companyId
   private employees: Map<number, Employee>;
   private shifts: Map<number, Shift>;
   private schedules: Map<number, Schedule>;
   private scheduleData: Map<number, { employees: Employee[], shifts: Shift[] }>;
   
+  // Gestión de IDs incrementales
+  private userId: number;
+  private companyId: number;
   private employeeId: number;
   private shiftId: number;
   private scheduleId: number;
 
+  // Store para sesiones
+  public sessionStore: any;
+
   constructor() {
+    this.users = new Map();
+    this.companies = new Map();
+    this.userCompanies = new Map();
     this.employees = new Map();
     this.shifts = new Map();
     this.schedules = new Map();
     this.scheduleData = new Map();
-    
+
+    this.userId = 1;
+    this.companyId = 1;
     this.employeeId = 1;
     this.shiftId = 1;
     this.scheduleId = 1;
     
+    // Crear store de sesiones en memoria
+    // Inicializaremos el sessionStore más tarde en un método init()
+    this.sessionStore = null;
+
     // Add some initial employees for testing
     this.seedInitialData();
   }
@@ -252,10 +276,198 @@ export class MemStorage implements IStorage {
   async loadScheduleData(scheduleId: number): Promise<{ employees: Employee[], shifts: Shift[] } | undefined> {
     return this.scheduleData.get(scheduleId);
   }
+  
+  // Implementación de métodos de usuarios
+  async getUser(id: number): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(user => user.username === username);
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const id = user.id || this.userId++;
+    const now = new Date();
+    const newUser: User = {
+      id,
+      username: user.username,
+      password: user.password,
+      createdAt: user.createdAt || now,
+      updatedAt: user.updatedAt || now
+    };
+    this.users.set(id, newUser);
+    return newUser;
+  }
+
+  async updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined> {
+    const existingUser = this.users.get(id);
+    if (!existingUser) return undefined;
+    
+    const updatedUser: User = {
+      ...existingUser,
+      ...user,
+      updatedAt: new Date()
+    };
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+  
+  // Implementación de métodos de empresas
+  async getCompanies(): Promise<Company[]> {
+    return Array.from(this.companies.values());
+  }
+
+  async getCompany(id: number): Promise<Company | undefined> {
+    return this.companies.get(id);
+  }
+
+  async createCompany(company: InsertCompany): Promise<Company> {
+    const id = company.id || this.companyId++;
+    const now = new Date();
+    const newCompany: Company = {
+      id,
+      name: company.name,
+      description: company.description || null,
+      logo: company.logo || null,
+      address: company.address || null,
+      phone: company.phone || null,
+      email: company.email || null,
+      website: company.website || null,
+      active: company.active ?? true,
+      createdAt: company.createdAt || now,
+      updatedAt: company.updatedAt || now
+    };
+    this.companies.set(id, newCompany);
+    return newCompany;
+  }
+
+  async updateCompany(id: number, company: Partial<InsertCompany>): Promise<Company | undefined> {
+    const existingCompany = this.companies.get(id);
+    if (!existingCompany) return undefined;
+    
+    const updatedCompany: Company = {
+      ...existingCompany,
+      ...company,
+      updatedAt: new Date()
+    };
+    this.companies.set(id, updatedCompany);
+    return updatedCompany;
+  }
+
+  async deleteCompany(id: number): Promise<boolean> {
+    return this.companies.delete(id);
+  }
+  
+  // Implementación de métodos de relación usuario-empresa
+  async getUserCompanies(userId: number): Promise<(UserCompany & { company: Company })[]> {
+    const userCompanies: (UserCompany & { company: Company })[] = [];
+    
+    for (const uc of this.userCompanies.values()) {
+      if (uc.user_id === userId) {
+        const company = this.companies.get(uc.company_id);
+        if (company) {
+          userCompanies.push({
+            ...uc,
+            company
+          });
+        }
+      }
+    }
+    
+    return userCompanies;
+  }
+
+  async assignUserToCompany(userCompany: InsertUserCompany): Promise<UserCompany> {
+    const key = `${userCompany.user_id}-${userCompany.company_id}`;
+    const now = new Date();
+    const newUserCompany: UserCompany = {
+      user_id: userCompany.user_id,
+      company_id: userCompany.company_id,
+      role: userCompany.role || 'user',
+      createdAt: now,
+      updatedAt: now
+    };
+    this.userCompanies.set(key, newUserCompany);
+    return newUserCompany;
+  }
+
+  async removeUserFromCompany(userId: number, companyId: number): Promise<boolean> {
+    const key = `${userId}-${companyId}`;
+    return this.userCompanies.delete(key);
+  }
+  
+  // Método para configuración de base de datos
+  async updateDatabaseConfig(config: {
+    DATABASE_URL: string;
+    PGDATABASE?: string;
+    PGHOST?: string;
+    PGPORT?: string;
+    PGPASSWORD?: string;
+    PGUSER?: string;
+  }): Promise<boolean> {
+    // En MemStorage no hace nada, pero debemos implementarlo
+    console.log("Configuración de base de datos simulada:", config);
+    return true;
+  }
+  
+  // Método de inicialización para cargar datos y configurar el sessionStore
+  async init(): Promise<void> {
+    // Importar memorystore y express-session de forma dinámica (ESM compatible)
+    const expressSession = await import('express-session');
+    const session = expressSession.default;
+    
+    const memoryStoreModule = await import('memorystore');
+    const MemoryStore = memoryStoreModule.default(session);
+    
+    // Inicializar session store
+    this.sessionStore = new MemoryStore({
+      checkPeriod: 86400000 // 24 horas
+    });
+    
+    // Sincronizar datos desde la base de datos remota (se implementará en sync.ts)
+    console.log("Inicializando almacenamiento en memoria y sincronizando datos remotos...");
+  }
 }
 
 // Implementación de la base de datos PostgreSQL
 export class DatabaseStorage implements IStorage {
+  // Session store
+  public sessionStore: any;
+  
+  // Método de inicialización para configurar el sessionStore
+  async init(): Promise<void> {
+    // Importar memorystore y express-session de forma dinámica (ESM compatible)
+    try {
+      const expressSession = await import('express-session');
+      const session = expressSession.default;
+      
+      const pgStoreModule = await import('connect-pg-simple');
+      const PostgresStore = pgStoreModule.default(session);
+      
+      // Inicializar PostgreSQL session store
+      this.sessionStore = new PostgresStore({
+        pool, // Importado desde ./db
+        createTableIfMissing: true
+      });
+      
+      console.log("PostgreSQL session store inicializado correctamente");
+    } catch (error) {
+      console.error("Error al inicializar PostgreSQL session store:", error);
+      // Fallar de forma segura, usar memoria como respaldo
+      const expressSession = await import('express-session');
+      const session = expressSession.default;
+      
+      const memoryStoreModule = await import('memorystore');
+      const MemoryStore = memoryStoreModule.default(session);
+      
+      this.sessionStore = new MemoryStore({
+        checkPeriod: 86400000 // 24 horas
+      });
+      
+      console.log("Usando memory store como fallback");
+    }
+  }
   // User operations
   async getUser(id: number): Promise<User | undefined> {
     const result = await db.select().from(users).where(eq(users.id, id));
@@ -606,4 +818,5 @@ export class DatabaseStorage implements IStorage {
 }
 
 // Cambiar el almacenamiento a la base de datos
-export const storage = new DatabaseStorage();
+// Ahora usamos MemStorage como la principal fuente de datos
+export const storage = new MemStorage();
