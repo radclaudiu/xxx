@@ -17,10 +17,8 @@ import {
   Clock, 
   DollarSign,
   FileText,
-  FolderOpen,
   HelpCircle,
   LogOut,
-  Save,
   Settings,
   UserPlus,
   Users
@@ -269,21 +267,7 @@ export default function Home() {
       });
   };
   
-  // Save schedule (placeholder)
-  const handleSaveSchedule = () => {
-    toast({
-      title: "Guardado",
-      description: "Horario guardado exitosamente.",
-    });
-  };
-  
-  // Load schedule (placeholder)
-  const handleLoadSchedule = () => {
-    toast({
-      title: "Cargado",
-      description: "Horario cargado exitosamente.",
-    });
-  };
+
   
   // Handle deleting a shift
   const handleDeleteShift = (shiftId: number) => {
@@ -332,26 +316,7 @@ export default function Home() {
                 </Button>
               </Link>
             )}
-            {user?.role !== 'employee' && (
-              <Button 
-                variant="secondary" 
-                className="bg-white text-primary px-3 py-1 rounded flex items-center gap-1 text-sm font-medium hover:bg-gray-100"
-                onClick={handleSaveSchedule}
-              >
-                <Save className="h-4 w-4" />
-                Guardar
-              </Button>
-            )}
-            {user?.role !== 'employee' && (
-              <Button 
-                variant="secondary" 
-                className="bg-white text-primary px-3 py-1 rounded flex items-center gap-1 text-sm font-medium hover:bg-gray-100"
-                onClick={handleLoadSchedule}
-              >
-                <FolderOpen className="h-4 w-4" />
-                Cargar
-              </Button>
-            )}
+
             {/* Dropdown para cambiar de empresa (solo si hay más de una) */}
             {companies.length > 1 && (
               <DropdownMenu>
