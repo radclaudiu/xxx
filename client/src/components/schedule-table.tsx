@@ -944,7 +944,8 @@ export default function ScheduleTable({
           WebkitOverflowScrolling: "touch", // Mejorar el desplazamiento suave
           width: "100%",
           maxWidth: "100%", // Limitar al ancho del contenedor padre
-          overflowX: "auto" // Scroll horizontal cuando sea necesario
+          overflowX: "auto", // Scroll horizontal cuando sea necesario
+          paddingRight: "10px" // Añadir un pequeño padding a la derecha para evitar corte
         }}>
         <table className="w-full border-collapse" style={{ minWidth: "max-content", tableLayout: "fixed" }}>
           {/* Table Header - Estructura de dos filas */}

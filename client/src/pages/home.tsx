@@ -196,7 +196,7 @@ export default function Home() {
   };
   
   return (
-    <div className="min-h-screen flex flex-col w-full max-w-[95vw] mx-auto">
+    <div className="min-h-screen flex flex-col w-full">
       {/* Header */}
       <header className="bg-primary text-white p-4 shadow-md w-full">
         <div className="w-full px-2 flex justify-between items-center">
