@@ -4,17 +4,21 @@ import {
   useMutation,
   UseMutationResult,
 } from "@tanstack/react-query";
-import { User } from "@shared/schema";
+import { User, UserCompany } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
+// Tipo expandido para incluir los roles de usuario en empresas
 type AuthContextType = {
   user: User | null;
+  userCompanies: UserCompany[] | null;
+  currentCompanyRole: string | null;
   isLoading: boolean;
   error: Error | null;
   loginMutation: UseMutationResult<User, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
   registerMutation: UseMutationResult<User, Error, RegisterData>;
+  hasRole: (role: string | string[]) => boolean;
 };
 
 type LoginData = {
