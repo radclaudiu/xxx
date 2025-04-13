@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation, Redirect } from "wouter";
+import { useLocation } from "wouter";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -35,18 +35,6 @@ export default function AuthPage() {
   const [, navigate] = useLocation();
   const { user, isLoading, loginMutation, registerMutation } = useAuth();
   
-  useEffect(() => {
-    // Redirigir si el usuario ya está autenticado o después de iniciar sesión/registrarse
-    if (user) {
-      navigate("/");
-    }
-  }, [user, navigate]);
-  
-  // No renderizar nada si el usuario está autenticado (evita parpadeo)
-  if (user) {
-    return null;
-  }
-
   // Configuración del formulario de inicio de sesión
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -67,6 +55,13 @@ export default function AuthPage() {
       confirmPassword: "",
     },
   });
+  
+  useEffect(() => {
+    // Redirigir si el usuario ya está autenticado o después de iniciar sesión/registrarse
+    if (user) {
+      navigate("/");
+    }
+  }, [user, navigate]);
 
   // Manejar envío de inicio de sesión
   const onLoginSubmit = (values: z.infer<typeof loginSchema>) => {
