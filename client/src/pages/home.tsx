@@ -52,6 +52,9 @@ export default function Home() {
   const { toast } = useToast();
   const { user, logoutMutation } = useAuth();
   
+  // Debug: mostrar información del usuario
+  console.log("Información de usuario en Home:", user);
+  
   // States
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
