@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useCompany } from "@/hooks/use-company";
 import { Employee, Shift, InsertShift } from "@shared/schema";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -39,7 +38,6 @@ export default function ShiftModal({
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { selectedCompany } = useCompany();
   
   // Reset form when modal opens or shift changes
   useEffect(() => {
@@ -101,7 +99,7 @@ export default function ShiftModal({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
-        queryKey: ["/api/shifts", selectedCompany?.id] 
+        queryKey: ["/api/shifts", formatDateForAPI(date)] 
       });
       toast({
         title: "Turno asignado",
@@ -126,7 +124,7 @@ export default function ShiftModal({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
-        queryKey: ["/api/shifts", selectedCompany?.id] 
+        queryKey: ["/api/shifts", formatDateForAPI(date)] 
       });
       toast({
         title: "Turno actualizado",
@@ -150,7 +148,7 @@ export default function ShiftModal({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
-        queryKey: ["/api/shifts", selectedCompany?.id] 
+        queryKey: ["/api/shifts", formatDateForAPI(date)] 
       });
       toast({
         title: "Turno eliminado",
@@ -180,23 +178,12 @@ export default function ShiftModal({
       return;
     }
     
-    // Verificar si hay una empresa seleccionada
-    if (!selectedCompany) {
-      toast({
-        title: "Error",
-        description: "No hay empresa seleccionada. Selecciona una empresa primero.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     const shiftData: InsertShift = {
       employeeId: employee.id,
       date: formatDateForAPI(date),
       startTime,
       endTime,
       notes,
-      companyId: selectedCompany.id
     };
     
     if (shift) {

@@ -91,87 +91,54 @@ export default function ScheduleTable({
   
   // Function to check if a cell should be marked as assigned
   const isCellAssigned = (employeeId: number, time: string) => {
-    if (!shifts || !Array.isArray(shifts) || shifts.length === 0) return false;
-    
-    try {
-      return shifts.some(shift => 
-        shift && 
-        shift.employeeId === employeeId && 
-        shift.date === formattedDate && 
-        shift.startTime && 
-        shift.endTime && 
-        isTimeBetween(time, shift.startTime, shift.endTime)
-      );
-    } catch (error) {
-      console.error("Error al comprobar si la celda está asignada:", error);
-      return false;
-    }
+    return shifts.some(shift => 
+      shift.employeeId === employeeId && 
+      shift.date === formattedDate && 
+      isTimeBetween(time, shift.startTime, shift.endTime)
+    );
   };
   
   // Function to get shift for a cell
   const getShiftForCell = (employeeId: number, time: string) => {
-    if (!shifts || !Array.isArray(shifts) || shifts.length === 0) return undefined;
-    
-    try {
-      return shifts.find(shift => 
-        shift && 
-        shift.employeeId === employeeId && 
-        shift.date === formattedDate && 
-        shift.startTime && 
-        shift.endTime && 
-        isTimeBetween(time, shift.startTime, shift.endTime)
-      );
-    } catch (error) {
-      console.error("Error al obtener el turno para la celda:", error);
-      return undefined;
-    }
+    return shifts.find(shift => 
+      shift.employeeId === employeeId && 
+      shift.date === formattedDate && 
+      isTimeBetween(time, shift.startTime, shift.endTime)
+    );
   };
   
   // Function to determine if a cell is the first cell in a shift
   const isFirstCellInShift = (employeeId: number, time: string) => {
-    if (!time) return false;
-    try {
-      const shift = getShiftForCell(employeeId, time);
-      return shift && shift.startTime === time;
-    } catch (error) {
-      console.error("Error al verificar si es primera celda en turno:", error);
-      return false;
-    }
+    const shift = getShiftForCell(employeeId, time);
+    return shift && shift.startTime === time;
   };
   
   // Calcular la duración del turno en número de celdas (15 min cada una)
   const getShiftCellSpan = (employeeId: number, time: string) => {
-    try {
-      const shift = getShiftForCell(employeeId, time);
-      if (!shift || !shift.startTime || !shift.endTime) return 1;
-      
-      // Buscar el índice de tiempo de inicio en timeSlots
-      const startIndex = timeSlots.indexOf(shift.startTime);
-      if (startIndex === -1) return 1; // Si no se encuentra, devolver 1
-      
-      // Convertir tiempos a minutos para comparar
-      const startMinutes = convertTimeToMinutes(shift.startTime);
-      const endMinutes = convertTimeToMinutes(shift.endTime);
-      
-      if (isNaN(startMinutes) || isNaN(endMinutes)) return 1;
-      
-      // Calcular diferencia en minutos
-      let diffMinutes = endMinutes - startMinutes;
-      
-      // Si el horario de fin es anterior al de inicio, asumimos que es del día siguiente
-      if (diffMinutes <= 0) {
-        diffMinutes += 24 * 60; // Añadir 24 horas en minutos
-      }
-      
-      // Convertir a número de intervalos de 15 minutos
-      const intervalCount = Math.ceil(diffMinutes / 15);
-      
-      // Asegurar que devolvemos al menos 1 celda
-      return Math.max(1, intervalCount);
-    } catch (error) {
-      console.error("Error al calcular duración del turno:", error);
-      return 1;
+    const shift = getShiftForCell(employeeId, time);
+    if (!shift) return 1;
+    
+    // Buscar el índice de tiempo de inicio en timeSlots
+    const startIndex = timeSlots.indexOf(shift.startTime);
+    if (startIndex === -1) return 1; // Si no se encuentra, devolver 1
+    
+    // Convertir tiempos a minutos para comparar
+    const startMinutes = convertTimeToMinutes(shift.startTime);
+    const endMinutes = convertTimeToMinutes(shift.endTime);
+    
+    // Calcular diferencia en minutos
+    let diffMinutes = endMinutes - startMinutes;
+    
+    // Si el horario de fin es anterior al de inicio, asumimos que es del día siguiente
+    if (diffMinutes <= 0) {
+      diffMinutes += 24 * 60; // Añadir 24 horas en minutos
     }
+    
+    // Convertir a número de intervalos de 15 minutos
+    const intervalCount = Math.ceil(diffMinutes / 15);
+    
+    // Asegurar que devolvemos al menos 1 celda
+    return Math.max(1, intervalCount);
   };
   
   // Handle document-wide mouse/touch up events

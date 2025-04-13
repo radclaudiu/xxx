@@ -3,9 +3,6 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { formatDate, formatDateForAPI, getPreviousDay, getNextDay, getStartOfWeek } from "@/lib/date-helpers";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth";
-import { useCompany } from "@/hooks/use-company";
-import { Redirect } from "wouter";
 import { Employee, Shift, InsertShift } from "@shared/schema";
 import ScheduleTable from "@/components/schedule-table";
 import EmployeeModal from "@/components/employee-modal";
@@ -14,7 +11,7 @@ import ExportsModal, { ExportsModalRef } from "@/components/exports-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChevronLeft, ChevronRight, Save, FolderOpen, HelpCircle, UserPlus, DollarSign, Clock, Calendar, Building2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save, FolderOpen, HelpCircle, UserPlus, DollarSign, Clock, Calendar } from "lucide-react";
 
 export default function Home() {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
@@ -29,23 +26,7 @@ export default function Home() {
   const [estimatedDailySales, setEstimatedDailySales] = useState<string>('');
   const [hourlyEmployeeCost, setHourlyEmployeeCost] = useState<string>('');
   
-  // Estado de autenticación
-  const { user, isLoading, error, logoutMutation } = useAuth();
-  
-  // Estado de la empresa seleccionada
-  const { selectedCompany, companyLoading, setSelectedCompany } = useCompany();
-  
   const { toast } = useToast();
-  
-  // Mostrar información del usuario autenticado en la consola para depuración
-  useEffect(() => {
-    console.log("Home page - Auth state:", { 
-      user, 
-      isLoading, 
-      error, 
-      authenticated: !!user 
-    });
-  }, [user, isLoading, error]);
   
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -88,45 +69,28 @@ export default function Home() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isEmployeeModalOpen, isHelpModalOpen, toast]);
   
-  // Fetch employees filtered by selected company
+  // Fetch employees
   const { data: employees = [] } = useQuery<Employee[]>({
-    queryKey: ["/api/employees", selectedCompany?.id],
-    queryFn: async () => {
-      if (!selectedCompany) return [];
-      const response = await fetch(`/api/employees?companyId=${selectedCompany.id}`);
-      if (!response.ok) throw new Error("Failed to fetch employees");
-      return response.json();
-    },
-    enabled: !!selectedCompany,
+    queryKey: ["/api/employees"],
   });
   
-  // Fetch all shifts (without date filter) for use in exports, filtered by company
+  // Fetch all shifts (without date filter) for use in exports
   const { data: allShifts = [] } = useQuery<Shift[]>({
-    queryKey: ["/api/shifts", selectedCompany?.id],
+    queryKey: ["/api/shifts"],
     queryFn: async () => {
-      if (!selectedCompany) return [];
-      const response = await fetch(`/api/shifts?companyId=${selectedCompany.id}`);
+      const response = await fetch(`/api/shifts`);
       if (!response.ok) throw new Error("Failed to fetch shifts");
       return response.json();
     },
-    enabled: !!selectedCompany,
   });
   
   // Filter shifts for the current day (for the main schedule display)
-  const shifts = allShifts && allShifts.length > 0 
-    ? allShifts.filter(shift => {
-        if (!shift || !shift.date) return false;
-        try {
-          const shiftDate = new Date(shift.date);
-          const formattedCurrentDate = formatDateForAPI(currentDate);
-          const formattedShiftDate = formatDateForAPI(shiftDate);
-          return formattedShiftDate === formattedCurrentDate;
-        } catch (error) {
-          console.error("Error al filtrar turno:", error);
-          return false;
-        }
-      })
-    : [];
+  const shifts = allShifts.filter(shift => {
+    const shiftDate = new Date(shift.date);
+    const formattedCurrentDate = formatDateForAPI(currentDate);
+    const formattedShiftDate = formatDateForAPI(shiftDate);
+    return formattedShiftDate === formattedCurrentDate;
+  });
   
   // Navigate to previous day
   const handlePreviousDay = () => {
@@ -146,7 +110,7 @@ export default function Home() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
-        queryKey: ["/api/shifts", selectedCompany?.id] 
+        queryKey: ["/api/shifts"] 
       });
     },
     onError: (error) => {
@@ -166,7 +130,7 @@ export default function Home() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
-        queryKey: ["/api/shifts", selectedCompany?.id] 
+        queryKey: ["/api/shifts"] 
       });
     },
     onError: (error) => {
@@ -180,16 +144,6 @@ export default function Home() {
   
   // Handle saving selected shifts
   const handleSaveShifts = (selections: {employee: Employee, startTime: string, endTime: string}[]) => {
-    // Si no hay empresa seleccionada, no hacer nada
-    if (!selectedCompany) {
-      toast({
-        title: "Error",
-        description: "No hay empresa seleccionada. Selecciona una empresa primero.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
     // Process each selection and create a shift
     const promises = selections.map(selection => {
       const shiftData: InsertShift = {
@@ -198,7 +152,6 @@ export default function Home() {
         startTime: selection.startTime,
         endTime: selection.endTime,
         notes: "",
-        companyId: selectedCompany.id
       };
       
       return createShiftMutation.mutateAsync(shiftData);
@@ -242,51 +195,12 @@ export default function Home() {
     deleteShiftMutation.mutate(shiftId);
   };
   
-  // Si no hay un usuario autenticado o está cargando, no mostramos nada
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
-          <p className="text-lg font-medium">Cargando...</p>
-        </div>
-      </div>
-    );
-  }
-  
-  // Si no hay empresa seleccionada, redirigimos a la página de selección de empresa
-  if (!selectedCompany && !companyLoading) {
-    console.log("No hay empresa seleccionada, redirigiendo a /company-select");
-    return <Redirect to="/company-select" />;
-  }
-  
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="bg-primary text-white p-4 shadow-md">
         <div className="w-full px-2 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold">Sistema de Turnos de Trabajo</h1>
-            {user && (
-              <span className="text-sm bg-white/20 px-2 py-1 rounded">
-                {user.username}
-              </span>
-            )}
-            {selectedCompany && (
-              <div className="flex items-center gap-2 bg-white/10 px-3 py-1 rounded ml-3">
-                <Building2 className="h-4 w-4" />
-                <span className="text-sm font-medium">{selectedCompany.name}</span>
-                <Button
-                  variant="ghost"
-                  className="h-6 w-6 p-0 ml-2 text-white/70 hover:text-white hover:bg-white/20 rounded-full"
-                  onClick={() => setSelectedCompany(null)}
-                  title="Cambiar empresa"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 21a8 8 0 0 0-16 0"/><path d="M10 8V3"/><path d="M14 8V3"/><path d="M14 12h4"/><path d="M18 16v.01"/><path d="M6 16v.01"/><path d="M22 22H2"/><path d="M10 12h.01"/><path d="M14 16h.01"/><path d="M10 16h.01"/></svg>
-                </Button>
-              </div>
-            )}
-          </div>
+          <h1 className="text-xl font-bold">Sistema de Turnos de Trabajo</h1>
           <div className="flex items-center gap-2">
             <Button 
               variant="secondary" 
@@ -303,15 +217,6 @@ export default function Home() {
             >
               <FolderOpen className="h-4 w-4" />
               Cargar
-            </Button>
-            <Button 
-              variant="destructive" 
-              className="bg-red-600 text-white px-3 py-1 rounded flex items-center gap-1 text-sm font-medium hover:bg-red-700"
-              onClick={() => {
-                logoutMutation.mutate();
-              }}
-            >
-              Cerrar Sesión
             </Button>
           </div>
         </div>

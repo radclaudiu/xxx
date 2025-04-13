@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useCompany } from "@/hooks/use-company";
 import { InsertEmployee, Employee } from "@shared/schema";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,6 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit }: Emplo
   const [maxHoursPerWeek, setMaxHoursPerWeek] = useState("40"); // Default 40 hours
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { selectedCompany } = useCompany();
   
   // Reset form when modal opens or employeeToEdit changes
   useEffect(() => {
@@ -46,7 +44,7 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit }: Emplo
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/employees", selectedCompany?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
       toast({
         title: "Empleado agregado",
         description: "El empleado ha sido agregado exitosamente.",
@@ -69,7 +67,7 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit }: Emplo
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/employees", selectedCompany?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
       toast({
         title: "Empleado actualizado",
         description: "El empleado ha sido actualizado exitosamente.",
@@ -91,9 +89,9 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit }: Emplo
       await apiRequest("DELETE", `/api/employees/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/employees", selectedCompany?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
       // Also invalidate shifts as they might be related to the deleted employee
-      queryClient.invalidateQueries({ queryKey: ["/api/shifts", selectedCompany?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/shifts"] });
       toast({
         title: "Empleado eliminado",
         description: "El empleado ha sido eliminado exitosamente.",
@@ -122,17 +120,6 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit }: Emplo
       return;
     }
     
-    // Verificar si hay una empresa seleccionada
-    if (!selectedCompany) {
-      toast({
-        title: "Error",
-        description: "No hay empresa seleccionada. Selecciona una empresa primero.",
-        variant: "destructive",
-      });
-      onClose();
-      return;
-    }
-    
     // Validar que maxHoursPerWeek sea un número válido
     const maxHours = parseInt(maxHoursPerWeek, 10);
     if (isNaN(maxHours) || maxHours < 0) {
@@ -147,8 +134,7 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit }: Emplo
     const employeeData: InsertEmployee = {
       name: name.trim(),
       role: role.trim(),
-      maxHoursPerWeek: maxHours,
-      companyId: selectedCompany.id
+      maxHoursPerWeek: maxHours
     };
     
     if (employeeToEdit) {
