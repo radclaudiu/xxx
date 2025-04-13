@@ -69,7 +69,7 @@ function ManagerRoute({ children }: { children: React.ReactNode }) {
     return <Redirect to="/auth" />;
   }
 
-  if (user.role !== "admin" && user.role !== "manager") {
+  if (user.role !== "admin" && user.role !== "manager" && user.role !== "user") {
     return <Redirect to="/" />;
   }
 

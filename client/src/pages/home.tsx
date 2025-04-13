@@ -319,7 +319,7 @@ export default function Home() {
             )}
             
             {/* Mostrar botón de administración de empresa para administradores y gerentes */}
-            {(user?.role === 'admin' || user?.role === 'manager') && (
+            {(user?.role === 'admin' || user?.role === 'manager' || user?.role === 'user') && (
               <Link href="/company-admin">
                 <Button 
                   variant="secondary" 
