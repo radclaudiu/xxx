@@ -1,10 +1,136 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
-import { insertEmployeeSchema, insertShiftSchema, insertScheduleSchema } from "@shared/schema";
+import { insertEmployeeSchema, insertShiftSchema, insertScheduleSchema, insertCompanySchema, insertScheduleTemplateSchema } from "@shared/schema";
+import { setupAuth, isAuthenticated, isAdmin } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Configurar autenticación
+  setupAuth(app);
+  
+  // Rutas para empresas - Solo administradores pueden crear/editar empresas
+  app.get("/api/companies", isAuthenticated, async (req, res) => {
+    try {
+      // Si es administrador, devolver todas las empresas
+      // Si es un usuario normal, devolver solo las empresas a las que pertenece
+      const companies = await storage.getCompanies(
+        req.user?.role === "admin" ? undefined : req.user?.id
+      );
+      res.json(companies);
+    } catch (error) {
+      res.status(500).json({ message: "Error al obtener empresas" });
+    }
+  });
+  
+  app.post("/api/companies", isAdmin, async (req, res) => {
+    try {
+      const validatedData = insertCompanySchema.parse({
+        ...req.body,
+        createdBy: req.user?.id
+      });
+      
+      const company = await storage.createCompany(validatedData);
+      res.status(201).json(company);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Datos de empresa inválidos", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Error al crear empresa" });
+      }
+    }
+  });
+  
+  app.put("/api/companies/:id", isAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertCompanySchema.partial().parse(req.body);
+      
+      const company = await storage.updateCompany(id, validatedData);
+      
+      if (!company) {
+        return res.status(404).json({ message: "Empresa no encontrada" });
+      }
+      
+      res.json(company);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Datos de empresa inválidos", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Error al actualizar empresa" });
+      }
+    }
+  });
+  
+  app.delete("/api/companies/:id", isAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteCompany(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Empresa no encontrada" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      res.status(500).json({ message: "Error al eliminar empresa" });
+    }
+  });
+  
+  // Asignar usuario a empresa (solo administradores)
+  app.post("/api/companies/:companyId/users", isAdmin, async (req, res) => {
+    try {
+      const companyId = parseInt(req.params.companyId);
+      const { userId, role } = req.body;
+      
+      // Verificar que la empresa existe
+      const company = await storage.getCompany(companyId);
+      if (!company) {
+        return res.status(404).json({ message: "Empresa no encontrada" });
+      }
+      
+      // Verificar que el usuario existe
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "Usuario no encontrado" });
+      }
+      
+      const userCompany = await storage.assignUserToCompany(userId, companyId, role);
+      res.status(201).json(userCompany);
+    } catch (error) {
+      res.status(500).json({ message: "Error al asignar usuario a empresa" });
+    }
+  });
+  
+  // Plantillas de horario
+  app.get("/api/schedule-templates", isAuthenticated, async (req, res) => {
+    try {
+      const templates = await storage.getScheduleTemplates(
+        req.user?.role === "admin" ? undefined : req.user?.id
+      );
+      res.json(templates);
+    } catch (error) {
+      res.status(500).json({ message: "Error al obtener plantillas" });
+    }
+  });
+  
+  app.post("/api/schedule-templates", isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertScheduleTemplateSchema.parse({
+        ...req.body,
+        createdBy: req.user?.id
+      });
+      
+      const template = await storage.createScheduleTemplate(validatedData);
+      res.status(201).json(template);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Datos de plantilla inválidos", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Error al crear plantilla" });
+      }
+    }
+  });
   // Employee routes
   app.get("/api/employees", async (req, res) => {
     try {

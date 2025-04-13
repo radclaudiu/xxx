@@ -1,6 +1,6 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { Express, Request } from "express";
+import express, { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
@@ -171,7 +171,7 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err, user, info) => {
+    passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) return next(err);
       
       if (!user) {
@@ -218,7 +218,7 @@ export function setupAuth(app: Express) {
 }
 
 // Middleware para verificar autenticación
-export function isAuthenticated(req: Request, res: Express.Response, next: Express.NextFunction) {
+export function isAuthenticated(req: Request, res: Response, next: NextFunction) {
   if (req.isAuthenticated()) {
     return next();
   }
@@ -226,8 +226,8 @@ export function isAuthenticated(req: Request, res: Express.Response, next: Expre
 }
 
 // Middleware para verificar rol de administrador
-export function isAdmin(req: Request, res: Express.Response, next: Express.NextFunction) {
-  if (req.isAuthenticated() && req.user.role === "admin") {
+export function isAdmin(req: Request, res: Response, next: NextFunction) {
+  if (req.isAuthenticated() && req.user?.role === "admin") {
     return next();
   }
   res.status(403).json({ error: "No autorizado" });

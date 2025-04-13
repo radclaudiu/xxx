@@ -1,29 +1,62 @@
-import { eq, and, desc, asc } from "drizzle-orm";
+import { eq, and, desc, asc, isNull, not, or, inArray } from "drizzle-orm";
 import { 
   Employee, InsertEmployee, 
   Shift, InsertShift,
   Schedule, InsertSchedule,
-  employees, shifts, schedules
+  User, InsertUser,
+  Company, InsertCompany,
+  UserCompany, InsertUserCompany,
+  ScheduleTemplate, InsertScheduleTemplate,
+  employees, shifts, schedules, 
+  users, companies, userCompanies, scheduleTemplates
 } from "@shared/schema";
 import { db } from "./db";
 
 export interface IStorage {
+  // User operations
+  getUser(id: number): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined>;
+  deleteUser(id: number): Promise<boolean>;
+  
+  // Company operations
+  getCompanies(userId?: number): Promise<Company[]>;
+  getCompany(id: number): Promise<Company | undefined>;
+  createCompany(company: InsertCompany): Promise<Company>;
+  updateCompany(id: number, company: Partial<InsertCompany>): Promise<Company | undefined>;
+  deleteCompany(id: number): Promise<boolean>;
+  
+  // User-Company relations
+  getUserCompanies(userId: number): Promise<UserCompany[]>;
+  getCompanyUsers(companyId: number): Promise<UserCompany[]>;
+  assignUserToCompany(userId: number, companyId: number, role: string): Promise<UserCompany>;
+  removeUserFromCompany(userId: number, companyId: number): Promise<boolean>;
+  
+  // Schedule Templates
+  getScheduleTemplates(userId?: number): Promise<ScheduleTemplate[]>;
+  getScheduleTemplate(id: number): Promise<ScheduleTemplate | undefined>;
+  createScheduleTemplate(template: InsertScheduleTemplate): Promise<ScheduleTemplate>;
+  updateScheduleTemplate(id: number, template: Partial<InsertScheduleTemplate>): Promise<ScheduleTemplate | undefined>;
+  deleteScheduleTemplate(id: number): Promise<boolean>;
+  
   // Employee operations
-  getEmployees(): Promise<Employee[]>;
+  getEmployees(companyId?: number): Promise<Employee[]>;
   getEmployee(id: number): Promise<Employee | undefined>;
   createEmployee(employee: InsertEmployee): Promise<Employee>;
   updateEmployee(id: number, employee: Partial<InsertEmployee>): Promise<Employee | undefined>;
   deleteEmployee(id: number): Promise<boolean>;
   
   // Shift operations
-  getShifts(date?: string, employeeId?: number): Promise<Shift[]>;
+  getShifts(date?: string, employeeId?: number, companyId?: number): Promise<Shift[]>;
   getShift(id: number): Promise<Shift | undefined>;
   createShift(shift: InsertShift): Promise<Shift>;
   updateShift(id: number, shift: Partial<InsertShift>): Promise<Shift | undefined>;
   deleteShift(id: number): Promise<boolean>;
   
   // Schedule operations (save/load)
-  getSchedules(): Promise<Schedule[]>;
+  getSchedules(companyId?: number): Promise<Schedule[]>;
   getSchedule(id: number): Promise<Schedule | undefined>;
   createSchedule(schedule: InsertSchedule): Promise<Schedule>;
   deleteSchedule(id: number): Promise<boolean>;
