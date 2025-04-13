@@ -195,7 +195,7 @@ export default function Home() {
   };
   
   return (
-    <div className="min-h-screen flex flex-col w-full max-w-full overflow-x-hidden">
+    <div className="min-h-screen flex flex-col w-full max-w-[100vw] overflow-x-hidden">
       {/* Header */}
       <header className="bg-primary text-white p-2 md:p-4 shadow-md w-full">
         <div className="w-full px-1 md:px-2 flex justify-between items-center">

@@ -829,7 +829,7 @@ export default function ScheduleTable({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-full max-w-[100vw] overflow-x-hidden">
       {/* Menú contextual para turnos */}
       {contextMenu.isOpen && contextMenu.shift && (
         <div 
