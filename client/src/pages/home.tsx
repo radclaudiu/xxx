@@ -22,7 +22,8 @@ import {
   LogOut,
   Save,
   Settings,
-  UserPlus
+  UserPlus,
+  Users
 } from "lucide-react";
 import {
   DropdownMenu,

@@ -34,6 +34,7 @@ interface ScheduleTableProps {
   startHour?: number;
   endHour?: number;
   onSaveTimeRange?: (startHour: number, endHour: number) => void;
+  isReadOnly?: boolean;
 }
 
 export default function ScheduleTable({ 
@@ -46,7 +47,8 @@ export default function ScheduleTable({
   hourlyEmployeeCost = 0,
   startHour: initialStartHour = 8,
   endHour: initialEndHour = 22,
-  onSaveTimeRange
+  onSaveTimeRange,
+  isReadOnly = false
 }: ScheduleTableProps) {
   const isMobile = useIsMobile();
   
@@ -341,6 +343,9 @@ export default function ScheduleTable({
   
   // Handler for starting an interaction (mouse or touch)
   const handleInteractionStart = (employee: Employee, time: string) => {
+    // Si el componente está en modo de solo lectura, no permitir interacción
+    if (isReadOnly) return;
+    
     // If cell is already assigned, don't allow selection
     if (isCellAssigned(employee.id, time)) return;
     
