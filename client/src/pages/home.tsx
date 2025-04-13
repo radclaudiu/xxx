@@ -217,6 +217,11 @@ export default function Home() {
       queryClient.invalidateQueries({ 
         queryKey: ["/api/shifts", currentCompanyId] 
       });
+      
+      // Recargar los datos de empleados para actualizar las horas semanales
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/employees", currentCompanyId] 
+      });
     },
     onError: (error) => {
       toast({
@@ -237,6 +242,11 @@ export default function Home() {
       // Invalidar la consulta con el ID de la empresa actual
       queryClient.invalidateQueries({ 
         queryKey: ["/api/shifts", currentCompanyId] 
+      });
+      
+      // Recargar los datos de empleados para actualizar las horas semanales
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/employees", currentCompanyId] 
       });
     },
     onError: (error) => {
