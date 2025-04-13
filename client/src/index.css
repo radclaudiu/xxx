@@ -6,15 +6,19 @@
 html, body {
   margin: 0;
   padding: 0;
-  width: 100%;
+  width: 95%; /* Reducido al 95% del ancho del navegador */
+  max-width: 95vw; /* Limitar al 95% del ancho de la ventana */
+  margin-left: auto;
+  margin-right: auto;
   overflow-x: hidden; /* Prevenir desplazamiento horizontal */
-  max-width: 100vw; /* Limitar al ancho de la ventana */
 }
 
-/* Contenedores principales con ancho completo */
+/* Contenedores principales con ancho del 95% */
 #root {
-  width: 100%;
-  max-width: 100vw;
+  width: 95%;
+  max-width: 95vw;
+  margin-left: auto;
+  margin-right: auto;
   overflow-x: hidden;
 }
 

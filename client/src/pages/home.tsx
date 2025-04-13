@@ -196,9 +196,9 @@ export default function Home() {
   };
   
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col w-full max-w-[95vw] mx-auto">
       {/* Header */}
-      <header className="bg-primary text-white p-4 shadow-md">
+      <header className="bg-primary text-white p-4 shadow-md w-full">
         <div className="w-full px-2 flex justify-between items-center">
           <h1 className="text-xl font-bold">Sistema de Turnos de Trabajo</h1>
           <div className="flex items-center gap-2">
@@ -223,7 +223,7 @@ export default function Home() {
       </header>
       
       {/* Main Content */}
-      <main className="flex-grow p-4">
+      <main className="flex-grow p-4 w-full">
         <div className="w-full bg-white rounded-lg shadow-md p-4">
           {/* Financial Inputs */}
           <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4 bg-blue-50 p-3 rounded-lg">
@@ -345,7 +345,7 @@ export default function Home() {
       </main>
       
       {/* Footer */}
-      <footer className="bg-neutral-100 py-3 text-neutral-500 text-center text-sm">
+      <footer className="bg-neutral-100 py-3 text-neutral-500 text-center text-sm w-full">
         <div className="w-full px-2">
           Sistema de Turnos de Trabajo &copy; {new Date().getFullYear()}
         </div>
