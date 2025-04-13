@@ -470,7 +470,7 @@ export default function Home() {
                 className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 px-3 py-1 rounded flex items-center gap-1 text-sm font-medium"
                 onClick={() => {
                   if (exportsModalRef.current) {
-                    exportsModalRef.current.openWithReport();
+                    exportsModalRef.current.openWithReport(null);
                   }
                 }}
               >

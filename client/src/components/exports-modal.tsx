@@ -13,7 +13,7 @@ interface ExportsModalProps {
 
 // Definimos la interfaz para los métodos expuestos a través de la referencia
 export interface ExportsModalRef {
-  openWithReport: (reportType: string) => void;
+  openWithReport: (reportType: string | null) => void;
 }
 
 const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees, shifts, currentDate }, ref) => {
@@ -23,7 +23,7 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
   // Estado para controlar la semana seleccionada
   const [selectedWeekStart, setSelectedWeekStart] = useState(() => getStartOfWeek(currentDate));
   
-  // Método para abrir el modal directamente con un reporte específico
+  // Método para abrir el modal directamente con un reporte específico o mostrar el menú
   const openWithReport = (reportType: string | null = null) => {
     setSelectedReport(reportType);
     setIsOpen(true);
@@ -82,24 +82,37 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
       case 'week-schedule':
         return (
           <div className="rounded-md border">
-            <div className="overflow-x-auto">
-              <table className="min-w-full w-max-content table-auto border-collapse">
+            <div className="flex justify-end mb-4">
+              <Button 
+                variant="outline" 
+                className="text-blue-600 border-blue-300"
+                onClick={() => {
+                  // Abrir ventana de impresión para exportar a PDF
+                  window.print();
+                }}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Exportar a PDF
+              </Button>
+            </div>
+            <div className="overflow-x-auto print:overflow-visible">
+              <table className="min-w-full w-max-content table-auto border-collapse print:text-[8pt] print:w-full">
                 <thead>
                   <tr>
-                    <th className="border p-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase sticky left-0 z-10" style={{ height: "42px", minHeight: "42px" }}>
+                    <th className="border p-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase sticky left-0 z-10 print:bg-gray-100 print:static" style={{ height: "42px", minHeight: "42px" }}>
                       Empleado
                     </th>
                     {dayNames.map((day, index) => (
-                      <th key={day} className="border p-2 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase" style={{ height: "42px", minHeight: "42px" }}>
+                      <th key={day} className="border p-2 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase print:bg-gray-100" style={{ height: "42px", minHeight: "42px" }}>
                         {day} {weekDays[index].getDate()}
                       </th>
                     ))}
-                    <th className="border p-2 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase" style={{ height: "42px", minHeight: "42px" }}>
+                    <th className="border p-2 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase print:bg-gray-100" style={{ height: "42px", minHeight: "42px" }}>
                       Total
                     </th>
                   </tr>
                 </thead>
-                <tbody className="text-xs">
+                <tbody className="text-xs print:text-[8pt]">
                   {employees.map((employee) => {
                     // Calcular las horas trabajadas para cada día de la semana
                     const weeklyHours = weekDays.map(day => {

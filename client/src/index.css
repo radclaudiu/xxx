@@ -2,6 +2,57 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Estilos para impresión (PDF export) */
+@media print {
+  /* Hide UI elements we don't want to print */
+  header, footer, button, .print-hide {
+    display: none !important;
+  }
+  
+  /* Ensure content fits on page */
+  body {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: #fff;
+  }
+  
+  /* Make tables fit on page */
+  table {
+    width: 100% !important;
+    font-size: 9pt !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  
+  /* Fix cells for printing */
+  th, td {
+    position: static !important;
+    font-size: 9pt !important;
+    padding: 2px 4px !important;
+  }
+  
+  /* Ensure proper page breaks */
+  .print-page-break {
+    page-break-before: always;
+  }
+  
+  /* Landscape orientation for schedule */
+  @page {
+    size: landscape;
+  }
+}
+
+/* Fix for sticky position on mobile */
+@media (max-width: 768px) {
+  .sticky-column {
+    position: sticky;
+    left: 0;
+    z-index: 10;
+    background-color: white;
+  }
+}
+
 /* Estilos generales para evitar desplazamiento horizontal */
 html, body {
   margin: 0;
