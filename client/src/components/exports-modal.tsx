@@ -24,7 +24,7 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
   const [selectedWeekStart, setSelectedWeekStart] = useState(() => getStartOfWeek(currentDate));
   
   // Método para abrir el modal directamente con un reporte específico
-  const openWithReport = (reportType: string) => {
+  const openWithReport = (reportType: string | null = null) => {
     setSelectedReport(reportType);
     setIsOpen(true);
   };
