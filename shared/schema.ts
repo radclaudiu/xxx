@@ -23,6 +23,8 @@ export const companies = pgTable("companies", {
   email: text("email"),
   website: text("website"),
   taxId: text("tax_id"),
+  startHour: integer("start_hour").default(9), // Hora de inicio (por defecto 9:00)
+  endHour: integer("end_hour").default(22), // Hora de fin (por defecto 22:00)
   logoUrl: text("logo_url"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
@@ -76,6 +78,8 @@ export const insertCompanySchema = createInsertSchema(companies).pick({
   logoUrl: true,
   isActive: true,
   createdBy: true,
+  startHour: true,
+  endHour: true,
 }).partial({
   description: true,
   address: true,
@@ -85,6 +89,8 @@ export const insertCompanySchema = createInsertSchema(companies).pick({
   taxId: true,
   logoUrl: true,
   isActive: true,
+  startHour: true,
+  endHour: true,
 });
 
 export const insertUserCompanySchema = createInsertSchema(userCompanies).pick({

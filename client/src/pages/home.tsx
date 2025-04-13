@@ -48,6 +48,9 @@ export default function Home() {
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [estimatedDailySales, setEstimatedDailySales] = useState("0");
   const [hourlyEmployeeCost, setHourlyEmployeeCost] = useState("0");
+  // Estados para rangos horarios (con valores por defecto que se actualizarán desde la empresa)
+  const [startHour, setStartHour] = useState(9);
+  const [endHour, setEndHour] = useState(22);
   
   // Refs
   const exportsModalRef = useRef<ExportsModalRef>(null);
@@ -90,6 +93,16 @@ export default function Home() {
     },
   });
   
+  // Actualizar los rangos horarios cuando se carguen las empresas
+  useEffect(() => {
+    if (companies.length > 0 && companies[0]) {
+      // Establecer los valores desde la empresa o usar los valores por defecto
+      setStartHour(companies[0].startHour || 9);
+      setEndHour(companies[0].endHour || 22);
+      console.log("Rango horario cargado de la empresa:", companies[0].startHour, "-", companies[0].endHour);
+    }
+  }, [companies]);
+
   // Filter shifts for the current day (for the main schedule display)
   const currentDateFormatted = formatDateForAPI(currentDate);
   console.log("Fecha actual formateada:", currentDateFormatted);
@@ -461,6 +474,8 @@ export default function Home() {
             onDeleteShift={handleDeleteShift}
             estimatedDailySales={parseFloat(estimatedDailySales) || 0}
             hourlyEmployeeCost={parseFloat(hourlyEmployeeCost) || 0}
+            startHour={startHour}
+            endHour={endHour}
           />
         </div>
       </main>
