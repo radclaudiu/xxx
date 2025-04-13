@@ -68,7 +68,7 @@ export function ManagerRoute({
     <ProtectedRoute
       path={path}
       component={component}
-      allowedRoles={["manager", "admin"]}
+      allowedRoles={["manager", "admin", "user"]}
     />
   );
 }

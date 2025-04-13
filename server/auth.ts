@@ -201,19 +201,41 @@ export function setupAuth(app: Express) {
     });
   });
 
-  app.get("/api/user", (req, res) => {
+  app.get("/api/user", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "No autenticado" });
     }
     
     const user = req.user;
-    res.json({
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      fullName: user.fullName,
-      role: user.role,
-    });
+    
+    // Obtener roles específicos de empresa para este usuario
+    try {
+      const companyRoles = await db
+        .select({
+          companyId: userCompanies.companyId,
+          role: userCompanies.role
+        })
+        .from(userCompanies)
+        .where(eq(userCompanies.userId, user.id));
+      
+      res.json({
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        fullName: user.fullName,
+        role: user.role,
+        companyRoles: companyRoles
+      });
+    } catch (error) {
+      console.error("Error al obtener roles de empresa:", error);
+      res.json({
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        fullName: user.fullName,
+        role: user.role,
+      });
+    }
   });
 }
 
