@@ -67,24 +67,34 @@ export default function Home() {
   // Refs
   const exportsModalRef = useRef<ExportsModalRef>(null);
   
-  // Fetch employees (filtrados por la empresa actual)
+  // Fetch employees (filtrados por la empresa actual y con la fecha actual para forzar recarga)
   const {
     data: employees = [],
     isLoading: isLoadingEmployees,
   } = useQuery<Employee[]>({
-    queryKey: ["/api/employees", currentCompanyId],
+    queryKey: ["/api/employees", currentCompanyId, formatDateForAPI(currentDate)],
     queryFn: async () => {
-      const url = currentCompanyId ? `/api/employees?companyId=${currentCompanyId}` : "/api/employees";
+      // Añadimos timestamp para evitar caché del navegador
+      const timestamp = new Date().getTime();
+      const url = currentCompanyId 
+        ? `/api/employees?companyId=${currentCompanyId}&t=${timestamp}` 
+        : `/api/employees?t=${timestamp}`;
+      
+      console.log("Consultando empleados con URL:", url);
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error("Error al cargar empleados");
       }
-      return response.json();
+      const data = await response.json();
+      console.log("Datos de empleados recibidos:", data);
+      return data;
     },
     enabled: !!currentCompanyId,
     select: (data) => {
       return data.sort((a, b) => a.name.localeCompare(b.name));
     },
+    // Desactivar caché para forzar siempre una nueva solicitud
+    staleTime: 0,
   });
   
   // Fetch shifts (filtrados por la empresa actual)
@@ -134,11 +144,21 @@ export default function Home() {
     }
   }, [companies]);
   
-  // Refrescar datos de empleados cuando cambia la fecha
+  // Refrescar datos cuando cambia la fecha o compañía
   useEffect(() => {
     if (currentCompanyId) {
+      console.log("Actualizando datos debido al cambio de fecha o compañía:", formatDateForAPI(currentDate));
+      
       // Recargar los datos de empleados para mostrar las horas semanales actualizadas
-      queryClient.invalidateQueries({ queryKey: ["/api/employees", currentCompanyId] });
+      // Usamos la misma clave que en useQuery para asegurar que se invalida correctamente
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/employees", currentCompanyId, formatDateForAPI(currentDate)]
+      });
+      
+      // También refrescar los turnos para asegurar que los datos están sincronizados
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/shifts", currentCompanyId] 
+      });
     }
   }, [currentDate, currentCompanyId]);
   
@@ -195,15 +215,15 @@ export default function Home() {
   // Navigate to previous day
   const handlePreviousDay = () => {
     setCurrentDate(getPreviousDay(currentDate));
-    // Invalidar la consulta de empleados para forzar una recarga de los datos
-    queryClient.invalidateQueries({ queryKey: ["/api/employees", currentCompanyId] });
+    // No necesitamos invalidar consultas aquí
+    // El useEffect se encargará de hacerlo cuando cambie currentDate
   };
   
   // Navigate to next day
   const handleNextDay = () => {
     setCurrentDate(getNextDay(currentDate));
-    // Invalidar la consulta de empleados para forzar una recarga de los datos
-    queryClient.invalidateQueries({ queryKey: ["/api/employees", currentCompanyId] });
+    // No necesitamos invalidar consultas aquí
+    // El useEffect se encargará de hacerlo cuando cambie currentDate
   };
   
   // Create shift mutation
