@@ -134,6 +134,14 @@ export default function Home() {
     }
   }, [companies]);
   
+  // Refrescar datos de empleados cuando cambia la fecha
+  useEffect(() => {
+    if (currentCompanyId) {
+      // Recargar los datos de empleados para mostrar las horas semanales actualizadas
+      queryClient.invalidateQueries({ queryKey: ["/api/employees", currentCompanyId] });
+    }
+  }, [currentDate, currentCompanyId]);
+  
   // Mutación para actualizar el rango horario de la empresa
   const updateTimeRangeMutation = useMutation({
     mutationFn: async ({ companyId, startHour, endHour }: { companyId: number, startHour: number, endHour: number }) => {
@@ -187,11 +195,15 @@ export default function Home() {
   // Navigate to previous day
   const handlePreviousDay = () => {
     setCurrentDate(getPreviousDay(currentDate));
+    // Invalidar la consulta de empleados para forzar una recarga de los datos
+    queryClient.invalidateQueries({ queryKey: ["/api/employees", currentCompanyId] });
   };
   
   // Navigate to next day
   const handleNextDay = () => {
     setCurrentDate(getNextDay(currentDate));
+    // Invalidar la consulta de empleados para forzar una recarga de los datos
+    queryClient.invalidateQueries({ queryKey: ["/api/employees", currentCompanyId] });
   };
   
   // Create shift mutation
