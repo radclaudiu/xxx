@@ -25,12 +25,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Si es administrador, devolver todas las empresas
       // Si es un usuario normal, devolver solo las empresas a las que pertenece
-      const companies = await storage.getCompanies(
-        req.user?.role === "admin" ? undefined : req.user?.id
-      );
+      const userId = req.user?.role === "admin" ? undefined : req.user?.id;
+      console.log("Obteniendo empresas para usuario:", userId);
+      
+      const companies = await storage.getCompanies(userId);
+      console.log("Empresas obtenidas:", companies);
       res.json(companies);
     } catch (error) {
-      res.status(500).json({ message: "Error al obtener empresas" });
+      console.error("Error detallado al obtener empresas:", error);
+      res.status(500).json({ 
+        message: "Error al obtener empresas", 
+        error: error instanceof Error ? error.message : String(error) 
+      });
     }
   });
   
@@ -41,13 +47,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdBy: req.user?.id
       });
       
+      console.log("Creando empresa con datos:", validatedData);
       const company = await storage.createCompany(validatedData);
+      console.log("Empresa creada:", company);
       res.status(201).json(company);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error("Error de validación al crear empresa:", error.errors);
         res.status(400).json({ message: "Datos de empresa inválidos", errors: error.errors });
       } else {
-        res.status(500).json({ message: "Error al crear empresa" });
+        console.error("Error detallado al crear empresa:", error);
+        res.status(500).json({ 
+          message: "Error al crear empresa", 
+          error: error instanceof Error ? error.message : String(error) 
+        });
       }
     }
   });
