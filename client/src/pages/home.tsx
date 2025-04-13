@@ -304,15 +304,31 @@ export default function Home() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/admin">
-              <Button 
-                variant="secondary" 
-                className="bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200 px-3 py-1 rounded flex items-center gap-1 text-sm font-medium"
-              >
-                <Settings className="h-4 w-4" />
-                Administración
-              </Button>
-            </Link>
+            {/* Mostrar el botón de administración general solo para administradores */}
+            {user?.role === 'admin' && (
+              <Link href="/admin">
+                <Button 
+                  variant="secondary" 
+                  className="bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200 px-3 py-1 rounded flex items-center gap-1 text-sm font-medium"
+                >
+                  <Settings className="h-4 w-4" />
+                  Admin General
+                </Button>
+              </Link>
+            )}
+            
+            {/* Mostrar botón de administración de empresa para administradores y gerentes */}
+            {(user?.role === 'admin' || user?.role === 'manager') && (
+              <Link href="/company-admin">
+                <Button 
+                  variant="secondary" 
+                  className="bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200 px-3 py-1 rounded flex items-center gap-1 text-sm font-medium"
+                >
+                  <Users className="h-4 w-4" />
+                  Admin Empresa
+                </Button>
+              </Link>
+            )}
             <Button 
               variant="secondary" 
               className="bg-white text-primary px-3 py-1 rounded flex items-center gap-1 text-sm font-medium hover:bg-gray-100"
@@ -550,13 +566,16 @@ export default function Home() {
                 <FileText className="h-4 w-4" />
                 Exportar
               </Button>
-              <Button
-                className="bg-[#F57C00] text-white px-4 py-2 rounded flex items-center gap-1 text-sm font-medium hover:bg-opacity-90"
-                onClick={() => setIsEmployeeModalOpen(true)}
-              >
-                <UserPlus className="h-4 w-4" />
-                Agregar Empleado
-              </Button>
+              {/* Botón de agregar empleado solo para administradores y gerentes */}
+              {user?.role !== 'employee' && (
+                <Button
+                  className="bg-[#F57C00] text-white px-4 py-2 rounded flex items-center gap-1 text-sm font-medium hover:bg-opacity-90"
+                  onClick={() => setIsEmployeeModalOpen(true)}
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Agregar Empleado
+                </Button>
+              )}
               <Button
                 variant="outline"
                 className="bg-neutral-100 hover:bg-neutral-200 p-2 rounded-full"

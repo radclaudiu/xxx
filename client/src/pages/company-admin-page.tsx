@@ -91,16 +91,16 @@ export default function CompanyAdminPage() {
   
   // Consultar empresas del usuario
   const { 
-    data: companies = [], 
+    data: companies = [] as any[], 
     isLoading: isLoadingCompanies 
-  } = useQuery({
+  } = useQuery<any[]>({
     queryKey: ["/api/companies"],
     enabled: !!user,
   });
   
   // Consultar relaciones usuario-empresa
   const { 
-    data: userCompanies = [], 
+    data: userCompanies = [] as UserCompanyExpanded[], 
     isLoading: isLoadingUserCompanies 
   } = useQuery<UserCompanyExpanded[]>({
     queryKey: ["/api/user-companies"],

@@ -232,8 +232,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Eliminar usuario de empresa (solo administradores)
-  app.delete("/api/companies/:companyId/users/:userId", isAdmin, async (req, res) => {
+  // Eliminar usuario de empresa (admin o gerentes)
+  app.delete("/api/companies/:companyId/users/:userId", isAdminOrManager, async (req, res) => {
     try {
       const companyId = parseInt(req.params.companyId);
       const userId = parseInt(req.params.userId);
@@ -262,7 +262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Endpoint para obtener relaciones usuario-empresa
-  app.get("/api/user-companies", isAdmin, async (req, res) => {
+  app.get("/api/user-companies", isAuthenticated, async (req, res) => {
     try {
       const allUserCompanies = [];
       
