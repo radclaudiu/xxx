@@ -160,10 +160,9 @@ export default function Home() {
     // Wait for all shifts to be created
     Promise.all(promises)
       .then(() => {
-        toast({
-          title: "Turnos guardados",
-          description: `Se han asignado ${selections.length} turno(s) exitosamente.`,
-        });
+        // Eliminamos la notificación de éxito para que no moleste al usuario
+        // cuando se hacen múltiples selecciones automáticas
+        // Solo guardaremos el turno silenciosamente
       })
       .catch((error) => {
         toast({
