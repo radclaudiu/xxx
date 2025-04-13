@@ -38,7 +38,7 @@ export function ProtectedRoute({
   console.log("ProtectedRoute: renderizando componente protegido");
   return (
     <Route path={path}>
-      <Component />
+      {user ? <Component /> : <Redirect to="/auth" />}
     </Route>
   );
 }

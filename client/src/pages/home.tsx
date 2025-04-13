@@ -99,12 +99,20 @@ export default function Home() {
   });
   
   // Filter shifts for the current day (for the main schedule display)
-  const shifts = allShifts.filter(shift => {
-    const shiftDate = new Date(shift.date);
-    const formattedCurrentDate = formatDateForAPI(currentDate);
-    const formattedShiftDate = formatDateForAPI(shiftDate);
-    return formattedShiftDate === formattedCurrentDate;
-  });
+  const shifts = allShifts && allShifts.length > 0 
+    ? allShifts.filter(shift => {
+        if (!shift || !shift.date) return false;
+        try {
+          const shiftDate = new Date(shift.date);
+          const formattedCurrentDate = formatDateForAPI(currentDate);
+          const formattedShiftDate = formatDateForAPI(shiftDate);
+          return formattedShiftDate === formattedCurrentDate;
+        } catch (error) {
+          console.error("Error al filtrar turno:", error);
+          return false;
+        }
+      })
+    : [];
   
   // Navigate to previous day
   const handlePreviousDay = () => {
