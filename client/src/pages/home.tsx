@@ -623,6 +623,10 @@ export default function Home() {
               }
             }}
             isReadOnly={user?.role === 'employee'}
+            onEditEmployee={(employee) => {
+              setEmployeeToEdit(employee);
+              setIsEmployeeModalOpen(true);
+            }}
           />
         </div>
       </main>
