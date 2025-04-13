@@ -130,10 +130,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const date = req.query.date as string | undefined;
       const employeeId = req.query.employeeId ? parseInt(req.query.employeeId as string) : undefined;
+      const companyId = req.query.companyId ? parseInt(req.query.companyId as string) : undefined;
       
-      const shifts = await storage.getShifts(date, employeeId);
+      console.log("Fetching shifts with date:", date, "employeeId:", employeeId, "companyId:", companyId);
+      const shifts = await storage.getShifts(date, employeeId, companyId);
       res.json(shifts);
     } catch (error) {
+      console.error("Error fetching shifts:", error);
       res.status(500).json({ message: "Failed to fetch shifts" });
     }
   });
@@ -206,9 +209,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Schedule routes (for saving/loading)
   app.get("/api/schedules", async (req, res) => {
     try {
-      const schedules = await storage.getSchedules();
+      const companyId = req.query.companyId ? parseInt(req.query.companyId as string) : undefined;
+      console.log("Fetching schedules with companyId:", companyId);
+      const schedules = await storage.getSchedules(companyId);
       res.json(schedules);
     } catch (error) {
+      console.error("Error fetching schedules:", error);
       res.status(500).json({ message: "Failed to fetch schedules" });
     }
   });

@@ -42,6 +42,14 @@ export default function CompanySelectPage() {
     return <Redirect to="/auth" />;
   }
 
+  // Si solo hay una empresa, seleccionarla automáticamente y redirigir a la página principal
+  if (userCompanies.length === 1 && !companyLoading) {
+    console.log("Solo hay una empresa, seleccionando automáticamente:", userCompanies[0]);
+    setSelectedCompany(userCompanies[0]);
+    return <Redirect to="/" />;
+  }
+  
+  // Si no hay empresas asignadas
   if (userCompanies.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4">

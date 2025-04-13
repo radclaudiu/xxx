@@ -66,8 +66,10 @@ export default function AuthPage() {
   console.log("AuthPage state:", { user, isLoading, authenticated: !!user });
   
   if (user) {
-    console.log("AuthPage: usuario autenticado, redirigiendo a /");
-    return <Redirect to="/" />;
+    // Al iniciar sesión correctamente, redirigimos primero a la página de selección de empresa
+    // La página de selección de empresa se encargará de redirigir a la página principal si solo hay una empresa
+    console.log("AuthPage: usuario autenticado, redirigiendo a /company-select");
+    return <Redirect to="/company-select" />;
   }
 
   const onLoginSubmit = (values: LoginFormValues) => {
