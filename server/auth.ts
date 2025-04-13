@@ -43,8 +43,9 @@ export function setupAuth(app: Express) {
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === 'production',
+      secure: false, // Establecer a false para desarrollo
       maxAge: 1000 * 60 * 60 * 24 * 7, // Una semana
+      sameSite: 'lax',
     }
   };
 
@@ -104,12 +105,24 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
+    console.log("Intento de login:", req.body);
     passport.authenticate("local", (err, user, info) => {
-      if (err) return next(err);
-      if (!user) return res.status(401).json({ message: "Credenciales incorrectas" });
+      if (err) {
+        console.error("Error en autenticación:", err);
+        return next(err);
+      }
+      if (!user) {
+        console.log("Usuario no encontrado o contraseña incorrecta");
+        return res.status(401).json({ message: "Credenciales incorrectas" });
+      }
       
+      console.log("Usuario autenticado:", user.username);
       req.login(user, (err) => {
-        if (err) return next(err);
+        if (err) {
+          console.error("Error en req.login:", err);
+          return next(err);
+        }
+        console.log("Sesión iniciada correctamente", req.isAuthenticated());
         res.status(200).json(user);
       });
     })(req, res, next);
