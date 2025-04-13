@@ -72,6 +72,14 @@ export default function Home() {
     isLoading: isLoadingEmployees,
   } = useQuery<Employee[]>({
     queryKey: ["/api/employees", currentCompanyId],
+    queryFn: async () => {
+      const url = currentCompanyId ? `/api/employees?companyId=${currentCompanyId}` : "/api/employees";
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("Error al cargar empleados");
+      }
+      return response.json();
+    },
     enabled: !!currentCompanyId,
     select: (data) => {
       return data.sort((a, b) => a.name.localeCompare(b.name));
@@ -84,6 +92,14 @@ export default function Home() {
     isLoading: isLoadingShifts,
   } = useQuery<any[]>({
     queryKey: ["/api/shifts", currentCompanyId],
+    queryFn: async () => {
+      const url = currentCompanyId ? `/api/shifts?companyId=${currentCompanyId}` : "/api/shifts";
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("Error al cargar turnos");
+      }
+      return response.json();
+    },
     enabled: !!currentCompanyId,
     select: (data) => {
       return data.map((item) => {
@@ -184,8 +200,9 @@ export default function Home() {
       return response.json();
     },
     onSuccess: () => {
+      // Invalidar la consulta con el ID de la empresa actual
       queryClient.invalidateQueries({ 
-        queryKey: ["/api/shifts"] 
+        queryKey: ["/api/shifts", currentCompanyId] 
       });
     },
     onError: (error) => {
@@ -204,8 +221,9 @@ export default function Home() {
       return response;
     },
     onSuccess: () => {
+      // Invalidar la consulta con el ID de la empresa actual
       queryClient.invalidateQueries({ 
-        queryKey: ["/api/shifts"] 
+        queryKey: ["/api/shifts", currentCompanyId] 
       });
     },
     onError: (error) => {
@@ -344,8 +362,8 @@ export default function Home() {
                           });
                           
                           // Recargar datos específicos de la empresa
-                          queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
-                          queryClient.invalidateQueries({ queryKey: ["/api/shifts"] });
+                          queryClient.invalidateQueries({ queryKey: ["/api/employees", company.id] });
+                          queryClient.invalidateQueries({ queryKey: ["/api/shifts", company.id] });
                         }
                       }}
                     >
