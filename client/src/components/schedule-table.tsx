@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { Info, Save, Edit } from 'lucide-react';
-import ExportsModal from './exports-modal';
+// Se eliminó la importación de ExportsModal ya que se movió al componente principal
 import { 
   formatDateForAPI, 
   generateTimeSlots, 
@@ -998,14 +998,7 @@ export default function ScheduleTable({
             </div>
           </div>
           
-          {/* Botón de Exportaciones */}
-          <div className="flex items-center">
-            <ExportsModal 
-              employees={employees} 
-              shifts={shifts} 
-              currentDate={date} 
-            />
-          </div>
+          {/* Se eliminó el botón de exportaciones ya que se movió al menú principal */}
         </div>
         
         <div className="flex items-center">
