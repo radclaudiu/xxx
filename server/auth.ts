@@ -40,12 +40,13 @@ export function setupAuth(app: Express) {
   
   const sessionSettings: session.SessionOptions = {
     secret: SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
+    resave: true,
+    saveUninitialized: true,
     cookie: {
       secure: false, // Establecer a false para desarrollo
       maxAge: 1000 * 60 * 60 * 24 * 7, // Una semana
       sameSite: 'lax',
+      httpOnly: true
     }
   };
 
@@ -122,8 +123,24 @@ export function setupAuth(app: Express) {
           console.error("Error en req.login:", err);
           return next(err);
         }
-        console.log("Sesión iniciada correctamente", req.isAuthenticated());
-        res.status(200).json(user);
+        
+        // Guarda explícitamente la sesión para asegurar que se almacena
+        req.session.save((err) => {
+          if (err) {
+            console.error("Error al guardar la sesión:", err);
+            return next(err);
+          }
+          
+          console.log("Sesión iniciada y guardada correctamente", req.isAuthenticated());
+          console.log("Objeto de sesión:", req.session);
+          console.log("Cookie de sesión:", req.session.cookie);
+          
+          // Elimina la contraseña del objeto de usuario antes de enviarlo
+          const userResponse = { ...user };
+          delete userResponse.password;
+          
+          res.status(200).json(userResponse);
+        });
       });
     })(req, res, next);
   });
@@ -136,8 +153,22 @@ export function setupAuth(app: Express) {
   });
 
   app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    res.json(req.user);
+    console.log("GET /api/user - isAuthenticated:", req.isAuthenticated());
+    console.log("GET /api/user - session:", req.session);
+    console.log("GET /api/user - cookies:", req.headers.cookie);
+    
+    if (!req.isAuthenticated()) {
+      console.log("Usuario no autenticado, enviando 401");
+      return res.sendStatus(401);
+    }
+    
+    console.log("Usuario autenticado:", req.user);
+    
+    // Elimina la contraseña del objeto de usuario antes de enviarlo
+    const userResponse = { ...req.user };
+    delete userResponse.password;
+    
+    res.json(userResponse);
   });
 
   // Rutas para gestionar empresas del usuario

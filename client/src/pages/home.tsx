@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { formatDate, formatDateForAPI, getPreviousDay, getNextDay, getStartOfWeek } from "@/lib/date-helpers";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { Employee, Shift, InsertShift } from "@shared/schema";
 import ScheduleTable from "@/components/schedule-table";
 import EmployeeModal from "@/components/employee-modal";
@@ -26,7 +27,20 @@ export default function Home() {
   const [estimatedDailySales, setEstimatedDailySales] = useState<string>('');
   const [hourlyEmployeeCost, setHourlyEmployeeCost] = useState<string>('');
   
+  // Estado de autenticación
+  const { user, isLoading, error, logoutMutation } = useAuth();
+  
   const { toast } = useToast();
+  
+  // Mostrar información del usuario autenticado en la consola para depuración
+  useEffect(() => {
+    console.log("Home page - Auth state:", { 
+      user, 
+      isLoading, 
+      error, 
+      authenticated: !!user 
+    });
+  }, [user, isLoading, error]);
   
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -200,7 +214,14 @@ export default function Home() {
       {/* Header */}
       <header className="bg-primary text-white p-4 shadow-md">
         <div className="w-full px-2 flex justify-between items-center">
-          <h1 className="text-xl font-bold">Sistema de Turnos de Trabajo</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl font-bold">Sistema de Turnos de Trabajo</h1>
+            {user && (
+              <span className="text-sm bg-white/20 px-2 py-1 rounded">
+                {user.username}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <Button 
               variant="secondary" 
@@ -217,6 +238,15 @@ export default function Home() {
             >
               <FolderOpen className="h-4 w-4" />
               Cargar
+            </Button>
+            <Button 
+              variant="destructive" 
+              className="bg-red-600 text-white px-3 py-1 rounded flex items-center gap-1 text-sm font-medium hover:bg-red-700"
+              onClick={() => {
+                logoutMutation.mutate();
+              }}
+            >
+              Cerrar Sesión
             </Button>
           </div>
         </div>
