@@ -36,10 +36,22 @@ export async function syncRemoteDataToLocal(): Promise<void> {
       // Datos de ejemplo para desarrollo (solo crear si no existen usuarios)
       console.log('Creando usuario de prueba en memoria: lucia');
       
+      // Importamos la función para hashear contraseñas
+      const { scrypt, randomBytes } = await import('crypto');
+      const { promisify } = await import('util');
+      const scryptAsync = promisify(scrypt);
+      
+      // Crear hash de contraseña en el formato correcto
+      const password = 'Cory1234';
+      const salt = randomBytes(16).toString("hex");
+      const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+      const hashedPassword = `${buf.toString("hex")}.${salt}`;
+      
       // Este usuario se crea sólo en memoria, no en la base de datos remota
+      console.log('Creando usuario con contraseña formateada correctamente');
       await storage.createUser({
         username: 'lucia',
-        password: '$2a$10$A3hVMf8MoVyYYXj8zAw9zuugvE5u0LCEoGRXzwBbpuZVRZLhgqGGe', // 'Cory1234'
+        password: hashedPassword,
       });
     }
     
