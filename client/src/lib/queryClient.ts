@@ -43,6 +43,13 @@ export const getQueryFn: <T>(options: {
     await throwIfResNotOk(res);
     const data = await res.json();
     console.log("Data received:", data ? "Data presente" : "No data", "for", queryKey[0]);
+    
+    // Si recibimos un objeto vacío como respuesta, devolvemos null
+    if (data && Object.keys(data).length === 0) {
+      console.log("Empty object returned as null for", queryKey[0]);
+      return null;
+    }
+    
     return data;
   };
 

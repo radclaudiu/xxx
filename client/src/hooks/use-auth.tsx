@@ -36,7 +36,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
   } = useQuery<User | null, Error>({
     queryKey: ["/api/user"],
-    queryFn: getQueryFn({ on401: "returnNull" })
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    retry: false,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false
   });
 
   const loginMutation = useMutation({
@@ -45,7 +48,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json();
     },
     onSuccess: (user: User) => {
+      console.log("Login successful, user data:", user);
       queryClient.setQueryData(["/api/user"], user);
+      
+      // Forzar una actualización inmediata del estado
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      
       toast({
         title: "Inicio de sesión exitoso",
         description: `Bienvenido, ${user.username}`,
