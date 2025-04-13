@@ -132,24 +132,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   // Employee routes
-  app.get("/api/employees", async (req, res) => {
+  app.get("/api/employees", isAuthenticated, async (req, res) => {
     try {
-      const employees = await storage.getEmployees();
+      // Si el usuario es administrador y no especifica una empresa, devolver todos los empleados
+      // Si el usuario es de una empresa específica, solo devolver los empleados de esa empresa
+      let companyId: number | undefined = undefined;
+      
+      if (req.query.companyId) {
+        companyId = parseInt(req.query.companyId as string);
+      } else if (req.user?.role !== "admin") {
+        // Para usuarios no-admin, verificar si pertenecen solo a una empresa
+        const userCompanies = await storage.getUserCompanies(req.user!.id);
+        
+        if (userCompanies.length === 1) {
+          // Si solo pertenece a una empresa, usar esa
+          companyId = userCompanies[0].companyId;
+        } else if (userCompanies.length === 0) {
+          // Si no pertenece a ninguna empresa, devolver lista vacía
+          return res.json([]);
+        }
+        // Si pertenece a varias empresas, req.query.companyId debería especificar cuál
+      }
+      
+      const employees = await storage.getEmployees(companyId);
       res.json(employees);
     } catch (error) {
+      console.error("Error fetching employees:", error);
       res.status(500).json({ message: "Failed to fetch employees" });
     }
   });
 
-  app.post("/api/employees", async (req, res) => {
+  app.post("/api/employees", isAuthenticated, async (req, res) => {
     try {
-      const validatedData = insertEmployeeSchema.parse(req.body);
+      // Determinar la compañía del usuario si no es administrador
+      let companyId = req.body.companyId;
+      
+      if (!companyId && req.user?.role !== "admin") {
+        // Para usuarios no-admin, verificar si pertenecen solo a una empresa
+        const userCompanies = await storage.getUserCompanies(req.user!.id);
+        
+        if (userCompanies.length === 1) {
+          // Si solo pertenece a una empresa, usar esa
+          companyId = userCompanies[0].companyId;
+        } else if (userCompanies.length === 0) {
+          // Si no pertenece a ninguna empresa, no puede crear empleados
+          return res.status(403).json({ message: "No tiene permisos para crear empleados" });
+        } else {
+          // Si pertenece a varias empresas, debe especificar a cuál
+          return res.status(400).json({ message: "Debe especificar companyId cuando pertenece a múltiples empresas" });
+        }
+      }
+      
+      const validatedData = insertEmployeeSchema.parse({
+        ...req.body,
+        companyId
+      });
+      
       const employee = await storage.createEmployee(validatedData);
       res.status(201).json(employee);
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Invalid employee data", errors: error.errors });
       } else {
+        console.error("Error creating employee:", error);
         res.status(500).json({ message: "Failed to create employee" });
       }
     }
@@ -191,26 +236,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Shift routes
-  app.get("/api/shifts", async (req, res) => {
+  app.get("/api/shifts", isAuthenticated, async (req, res) => {
     try {
       const date = req.query.date as string | undefined;
       const employeeId = req.query.employeeId ? parseInt(req.query.employeeId as string) : undefined;
+      let companyId: number | undefined = undefined;
       
-      const shifts = await storage.getShifts(date, employeeId);
+      if (req.query.companyId) {
+        companyId = parseInt(req.query.companyId as string);
+      } else if (req.user?.role !== "admin") {
+        // Para usuarios no-admin, verificar si pertenecen solo a una empresa
+        const userCompanies = await storage.getUserCompanies(req.user!.id);
+        
+        if (userCompanies.length === 1) {
+          // Si solo pertenece a una empresa, usar esa
+          companyId = userCompanies[0].companyId;
+        } else if (userCompanies.length === 0) {
+          // Si no pertenece a ninguna empresa, devolver lista vacía
+          return res.json([]);
+        }
+        // Si pertenece a varias empresas, req.query.companyId debería especificar cuál
+      }
+      
+      const shifts = await storage.getShifts(date, employeeId, companyId);
       res.json(shifts);
     } catch (error) {
+      console.error("Error fetching shifts:", error);
       res.status(500).json({ message: "Failed to fetch shifts" });
     }
   });
 
-  app.post("/api/shifts", async (req, res) => {
+  app.post("/api/shifts", isAuthenticated, async (req, res) => {
     try {
       const validatedData = insertShiftSchema.parse(req.body);
       
-      // Verify employee exists
+      // Verificar que el empleado existe
       const employee = await storage.getEmployee(validatedData.employeeId);
       if (!employee) {
         return res.status(404).json({ message: "Employee not found" });
+      }
+      
+      // Verificar que el usuario tenga permiso para crear turnos para este empleado
+      if (req.user?.role !== "admin") {
+        const userCompanies = await storage.getUserCompanies(req.user!.id);
+        const userCompanyIds = userCompanies.map(uc => uc.companyId);
+        
+        if (!userCompanyIds.includes(employee.companyId)) {
+          return res.status(403).json({ message: "No tiene permisos para crear turnos para este empleado" });
+        }
       }
       
       const shift = await storage.createShift(validatedData);
@@ -219,6 +292,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Invalid shift data", errors: error.errors });
       } else {
+        console.error("Error creating shift:", error);
         res.status(500).json({ message: "Failed to create shift" });
       }
     }
@@ -269,38 +343,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Schedule routes (for saving/loading)
-  app.get("/api/schedules", async (req, res) => {
+  app.get("/api/schedules", isAuthenticated, async (req, res) => {
     try {
-      const schedules = await storage.getSchedules();
+      let companyId: number | undefined = undefined;
+      
+      if (req.query.companyId) {
+        companyId = parseInt(req.query.companyId as string);
+      } else if (req.user?.role !== "admin") {
+        // Para usuarios no-admin, verificar si pertenecen solo a una empresa
+        const userCompanies = await storage.getUserCompanies(req.user!.id);
+        
+        if (userCompanies.length === 1) {
+          // Si solo pertenece a una empresa, usar esa
+          companyId = userCompanies[0].companyId;
+        } else if (userCompanies.length === 0) {
+          // Si no pertenece a ninguna empresa, devolver lista vacía
+          return res.json([]);
+        }
+        // Si pertenece a varias empresas, req.query.companyId debería especificar cuál
+      }
+      
+      const schedules = await storage.getSchedules(companyId);
       res.json(schedules);
     } catch (error) {
+      console.error("Error fetching schedules:", error);
       res.status(500).json({ message: "Failed to fetch schedules" });
     }
   });
 
-  app.post("/api/schedules", async (req, res) => {
+  app.post("/api/schedules", isAuthenticated, async (req, res) => {
     try {
-      const validatedData = insertScheduleSchema.parse(req.body);
+      // Determinar la compañía del usuario si no es administrador
+      let companyId = req.body.companyId;
+      
+      if (!companyId && req.user?.role !== "admin") {
+        // Para usuarios no-admin, verificar si pertenecen solo a una empresa
+        const userCompanies = await storage.getUserCompanies(req.user!.id);
+        
+        if (userCompanies.length === 1) {
+          // Si solo pertenece a una empresa, usar esa
+          companyId = userCompanies[0].companyId;
+        } else if (userCompanies.length === 0) {
+          // Si no pertenece a ninguna empresa, no puede crear horarios
+          return res.status(403).json({ message: "No tiene permisos para crear horarios" });
+        } else {
+          // Si pertenece a varias empresas, debe especificar a cuál
+          return res.status(400).json({ message: "Debe especificar companyId cuando pertenece a múltiples empresas" });
+        }
+      } else if (companyId && req.user?.role !== "admin") {
+        // Verificar que el usuario tenga permiso para crear horarios para esta empresa
+        const userCompanies = await storage.getUserCompanies(req.user!.id);
+        const userCompanyIds = userCompanies.map(uc => uc.companyId);
+        
+        if (!userCompanyIds.includes(companyId)) {
+          return res.status(403).json({ message: "No tiene permisos para crear horarios para esta empresa" });
+        }
+      }
+      
+      const validatedData = insertScheduleSchema.parse({
+        ...req.body,
+        companyId,
+        createdBy: req.user?.id
+      });
+      
       const schedule = await storage.createSchedule(validatedData);
       res.status(201).json(schedule);
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Invalid schedule data", errors: error.errors });
       } else {
+        console.error("Error creating schedule:", error);
         res.status(500).json({ message: "Failed to create schedule" });
       }
     }
   });
 
-  app.post("/api/schedules/:id/save", async (req, res) => {
+  app.post("/api/schedules/:id/save", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const { employees, shifts } = req.body;
       
-      // Verify schedule exists
+      // Verificar que el horario existe
       const schedule = await storage.getSchedule(id);
       if (!schedule) {
         return res.status(404).json({ message: "Schedule not found" });
+      }
+      
+      // Verificar que el usuario tenga permiso para editar este horario
+      if (req.user?.role !== "admin") {
+        const userCompanies = await storage.getUserCompanies(req.user!.id);
+        const userCompanyIds = userCompanies.map(uc => uc.companyId);
+        
+        if (!userCompanyIds.includes(schedule.companyId)) {
+          return res.status(403).json({ message: "No tiene permisos para editar este horario" });
+        }
       }
       
       const success = await storage.saveScheduleData(id, employees, shifts);
@@ -311,18 +447,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({ message: "Schedule data saved successfully" });
     } catch (error) {
+      console.error("Error saving schedule data:", error);
       res.status(500).json({ message: "Failed to save schedule data" });
     }
   });
 
-  app.get("/api/schedules/:id/load", async (req, res) => {
+  app.get("/api/schedules/:id/load", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
-      // Verify schedule exists
+      // Verificar que el horario existe
       const schedule = await storage.getSchedule(id);
       if (!schedule) {
         return res.status(404).json({ message: "Schedule not found" });
+      }
+      
+      // Verificar que el usuario tenga permiso para ver este horario
+      if (req.user?.role !== "admin") {
+        const userCompanies = await storage.getUserCompanies(req.user!.id);
+        const userCompanyIds = userCompanies.map(uc => uc.companyId);
+        
+        if (!userCompanyIds.includes(schedule.companyId)) {
+          return res.status(403).json({ message: "No tiene permisos para ver este horario" });
+        }
       }
       
       const data = await storage.loadScheduleData(id);
@@ -333,6 +480,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(data);
     } catch (error) {
+      console.error("Error loading schedule data:", error);
       res.status(500).json({ message: "Failed to load schedule data" });
     }
   });

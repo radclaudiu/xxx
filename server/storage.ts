@@ -257,14 +257,243 @@ export class MemStorage implements IStorage {
 
 // Implementación de la base de datos PostgreSQL
 export class DatabaseStorage implements IStorage {
+  // User operations
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+  
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email.toLowerCase()));
+    return user;
+  }
+  
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+  
+  async createUser(user: InsertUser): Promise<User> {
+    const [newUser] = await db.insert(users).values(user).returning();
+    return newUser;
+  }
+  
+  async updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined> {
+    const [updatedUser] = await db
+      .update(users)
+      .set(user)
+      .where(eq(users.id, id))
+      .returning();
+    return updatedUser;
+  }
+  
+  async deleteUser(id: number): Promise<boolean> {
+    const [result] = await db
+      .delete(users)
+      .where(eq(users.id, id))
+      .returning({ id: users.id });
+    return !!result;
+  }
+  
+  // Company operations
+  async getCompanies(userId?: number): Promise<Company[]> {
+    if (userId) {
+      // Obtener empresas a las que pertenece el usuario
+      const userCompanyEntries = await db
+        .select({
+          companyId: userCompanies.companyId
+        })
+        .from(userCompanies)
+        .where(eq(userCompanies.userId, userId));
+      
+      const companyIds = userCompanyEntries.map(entry => entry.companyId);
+      
+      if (companyIds.length === 0) {
+        return [];
+      }
+      
+      return await db
+        .select()
+        .from(companies)
+        .where(inArray(companies.id, companyIds))
+        .orderBy(asc(companies.name));
+    } else {
+      // Obtener todas las empresas (para administradores)
+      return await db
+        .select()
+        .from(companies)
+        .orderBy(asc(companies.name));
+    }
+  }
+  
+  async getCompany(id: number): Promise<Company | undefined> {
+    const [company] = await db.select().from(companies).where(eq(companies.id, id));
+    return company;
+  }
+  
+  async createCompany(company: InsertCompany): Promise<Company> {
+    const [newCompany] = await db.insert(companies).values(company).returning();
+    return newCompany;
+  }
+  
+  async updateCompany(id: number, company: Partial<InsertCompany>): Promise<Company | undefined> {
+    const [updatedCompany] = await db
+      .update(companies)
+      .set(company)
+      .where(eq(companies.id, id))
+      .returning();
+    return updatedCompany;
+  }
+  
+  async deleteCompany(id: number): Promise<boolean> {
+    const [result] = await db
+      .delete(companies)
+      .where(eq(companies.id, id))
+      .returning({ id: companies.id });
+    return !!result;
+  }
+  
+  // User-Company relations
+  async getUserCompanies(userId: number): Promise<UserCompany[]> {
+    return await db
+      .select()
+      .from(userCompanies)
+      .where(eq(userCompanies.userId, userId));
+  }
+  
+  async getCompanyUsers(companyId: number): Promise<UserCompany[]> {
+    return await db
+      .select()
+      .from(userCompanies)
+      .where(eq(userCompanies.companyId, companyId));
+  }
+  
+  async assignUserToCompany(userId: number, companyId: number, role: string): Promise<UserCompany> {
+    // Verificar si ya existe la relación
+    const existingRelation = await db
+      .select()
+      .from(userCompanies)
+      .where(
+        and(
+          eq(userCompanies.userId, userId),
+          eq(userCompanies.companyId, companyId)
+        )
+      );
+    
+    if (existingRelation.length > 0) {
+      // Actualizar el rol si ya existe
+      const [updated] = await db
+        .update(userCompanies)
+        .set({ role })
+        .where(
+          and(
+            eq(userCompanies.userId, userId),
+            eq(userCompanies.companyId, companyId)
+          )
+        )
+        .returning();
+      return updated;
+    } else {
+      // Crear una nueva relación
+      const [newRelation] = await db
+        .insert(userCompanies)
+        .values({ userId, companyId, role })
+        .returning();
+      return newRelation;
+    }
+  }
+  
+  async removeUserFromCompany(userId: number, companyId: number): Promise<boolean> {
+    const [result] = await db
+      .delete(userCompanies)
+      .where(
+        and(
+          eq(userCompanies.userId, userId),
+          eq(userCompanies.companyId, companyId)
+        )
+      )
+      .returning({ id: userCompanies.id });
+    return !!result;
+  }
+  
+  // Schedule Templates
+  async getScheduleTemplates(userId?: number): Promise<ScheduleTemplate[]> {
+    if (userId) {
+      // Obtener plantillas creadas por el usuario o de sus empresas
+      const userCompanyEntries = await db
+        .select({
+          companyId: userCompanies.companyId
+        })
+        .from(userCompanies)
+        .where(eq(userCompanies.userId, userId));
+      
+      const companyIds = userCompanyEntries.map(entry => entry.companyId);
+      
+      return await db
+        .select()
+        .from(scheduleTemplates)
+        .where(
+          or(
+            eq(scheduleTemplates.createdBy, userId),
+            companyIds.length > 0 ? inArray(scheduleTemplates.companyId, companyIds) : isNull(scheduleTemplates.id)
+          )
+        )
+        .orderBy(desc(scheduleTemplates.createdAt));
+    } else {
+      // Obtener todas las plantillas (para administradores)
+      return await db
+        .select()
+        .from(scheduleTemplates)
+        .orderBy(desc(scheduleTemplates.createdAt));
+    }
+  }
+  
+  async getScheduleTemplate(id: number): Promise<ScheduleTemplate | undefined> {
+    const [template] = await db.select().from(scheduleTemplates).where(eq(scheduleTemplates.id, id));
+    return template;
+  }
+  
+  async createScheduleTemplate(template: InsertScheduleTemplate): Promise<ScheduleTemplate> {
+    const [newTemplate] = await db.insert(scheduleTemplates).values(template).returning();
+    return newTemplate;
+  }
+  
+  async updateScheduleTemplate(id: number, template: Partial<InsertScheduleTemplate>): Promise<ScheduleTemplate | undefined> {
+    const [updatedTemplate] = await db
+      .update(scheduleTemplates)
+      .set(template)
+      .where(eq(scheduleTemplates.id, id))
+      .returning();
+    return updatedTemplate;
+  }
+  
+  async deleteScheduleTemplate(id: number): Promise<boolean> {
+    const [result] = await db
+      .delete(scheduleTemplates)
+      .where(eq(scheduleTemplates.id, id))
+      .returning({ id: scheduleTemplates.id });
+    return !!result;
+  }
+  
   // Employee operations
-  async getEmployees(): Promise<Employee[]> {
-    return await db.select().from(employees).orderBy(asc(employees.name));
+  async getEmployees(companyId?: number): Promise<Employee[]> {
+    if (companyId) {
+      return await db
+        .select()
+        .from(employees)
+        .where(eq(employees.companyId, companyId))
+        .orderBy(asc(employees.name));
+    } else {
+      return await db
+        .select()
+        .from(employees)
+        .orderBy(asc(employees.name));
+    }
   }
   
   async getEmployee(id: number): Promise<Employee | undefined> {
-    const result = await db.select().from(employees).where(eq(employees.id, id));
-    return result.length > 0 ? result[0] : undefined;
+    const [employee] = await db.select().from(employees).where(eq(employees.id, id));
+    return employee;
   }
   
   async createEmployee(employee: InsertEmployee): Promise<Employee> {
@@ -308,28 +537,50 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Shift operations
-  async getShifts(date?: string, employeeId?: number): Promise<Shift[]> {
+  async getShifts(date?: string, employeeId?: number, companyId?: number): Promise<Shift[]> {
     let query = db.select().from(shifts);
     
-    if (date && employeeId) {
-      query = query.where(
-        and(
-          eq(shifts.date, date),
-          eq(shifts.employeeId, employeeId)
-        )
-      );
-    } else if (date) {
-      query = query.where(eq(shifts.date, date));
-    } else if (employeeId) {
-      query = query.where(eq(shifts.employeeId, employeeId));
+    // Condiciones para el filtrado
+    const conditions = [];
+    
+    if (date) {
+      conditions.push(eq(shifts.date, date));
+    }
+    
+    if (employeeId) {
+      conditions.push(eq(shifts.employeeId, employeeId));
+    }
+    
+    if (companyId) {
+      // Para filtrar por compañía, necesitamos unir con la tabla de empleados
+      // ya que los turnos están asociados a empleados que pertenecen a empresas
+      query = query
+        .leftJoin(employees, eq(shifts.employeeId, employees.id))
+        .where(eq(employees.companyId, companyId));
+      
+      // Si también hay otras condiciones, las añadimos
+      if (conditions.length > 0) {
+        for (const condition of conditions) {
+          query = query.where(condition);
+        }
+      }
+      
+      return await query;
+    } else if (conditions.length > 0) {
+      // Si no hay filtro por compañía pero sí hay otras condiciones
+      if (conditions.length === 1) {
+        query = query.where(conditions[0]);
+      } else {
+        query = query.where(and(...conditions));
+      }
     }
     
     return await query;
   }
   
   async getShift(id: number): Promise<Shift | undefined> {
-    const result = await db.select().from(shifts).where(eq(shifts.id, id));
-    return result.length > 0 ? result[0] : undefined;
+    const [shift] = await db.select().from(shifts).where(eq(shifts.id, id));
+    return shift;
   }
   
   async createShift(shift: InsertShift): Promise<Shift> {
@@ -367,13 +618,24 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Schedule operations
-  async getSchedules(): Promise<Schedule[]> {
-    return await db.select().from(schedules).orderBy(desc(schedules.createdAt));
+  async getSchedules(companyId?: number): Promise<Schedule[]> {
+    if (companyId) {
+      return await db
+        .select()
+        .from(schedules)
+        .where(eq(schedules.companyId, companyId))
+        .orderBy(desc(schedules.createdAt));
+    } else {
+      return await db
+        .select()
+        .from(schedules)
+        .orderBy(desc(schedules.createdAt));
+    }
   }
   
   async getSchedule(id: number): Promise<Schedule | undefined> {
-    const result = await db.select().from(schedules).where(eq(schedules.id, id));
-    return result.length > 0 ? result[0] : undefined;
+    const [schedule] = await db.select().from(schedules).where(eq(schedules.id, id));
+    return schedule;
   }
   
   async createSchedule(schedule: InsertSchedule): Promise<Schedule> {
