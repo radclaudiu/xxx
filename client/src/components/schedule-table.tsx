@@ -18,7 +18,9 @@ import {
   calculateHoursBetween,
   getStartOfWeek,
   getEndOfWeek,
-  isInSameWeek
+  isInSameWeek,
+  getWeekNumber,
+  getWeekIdentifier
 } from '@/lib/date-helpers';
 import { Employee, Shift } from '@shared/schema';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -717,13 +719,31 @@ export default function ScheduleTable({
   
   // Calcular las horas semanales trabajadas y restantes para cada empleado
   const calculateWeeklyHours = (employee: Employee) => {
-    // Obtener horas ya trabajadas según la base de datos
-    // Esta información se mantiene actualizada cada vez que se asigna o elimina un turno
-    let workedHours = employee.weeklyHoursWorked || 0;
+    // Obtener el identificador de la semana que se está visualizando
+    const currentWeekId = getWeekIdentifier(date);
     
-    // Contar horas de selecciones actuales no guardadas para hoy
+    // Inicializar contador de horas trabajadas para la semana específica
+    let workedHours = 0;
+    
+    // Calcular las horas de los turnos guardados para esa semana específica
+    shifts.forEach(shift => {
+      if (shift.employeeId === employee.id) {
+        // Convertir la fecha del turno a un objeto Date
+        const shiftDate = new Date(shift.date);
+        
+        // Verificar si el turno pertenece a la semana actual que se está visualizando
+        if (getWeekIdentifier(shiftDate) === currentWeekId) {
+          // Sumar las horas de este turno
+          workedHours += calculateHoursBetween(shift.startTime, shift.endTime);
+        }
+      }
+    });
+    
+    console.log(`Empleado ${employee.name} - Semana ${currentWeekId} - Horas calculadas: ${workedHours}`);
+    
+    // Contar horas de selecciones actuales no guardadas para hoy (solo si la fecha actual está en la misma semana)
     const selectedTimes = selectedCellsByEmployee.get(employee.id);
-    if (selectedTimes && selectedTimes.size > 0) {
+    if (selectedTimes && selectedTimes.size > 0 && getWeekIdentifier(new Date(formattedDate)) === currentWeekId) {
       // Convertir tiempos seleccionados a array y ordenar
       const sortedTimes = Array.from(selectedTimes).sort((a, b) => {
         return convertTimeToMinutes(a) - convertTimeToMinutes(b);
