@@ -888,18 +888,7 @@ export default function ScheduleTable({
         />
       )}
       
-      {/* Help message for touch users */}
-      <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-2 rounded-md mb-3 text-sm">
-        <div className="flex items-center gap-2">
-          <Info className="h-4 w-4" />
-          <span className="font-medium">Modo táctil:</span> 
-        </div>
-        <div className="mt-1 ml-6 text-xs">
-          • <strong>Un dedo:</strong> Selecciona celdas/turnos - arrastre para seleccionar varias
-          <br/>• <strong>Dos dedos:</strong> Desplaza la tabla lateralmente
-          <br/>• <strong>Tocar celda azul:</strong> Abre menú para eliminar turno
-        </div>
-      </div>
+      {/* Se eliminaron las indicaciones del modo táctil */}
       
       {/* Control buttons */}
       <div className="flex justify-between flex-wrap gap-3 mb-2">
