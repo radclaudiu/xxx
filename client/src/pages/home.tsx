@@ -93,13 +93,13 @@ export default function Home() {
   });
   
   // Filter shifts for the current day (for the main schedule display)
+  const currentDateFormatted = formatDateForAPI(currentDate);
+  
+  // Filtramos los turnos por fecha directamente comparando strings en formato YYYY-MM-DD
   const shifts = allShifts.filter(shift => {
     try {
-      // En caso de que shift.date sea inválido, manejarlo con un try-catch
-      const shiftDate = new Date(shift.date);
-      const formattedCurrentDate = formatDateForAPI(currentDate);
-      const formattedShiftDate = formatDateForAPI(shiftDate);
-      return formattedShiftDate === formattedCurrentDate;
+      // Si shift.date ya es un string en formato YYYY-MM-DD, no necesitamos convertirlo
+      return formatDateForAPI(shift.date) === currentDateFormatted;
     } catch (error) {
       console.error("Error al procesar fecha de turno:", error, shift);
       return false; // Excluir turnos con fechas problemáticas

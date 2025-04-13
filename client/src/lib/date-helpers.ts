@@ -22,22 +22,33 @@ export function parseDate(dateString: string): Date {
 }
 
 // Format date as YYYY-MM-DD for API requests
-export function formatDateForAPI(date: Date): string {
+export function formatDateForAPI(date: Date | string): string {
   try {
-    return date.toISOString().split('T')[0];
-  } catch (error) {
-    // Si la fecha es inválida, intentar corregirla creando una nueva fecha
-    const correctedDate = new Date();
-    correctedDate.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
-    correctedDate.setHours(0, 0, 0, 0);
-    
-    try {
-      return correctedDate.toISOString().split('T')[0];
-    } catch (innerError) {
-      // Si todavía falla, usa la fecha actual
-      console.error("Error formateando fecha para API:", error);
-      return new Date().toISOString().split('T')[0];
+    // Si es un string, verificamos si ya tiene el formato correcto YYYY-MM-DD
+    if (typeof date === 'string') {
+      // Si ya tiene el formato YYYY-MM-DD, simplemente devolvemos
+      if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return date;
+      }
+      // Si no, intentamos convertirlo a Date
+      date = new Date(date);
     }
+    
+    // Método seguro que no depende de toISOString()
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // Los meses son 0-11, añadimos 1
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+  } catch (error) {
+    console.error("Error formateando fecha para API:", error);
+    // Fallback a la fecha actual
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
   }
 }
 
