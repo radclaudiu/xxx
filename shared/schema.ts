@@ -155,6 +155,10 @@ export const shiftsRelations = relations(shifts, ({ one }) => ({
     fields: [shifts.scheduleId],
     references: [schedules.id],
   }),
+  company: one(companies, {
+    fields: [shifts.companyId],
+    references: [companies.id],
+  }),
 }));
 
 export const schedulesRelations = relations(schedules, ({ one, many }) => ({
