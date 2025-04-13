@@ -46,8 +46,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Asignar la empresa al usuario
         await storage.assignUserToCompany({
-          userId: userId,
-          companyId: defaultCompany.id,
+          user_id: userId,
+          company_id: defaultCompany.id,
           role: "admin"
         });
         

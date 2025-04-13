@@ -14,6 +14,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/auth" component={AuthPage} />
+      <ProtectedRoute path="/company-select" component={CompanySelectPage} />
       <ProtectedRoute path="/" component={Home} />
       <Route component={NotFound} />
     </Switch>
@@ -24,8 +25,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Router />
-        <Toaster />
+        <CompanyProvider>
+          <Router />
+          <Toaster />
+        </CompanyProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

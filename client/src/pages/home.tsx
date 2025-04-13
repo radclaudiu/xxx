@@ -88,19 +88,28 @@ export default function Home() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isEmployeeModalOpen, isHelpModalOpen, toast]);
   
-  // Fetch employees
+  // Fetch employees filtered by selected company
   const { data: employees = [] } = useQuery<Employee[]>({
-    queryKey: ["/api/employees"],
+    queryKey: ["/api/employees", selectedCompany?.id],
+    queryFn: async () => {
+      if (!selectedCompany) return [];
+      const response = await fetch(`/api/employees?companyId=${selectedCompany.id}`);
+      if (!response.ok) throw new Error("Failed to fetch employees");
+      return response.json();
+    },
+    enabled: !!selectedCompany,
   });
   
-  // Fetch all shifts (without date filter) for use in exports
+  // Fetch all shifts (without date filter) for use in exports, filtered by company
   const { data: allShifts = [] } = useQuery<Shift[]>({
-    queryKey: ["/api/shifts"],
+    queryKey: ["/api/shifts", selectedCompany?.id],
     queryFn: async () => {
-      const response = await fetch(`/api/shifts`);
+      if (!selectedCompany) return [];
+      const response = await fetch(`/api/shifts?companyId=${selectedCompany.id}`);
       if (!response.ok) throw new Error("Failed to fetch shifts");
       return response.json();
     },
+    enabled: !!selectedCompany,
   });
   
   // Filter shifts for the current day (for the main schedule display)
@@ -171,6 +180,16 @@ export default function Home() {
   
   // Handle saving selected shifts
   const handleSaveShifts = (selections: {employee: Employee, startTime: string, endTime: string}[]) => {
+    // Si no hay empresa seleccionada, no hacer nada
+    if (!selectedCompany) {
+      toast({
+        title: "Error",
+        description: "No hay empresa seleccionada. Selecciona una empresa primero.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     // Process each selection and create a shift
     const promises = selections.map(selection => {
       const shiftData: InsertShift = {
@@ -179,6 +198,7 @@ export default function Home() {
         startTime: selection.startTime,
         endTime: selection.endTime,
         notes: "",
+        companyId: selectedCompany.id
       };
       
       return createShiftMutation.mutateAsync(shiftData);
@@ -251,6 +271,20 @@ export default function Home() {
               <span className="text-sm bg-white/20 px-2 py-1 rounded">
                 {user.username}
               </span>
+            )}
+            {selectedCompany && (
+              <div className="flex items-center gap-2 bg-white/10 px-3 py-1 rounded ml-3">
+                <Building2 className="h-4 w-4" />
+                <span className="text-sm font-medium">{selectedCompany.name}</span>
+                <Button
+                  variant="ghost"
+                  className="h-6 w-6 p-0 ml-2 text-white/70 hover:text-white hover:bg-white/20 rounded-full"
+                  onClick={() => setSelectedCompany(null)}
+                  title="Cambiar empresa"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 21a8 8 0 0 0-16 0"/><path d="M10 8V3"/><path d="M14 8V3"/><path d="M14 12h4"/><path d="M18 16v.01"/><path d="M6 16v.01"/><path d="M22 22H2"/><path d="M10 12h.01"/><path d="M14 16h.01"/><path d="M10 16h.01"/></svg>
+                </Button>
+              </div>
             )}
           </div>
           <div className="flex items-center gap-2">
