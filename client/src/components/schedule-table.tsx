@@ -1,27 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { format, addDays, isSameDay } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
-import { toast } from '@/hooks/use-toast';
-import { Info, Save, Edit } from 'lucide-react';
-// Se eliminó la importación de ExportsModal ya que se movió al componente principal
-import { 
-  formatDateForAPI, 
-  generateTimeSlots, 
-  isTimeBetween, 
-  convertTimeToMinutes, 
-  calculateHoursBetween,
-  getStartOfWeek,
-  getEndOfWeek,
-  isInSameWeek
-} from '@/lib/date-helpers';
-import { Employee, Shift } from '@shared/schema';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Shift, Employee } from '@shared/schema';
+import { convertTimeToMinutes, calculateHoursBetween, isTimeBetween, getStartOfWeek, getEndOfWeek, isInSameWeek, formatDateForAPI } from '@/lib/date-helpers';
 
 interface ScheduleTableProps {
   employees: Employee[];
@@ -38,55 +21,166 @@ interface ScheduleTableProps {
   onEditEmployee?: (employee: Employee) => void;
 }
 
-export default function ScheduleTable({ 
-  employees, 
+export default function ScheduleTable({
+  employees,
   shifts,
   date,
   onSaveShifts,
   onDeleteShift,
-  estimatedDailySales = 0,
-  hourlyEmployeeCost = 0,
+  estimatedDailySales,
+  hourlyEmployeeCost,
   startHour: initialStartHour = 8,
   endHour: initialEndHour = 22,
   onSaveTimeRange,
   isReadOnly = false,
   onEditEmployee
 }: ScheduleTableProps) {
-  const isMobile = useIsMobile();
+  // Formatted date for API and display
+  const formattedDate = formatDateForAPI(date);
+  const displayDate = format(date, 'EEEE, dd MMMM yyyy', {locale: es});
   
-  // Cell size controls
-  const [cellSize, setCellSize] = useState(() => {
-    // En móviles, usar células más grandes por defecto para facilitar el toque
-    return isMobile ? 30 : 28;
-  });
+  // State for cell size
+  const [cellSize, setCellSize] = useState(30);
   
-  const increaseCellSize = () => {
-    setCellSize(prev => Math.min(prev + 2, 60)); // Aumentar límite máximo a 60px
-  };
-  
-  const decreaseCellSize = () => {
-    setCellSize(prev => Math.max(prev - 2, 20));
-  };
-  
-  // Rango horario configurable - usar los valores de props
-  const [startHour, setStartHour] = useState(initialStartHour); 
+  // State for time range
+  const [startHour, setStartHour] = useState(initialStartHour);
   const [endHour, setEndHour] = useState(initialEndHour);
   
-  // Generar intervalos de tiempo basados en el rango horario configurado
-  const timeSlots = generateTimeSlots(startHour, endHour);
+  // Increase cell size
+  const increaseCellSize = () => {
+    setCellSize(prev => Math.min(prev + 5, 50));
+  };
   
-  // Format date for API
-  const formattedDate = formatDateForAPI(date);
+  // Decrease cell size
+  const decreaseCellSize = () => {
+    setCellSize(prev => Math.max(prev - 5, 20));
+  };
   
-  // Store the selected cells for each employee
-  const [selectedCellsByEmployee, setSelectedCellsByEmployee] = useState<
-    Map<number, Set<string>>
-  >(new Map());
+  // Generate time slots based on start/end hours
+  const timeSlots = useMemo(() => {
+    const slots: string[] = [];
+    
+    // Adjust for 24-hour rollover
+    let adjustedEndHour = endHour;
+    if (endHour < startHour) {
+      adjustedEndHour += 24; // Add 24 hours
+    }
+    
+    // Generate slots at 15-minute intervals
+    for (let hour = startHour; hour < adjustedEndHour; hour++) {
+      const displayHour = hour % 24; // To handle 24+ hours
+      
+      for (let minute = 0; minute < 60; minute += 15) {
+        // Skip last entry of the last hour to avoid duplicates with the next day
+        if (hour === adjustedEndHour - 1 && minute === 45) continue;
+        
+        const formattedHour = displayHour.toString().padStart(2, '0');
+        const formattedMinute = minute.toString().padStart(2, '0');
+        slots.push(`${formattedHour}:${formattedMinute}`);
+      }
+    }
+    
+    return slots;
+  }, [startHour, endHour]);
   
-  // Clear selections when date changes
+  // State for selected cells by employee
+  const [selectedCellsByEmployee, setSelectedCellsByEmployee] = useState<Map<number, Set<string>>>(
+    new Map()
+  );
+  
+  // Function to check if a cell is selected
+  const isCellSelected = (employeeId: number, time: string): boolean => {
+    const selectedTimes = selectedCellsByEmployee.get(employeeId);
+    return selectedTimes ? selectedTimes.has(time) : false;
+  };
+  
+  // Reset selections when date changes
   useEffect(() => {
     setSelectedCellsByEmployee(new Map());
   }, [date]);
+  
+  // Estado para almacenar las horas restantes calculadas por empleado
+  const [employeeRemainingHours, setEmployeeRemainingHours] = useState<Record<number, number>>({});
+  
+  // Función para calcular horas de la semana (memoizada para mejor rendimiento)
+  const calculateWeeklyHours = useCallback((employee: Employee) => {
+    const currentWeekStart = getStartOfWeek(date);
+    const currentWeekEnd = getEndOfWeek(date);
+    
+    // Inicializar horas trabajadas
+    let workedHours = 0;
+    
+    // Contar horas de turnos ya guardados en la semana actual
+    shifts.forEach(shift => {
+      if (
+        shift.employeeId === employee.id && 
+        isInSameWeek(new Date(shift.date), date)
+      ) {
+        workedHours += calculateHoursBetween(shift.startTime, shift.endTime);
+      }
+    });
+    
+    // Contar horas de selecciones actuales no guardadas para hoy
+    const selectedTimes = selectedCellsByEmployee.get(employee.id);
+    if (selectedTimes && selectedTimes.size > 0) {
+      // Convertir tiempos seleccionados a array y ordenar
+      const sortedTimes = Array.from(selectedTimes).sort((a, b) => {
+        return convertTimeToMinutes(a) - convertTimeToMinutes(b);
+      });
+      
+      // Agrupar tiempos consecutivos
+      let currentGroup: string[] = [sortedTimes[0]];
+      
+      for (let i = 1; i < sortedTimes.length; i++) {
+        const prevTime = currentGroup[currentGroup.length - 1];
+        const currTime = sortedTimes[i];
+        
+        // Verificar si los tiempos son consecutivos
+        const prevIndex = timeSlots.indexOf(prevTime);
+        const currIndex = timeSlots.indexOf(currTime);
+        
+        if (currIndex - prevIndex === 1) {
+          // Tiempos consecutivos, agregar al grupo actual
+          currentGroup.push(currTime);
+        } else {
+          // Tiempos no consecutivos, calcular horas para el grupo actual
+          const startTime = currentGroup[0];
+          const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
+          const endTime = lastTimeIndex + 1 < timeSlots.length ? 
+                          timeSlots[lastTimeIndex + 1] : 
+                          currentGroup[currentGroup.length - 1];
+          
+          // Sumar horas de este grupo
+          workedHours += calculateHoursBetween(startTime, endTime);
+          
+          // Iniciar nuevo grupo
+          currentGroup = [currTime];
+        }
+      }
+      
+      // Procesar el último grupo
+      if (currentGroup.length > 0) {
+        const startTime = currentGroup[0];
+        const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
+        const endTime = lastTimeIndex + 1 < timeSlots.length ? 
+                        timeSlots[lastTimeIndex + 1] : 
+                        currentGroup[currentGroup.length - 1];
+        
+        // Sumar horas del último grupo
+        workedHours += calculateHoursBetween(startTime, endTime);
+      }
+    }
+    
+    // Calcular horas restantes
+    const maxWeeklyHours = employee.maxHoursPerWeek || 40; // Default 40 si no está definido
+    const remainingHours = Math.max(0, maxWeeklyHours - workedHours);
+    
+    return {
+      maxWeeklyHours,
+      workedHours: parseFloat(workedHours.toFixed(2)),
+      remainingHours: parseFloat(remainingHours.toFixed(2))
+    };
+  }, [date, shifts, selectedCellsByEmployee, timeSlots]);
   
   // Efecto para calcular y actualizar las horas restantes de cada empleado
   useEffect(() => {
@@ -102,26 +196,6 @@ export default function ScheduleTable({
     // Actualizar el estado con los nuevos valores
     setEmployeeRemainingHours(newRemainingHours);
   }, [employees, shifts, date, selectedCellsByEmployee, calculateWeeklyHours]);
-  
-  // Actualizar estados cuando cambian los props
-  useEffect(() => {
-    setStartHour(initialStartHour);
-    setEndHour(initialEndHour);
-  }, [initialStartHour, initialEndHour]);
-  
-  // State for drag selection
-  const [isDragging, setIsDragging] = useState(false);
-  const [startTime, setStartTime] = useState<string | null>(null);
-  const [activeEmployee, setActiveEmployee] = useState<Employee | null>(null);
-  const mouseDownRef = useRef(false);
-  
-  // Variables para controlar actualizaciones durante arrastre táctil
-  const lastTouchUpdateRef = useRef<number>(0);
-  const batchedSelectionsRef = useRef<Map<number, Set<string>> | null>(null);
-  const pendingUpdateRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Estado para almacenar las horas restantes calculadas por empleado
-  const [employeeRemainingHours, setEmployeeRemainingHours] = useState<Record<number, number>>({});
   
   // Function to check if a cell should be marked as assigned
   const isCellAssigned = (employeeId: number, time: string) => {
@@ -175,6 +249,92 @@ export default function ScheduleTable({
     return Math.max(1, intervalCount);
   };
   
+  // State for drag selection
+  const [isDragging, setIsDragging] = useState(false);
+  const [startTime, setStartTime] = useState<string | null>(null);
+  const [activeEmployee, setActiveEmployee] = useState<Employee | null>(null);
+  const mouseDownRef = useRef(false);
+  
+  // Variables para controlar actualizaciones durante arrastre táctil
+  const lastTouchUpdateRef = useRef<number>(0);
+  const batchedSelectionsRef = useRef<Map<number, Set<string>> | null>(null);
+  const pendingUpdateRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Estado para menú contextual
+  const [contextMenu, setContextMenu] = useState<{
+    isOpen: boolean;
+    shift: Shift | null;
+    x: number;
+    y: number;
+  }>({
+    isOpen: false,
+    shift: null,
+    x: 0,
+    y: 0
+  });
+  
+  // Manejar apertura de menú contextual
+  const handleOpenContextMenu = (e: React.MouseEvent | React.TouchEvent, shift: Shift) => {
+    // Si está en modo solo lectura, no mostrar el menú contextual
+    if (isReadOnly) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // En dispositivos táctiles, obtener coordenadas del toque
+    let x = 0;
+    let y = 0;
+    
+    if ('touches' in e) {
+      // Es un evento táctil
+      const touch = e.touches[0];
+      x = touch.clientX;
+      y = touch.clientY;
+    } else {
+      // Es un evento de mouse
+      x = (e as React.MouseEvent).clientX;
+      y = (e as React.MouseEvent).clientY;
+    }
+    
+    // Cerrar cualquier menú contextual abierto previamente
+    setContextMenu(prev => ({
+      isOpen: false,
+      shift: null,
+      x: 0,
+      y: 0
+    }));
+    
+    // Retrasar la apertura para evitar conflictos con los eventos táctiles
+    setTimeout(() => {
+      // Abrir menú contextual
+      setContextMenu({
+        isOpen: true,
+        shift,
+        x,
+        y
+      });
+    }, 50);
+  };
+  
+  // Cerrar menú contextual
+  const closeContextMenu = () => {
+    setContextMenu(prev => ({
+      ...prev,
+      isOpen: false
+    }));
+  };
+  
+  // Eliminar turno cuando se hace clic en la opción correspondiente del menú contextual
+  const handleDeleteShift = (shift: Shift) => {
+    if (!onDeleteShift) return;
+    
+    // Close the context menu
+    closeContextMenu();
+    
+    // Eliminar el turno sin mostrar notificación
+    onDeleteShift(shift.id);
+  };
+
   // Handle document-wide mouse/touch up events
   useEffect(() => {
     // Handler for mouse up and touch end events
@@ -442,441 +602,128 @@ export default function ScheduleTable({
   
   // Handler for cell interaction during drag
   const handleCellInteraction = (employee: Employee, time: string) => {
-    // Si está en modo solo lectura, no permitir la interacción
-    if (isReadOnly) return;
+    // Si no está en modo arrastre o es un empleado diferente, no hacer nada
+    if (!isDragging || !mouseDownRef.current || !activeEmployee || activeEmployee.id !== employee.id) return;
     
-    // Only process if we're dragging and it's the same employee
-    if (!mouseDownRef.current || !isDragging || !activeEmployee || activeEmployee.id !== employee.id) return;
-    
-    // If cell is already assigned, don't allow selection
+    // Si la celda ya está asignada a un turno, no permitir selección
     if (isCellAssigned(employee.id, time)) return;
     
-    if (startTime) {
-      // Usar la referencia batch para selecciones de ratón también
-      const batch = batchedSelectionsRef.current || new Map(selectedCellsByEmployee);
-      
-      // Select all cells between startTime and current time
-      const startIndex = timeSlots.indexOf(startTime);
-      const currentIndex = timeSlots.indexOf(time);
-      
-      if (startIndex >= 0 && currentIndex >= 0) {
-        const selectedCells = batch.get(employee.id) || new Set<string>();
-        
-        // Handle selection in either direction (forward or backward)
-        const minIdx = Math.min(startIndex, currentIndex);
-        const maxIdx = Math.max(startIndex, currentIndex);
-        
-        // Bandera para detectar cambios
-        let hasChanges = false;
-        const previousSize = selectedCells.size;
-        
-        for (let i = minIdx; i <= maxIdx; i++) {
-          const timeSlot = timeSlots[i];
-          // Only add if the cell is not already assigned
-          if (!isCellAssigned(employee.id, timeSlot) && !selectedCells.has(timeSlot)) {
-            selectedCells.add(timeSlot);
-            hasChanges = true;
-          }
-        }
-        
-        // Si hay cambios, actualizar el estado
-        if (hasChanges || previousSize !== selectedCells.size) {
-          // Update with the new selection
-          if (selectedCells.size > 0) {
-            batch.set(employee.id, selectedCells);
-          } else {
-            batch.delete(employee.id);
-          }
-          
-          // Actualizar la referencia batch
-          batchedSelectionsRef.current = batch;
-          
-          // Actualizar el estado
-          setSelectedCellsByEmployee(new Map(batch));
-        }
-      }
+    // Si batchedSelectionsRef.current es null, significa que no es un arrastre real
+    if (!batchedSelectionsRef.current) return;
+    
+    // Obtener conjunto de celdas seleccionadas para este empleado
+    const selectedTimes = batchedSelectionsRef.current.get(employee.id) || new Set<string>();
+    
+    // Clone the set to avoid mutation issues
+    const newSelectedTimes = new Set(selectedTimes);
+    
+    // Simple toggle for now - more complex logic can be added later
+    if (selectedTimes.has(time)) {
+      newSelectedTimes.delete(time);
+    } else {
+      newSelectedTimes.add(time);
     }
+    
+    // Create a new map with the updated selection
+    const newMap = new Map(batchedSelectionsRef.current);
+    
+    // Update the map with our modified selection
+    if (newSelectedTimes.size > 0) {
+      newMap.set(employee.id, newSelectedTimes);
+    } else {
+      newMap.delete(employee.id);
+    }
+    
+    // Update the batch ref
+    batchedSelectionsRef.current = newMap;
   };
   
   // Mouse enter handler
   const handleMouseEnter = (employee: Employee, time: string) => {
-    handleCellInteraction(employee, time);
+    if (isDragging && mouseDownRef.current) {
+      handleCellInteraction(employee, time);
+    }
   };
   
-  // Touch move handler para mostrar selecciones en tiempo real y permitir deselección
+  // Touch move handler - used to track touch movement across cells
   const handleTouchMove = (e: TouchEvent) => {
-    if (!isDragging || !activeEmployee || !startTime) return;
-    e.preventDefault(); // Prevenir desplazamiento de página durante el arrastre
+    // Si no está en modo arrastre o es demasiado pronto para la siguiente actualización, no hacer nada
+    if (!isDragging || !mouseDownRef.current || !activeEmployee || !batchedSelectionsRef.current) return;
     
-    // Aplicar throttling suave para limitar actualizaciones pero mantener feedback visual
+    // Limitar la frecuencia de actualizaciones para mejorar rendimiento
     const now = Date.now();
-    if (now - lastTouchUpdateRef.current < 50) { // Reducido a 50ms para mejor feedback visual
-      return; // Throttling más ligero para que se vean las actualizaciones en tiempo real
-    }
+    if (now - lastTouchUpdateRef.current < 50) return; // Solo actualizar cada 50ms
     
     lastTouchUpdateRef.current = now;
     
-    // Obtener la posición actual del toque
+    // Obtener el elemento bajo el toque
     const touch = e.touches[0];
-    const x = touch.clientX;
-    const y = touch.clientY;
+    const elem = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement;
     
-    // Usar offsets para detectar elementos incluso si el dedo se desvía ligeramente
-    const offsets = [
-      [0, 0],     // Centro
-      [-5, 0],    // Izquierda
-      [5, 0],     // Derecha
-      [0, -10],   // Arriba
-      [0, 10],    // Abajo
-      [-10, -10], // Diagonal superior izquierda
-      [10, -10],  // Diagonal superior derecha
-      [-10, 10],  // Diagonal inferior izquierda
-      [10, 10],   // Diagonal inferior derecha
-    ];
+    if (!elem) return;
     
-    let foundCell = false;
+    // Buscar el data-time y data-employee-id en el elemento o sus padres
+    let currentElem: HTMLElement | null = elem;
+    let timeAttr: string | null = null;
+    let employeeIdAttr: string | null = null;
     
-    // Buscar una celda válida bajo el dedo
-    for (const [offsetX, offsetY] of offsets) {
-      if (foundCell) break; // Salir si ya encontramos una celda válida
+    while (currentElem && (!timeAttr || !employeeIdAttr)) {
+      if (!timeAttr) timeAttr = currentElem.getAttribute('data-time');
+      if (!employeeIdAttr) employeeIdAttr = currentElem.getAttribute('data-employee-id');
       
-      const elementUnderTouch = document.elementFromPoint(x + offsetX, y + offsetY);
+      if (timeAttr && employeeIdAttr) break;
       
-      if (elementUnderTouch?.tagName === 'TD' && elementUnderTouch.hasAttribute('data-cell-id')) {
-        const cellId = elementUnderTouch.getAttribute('data-cell-id');
-        if (cellId) {
-          const [empId, time] = cellId.split('-');
-          const empIdNum = parseInt(empId, 10);
+      currentElem = currentElem.parentElement;
+    }
+    
+    // Si encontramos los atributos necesarios, procesar la interacción
+    if (timeAttr && employeeIdAttr) {
+      const employeeId = parseInt(employeeIdAttr, 10);
+      
+      // Verificar que es para el empleado activo
+      if (employeeId === activeEmployee.id) {
+        // Verificar si la celda ya está asignada a un turno
+        if (!isCellAssigned(employeeId, timeAttr)) {
+          // Obtener conjunto de celdas seleccionadas
+          const selectedTimes = batchedSelectionsRef.current.get(employeeId) || new Set<string>();
           
-          // Sólo procesar si es la misma fila/empleado
-          if (empIdNum === activeEmployee.id) {
-            foundCell = true;
-            
-            // Actualizar selecciones
-            if (batchedSelectionsRef.current) {
-              const batch = batchedSelectionsRef.current;
-              
-              // Al arrastrar de nuevo sobre una celda ya seleccionada, queremos quitarla
-              // Pero solo vamos a quitar celdas individuales, no rangos, para evitar comportamiento inesperado
-              // durante el arrastre continuo.
-              
-              // Verificar si es una celda individual (tocar y soltar, no arrastrar)
-              if (time === startTime) {
-                const selectedCells = batch.get(activeEmployee.id) || new Set<string>();
-                
-                // Si está seleccionada, quitarla
-                if (selectedCells.has(time) && !isCellAssigned(activeEmployee.id, time)) {
-                  selectedCells.delete(time);
-                  
-                  // Actualizar batch
-                  if (selectedCells.size > 0) {
-                    batch.set(activeEmployee.id, selectedCells);
-                  } else {
-                    batch.delete(activeEmployee.id);
-                  }
-                  
-                  // Actualizar inmediatamente para feedback visual en tiempo real
-                  setSelectedCellsByEmployee(new Map(batch));
-                  return; // Terminar después de quitar celda
-                }
-              }
-              
-              // Comportamiento de selección normal para arrastre a nuevas celdas
-              const startIndex = timeSlots.indexOf(startTime);
-              const currentIndex = timeSlots.indexOf(time);
-              
-              if (startIndex >= 0 && currentIndex >= 0) {
-                const selectedCells = batch.get(activeEmployee.id) || new Set<string>();
-                
-                // Seleccionar rango
-                const minIdx = Math.min(startIndex, currentIndex);
-                const maxIdx = Math.max(startIndex, currentIndex);
-                
-                // Bandera para detectar cambios
-                let hasChanges = false;
-                const previousSize = selectedCells.size;
-                
-                for (let i = minIdx; i <= maxIdx; i++) {
-                  const timeSlot = timeSlots[i];
-                  if (!isCellAssigned(activeEmployee.id, timeSlot) && !selectedCells.has(timeSlot)) {
-                    selectedCells.add(timeSlot);
-                    hasChanges = true;
-                  }
-                }
-                
-                // Si hay cambios o el número de celdas cambió, actualizar
-                if (hasChanges || previousSize !== selectedCells.size) {
-                  batch.set(activeEmployee.id, selectedCells);
-                  
-                  // Actualizar inmediatamente para feedback visual en tiempo real
-                  setSelectedCellsByEmployee(new Map(batch));
-                }
-              }
-            }
-          }
+          // Clone the set
+          const newSelectedTimes = new Set(selectedTimes);
+          
+          // Determinar si estamos añadiendo o quitando celdas basándonos en la primera celda
+          // Para simplificar, en el arrastre táctil siempre añadimos la celda
+          newSelectedTimes.add(timeAttr);
+          
+          // Update the map
+          const newMap = new Map(batchedSelectionsRef.current);
+          newMap.set(employeeId, newSelectedTimes);
+          
+          // Update the batch ref
+          batchedSelectionsRef.current = newMap;
+          
+          console.log(`Touch pasó sobre celda ${timeAttr} para empleado ${employeeId}`);
         }
       }
     }
   };
   
-  // Añadir manejador global para touchmove cuando se está arrastrando
+  // Add touch move event listener
   useEffect(() => {
+    // Solo añadir el listener cuando estamos en modo arrastre
     if (isDragging) {
       document.addEventListener('touchmove', handleTouchMove, { passive: false });
+      
+      return () => {
+        document.removeEventListener('touchmove', handleTouchMove);
+      };
     }
-    
-    return () => {
-      document.removeEventListener('touchmove', handleTouchMove);
-    };
-  }, [isDragging, activeEmployee, startTime]);
+  }, [isDragging]);
   
-  // Check if a cell is selected
-  const isCellSelected = (employeeId: number, time: string) => {
-    const selectedCells = selectedCellsByEmployee.get(employeeId);
-    return selectedCells ? selectedCells.has(time) : false;
-  };
-  
-  // Handle save button click
-  const handleSaveSelections = () => {
-    const selections: { employee: Employee, startTime: string, endTime: string }[] = [];
-    
-    // Process each employee's selections
-    selectedCellsByEmployee.forEach((selectedTimes, employeeId) => {
-      if (selectedTimes.size === 0) return;
-      
-      const employee = employees.find(e => e.id === employeeId);
-      if (!employee) return;
-      
-      // Convert selected times to array and sort them
-      const sortedTimes = Array.from(selectedTimes).sort((a, b) => {
-        const [aHour, aMinute] = a.split(':').map(Number);
-        const [bHour, bMinute] = b.split(':').map(Number);
-        return (aHour * 60 + aMinute) - (bHour * 60 + bMinute);
-      });
-      
-      if (sortedTimes.length === 0) return;
-      
-      // Group consecutive times
-      let currentGroup: string[] = [sortedTimes[0]];
-      
-      for (let i = 1; i < sortedTimes.length; i++) {
-        const prevTime = currentGroup[currentGroup.length - 1];
-        const currTime = sortedTimes[i];
-        
-        // Check if times are consecutive
-        const prevIndex = timeSlots.indexOf(prevTime);
-        const currIndex = timeSlots.indexOf(currTime);
-        
-        if (currIndex - prevIndex === 1) {
-          // Times are consecutive, add to current group
-          currentGroup.push(currTime);
-        } else {
-          // Times are not consecutive, save current group and start a new one
-          const startTime = currentGroup[0];
-          const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
-          // For end time, we need the next slot after the last one
-          const endTime = lastTimeIndex + 1 < timeSlots.length ? 
-                          timeSlots[lastTimeIndex + 1] : 
-                          currentGroup[currentGroup.length - 1];
-          
-          selections.push({
-            employee,
-            startTime,
-            endTime
-          });
-          
-          // Start new group
-          currentGroup = [currTime];
-        }
-      }
-      
-      // Process the last group
-      if (currentGroup.length > 0) {
-        const startTime = currentGroup[0];
-        const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
-        const endTime = lastTimeIndex + 1 < timeSlots.length ? 
-                        timeSlots[lastTimeIndex + 1] : 
-                        currentGroup[currentGroup.length - 1];
-        
-        selections.push({
-          employee,
-          startTime,
-          endTime
-        });
-      }
-    });
-    
-    // Call the provided save function with the processed selections
-    if (selections.length > 0) {
-      onSaveShifts(selections);
-      
-      // Clear selections after saving
-      setSelectedCellsByEmployee(new Map());
-    }
-  };
-  
-  // Check if there are any selections
-  const hasSelections = selectedCellsByEmployee.size > 0;
-  
-  // Manejar la eliminación de un turno
-  const handleDeleteShift = (shift: Shift) => {
-    if (!onDeleteShift) {
-      toast({
-        title: "Error",
-        description: "No se pudo eliminar el turno, función no disponible.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // Eliminar el turno sin mostrar notificación
-    onDeleteShift(shift.id);
-  };
-  
-  // Calcular las horas semanales trabajadas y restantes para cada empleado
-  // Función para calcular horas de la semana (memoizada para mejor rendimiento)
-  const calculateWeeklyHours = useCallback((employee: Employee) => {
-    const currentWeekStart = getStartOfWeek(date);
-    const currentWeekEnd = getEndOfWeek(date);
-    
-    // Inicializar horas trabajadas
-    let workedHours = 0;
-    
-    // Contar horas de turnos ya guardados en la semana actual
-    shifts.forEach(shift => {
-      if (
-        shift.employeeId === employee.id && 
-        isInSameWeek(new Date(shift.date), date)
-      ) {
-        workedHours += calculateHoursBetween(shift.startTime, shift.endTime);
-      }
-    });
-    
-    // Contar horas de selecciones actuales no guardadas para hoy
-    const selectedTimes = selectedCellsByEmployee.get(employee.id);
-    if (selectedTimes && selectedTimes.size > 0) {
-      // Convertir tiempos seleccionados a array y ordenar
-      const sortedTimes = Array.from(selectedTimes).sort((a, b) => {
-        return convertTimeToMinutes(a) - convertTimeToMinutes(b);
-      });
-      
-      // Agrupar tiempos consecutivos
-      let currentGroup: string[] = [sortedTimes[0]];
-      
-      for (let i = 1; i < sortedTimes.length; i++) {
-        const prevTime = currentGroup[currentGroup.length - 1];
-        const currTime = sortedTimes[i];
-        
-        // Verificar si los tiempos son consecutivos
-        const prevIndex = timeSlots.indexOf(prevTime);
-        const currIndex = timeSlots.indexOf(currTime);
-        
-        if (currIndex - prevIndex === 1) {
-          // Tiempos consecutivos, agregar al grupo actual
-          currentGroup.push(currTime);
-        } else {
-          // Tiempos no consecutivos, calcular horas para el grupo actual
-          const startTime = currentGroup[0];
-          const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
-          const endTime = lastTimeIndex + 1 < timeSlots.length ? 
-                          timeSlots[lastTimeIndex + 1] : 
-                          currentGroup[currentGroup.length - 1];
-          
-          // Sumar horas de este grupo
-          workedHours += calculateHoursBetween(startTime, endTime);
-          
-          // Iniciar nuevo grupo
-          currentGroup = [currTime];
-        }
-      }
-      
-      // Procesar el último grupo
-      if (currentGroup.length > 0) {
-        const startTime = currentGroup[0];
-        const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
-        const endTime = lastTimeIndex + 1 < timeSlots.length ? 
-                        timeSlots[lastTimeIndex + 1] : 
-                        currentGroup[currentGroup.length - 1];
-        
-        // Sumar horas del último grupo
-        workedHours += calculateHoursBetween(startTime, endTime);
-      }
-    }
-    
-    // Calcular horas restantes
-    const maxWeeklyHours = employee.maxHoursPerWeek || 40; // Default 40 si no está definido
-    const remainingHours = Math.max(0, maxWeeklyHours - workedHours);
-    
-    return {
-      maxWeeklyHours,
-      workedHours: parseFloat(workedHours.toFixed(2)),
-      remainingHours: parseFloat(remainingHours.toFixed(2))
-    };
-  }, [date, shifts, selectedCellsByEmployee, timeSlots]);
-  
-  // Estado para menú contextual
-  const [contextMenu, setContextMenu] = useState<{
-    isOpen: boolean;
-    shift: Shift | null;
-    x: number;
-    y: number;
-  }>({
-    isOpen: false,
-    shift: null,
-    x: 0,
-    y: 0
-  });
-  
-  // Manejar apertura de menú contextual
-  const handleOpenContextMenu = (e: React.MouseEvent | React.TouchEvent, shift: Shift) => {
-    // Si está en modo solo lectura, no mostrar el menú contextual
-    if (isReadOnly) return;
-    
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // En dispositivos táctiles, obtener coordenadas del toque
-    let x = 0;
-    let y = 0;
-    
-    if ('touches' in e) {
-      // Es un evento táctil
-      const touch = e.touches[0];
-      x = touch.clientX;
-      y = touch.clientY;
-    } else {
-      // Es un evento de mouse
-      x = (e as React.MouseEvent).clientX;
-      y = (e as React.MouseEvent).clientY;
-    }
-    
-    // Cerrar cualquier menú contextual abierto previamente
-    setContextMenu(prev => ({
-      isOpen: false,
-      shift: null,
-      x: 0,
-      y: 0
-    }));
-    
-    // Retrasar la apertura para evitar conflictos con los eventos táctiles
-    setTimeout(() => {
-      // Abrir menú contextual
-      setContextMenu({
-        isOpen: true,
-        shift,
-        x,
-        y
-      });
-    }, 50);
-  };
-  
-  // Cerrar menú contextual
-  const closeContextMenu = () => {
-    setContextMenu(prev => ({
-      ...prev,
-      isOpen: false
-    }));
-  };
+  // Actualizar estados cuando cambian los props
+  useEffect(() => {
+    setStartHour(initialStartHour);
+    setEndHour(initialEndHour);
+  }, [initialStartHour, initialEndHour]);
 
   return (
     <div className="space-y-4 w-full max-w-[100vw] overflow-x-hidden">
@@ -937,8 +784,6 @@ export default function ScheduleTable({
           onClick={closeContextMenu}
         />
       )}
-      
-      {/* Se eliminaron las indicaciones del modo táctil */}
       
       {/* Control buttons */}
       <div className="flex justify-between flex-wrap gap-3 mb-2">
@@ -1048,12 +893,6 @@ export default function ScheduleTable({
               </Button>
             )}
           </div>
-          
-          {/* Se eliminó el botón de exportaciones ya que se movió al menú principal */}
-        </div>
-        
-        <div className="flex items-center">
-          {/* Se eliminó el botón de guardar turnos ya que ahora se guardan automáticamente */}
         </div>
       </div>
       
@@ -1255,295 +1094,207 @@ export default function ScheduleTable({
                 );
               })}
             </tr>
-            
-
           </thead>
-
-          {/* Table Body */}
+          
+          {/* Table Body - Employees and time slots */}
           <tbody>
-            {employees.map((employee) => (
-              <tr key={employee.id} className="employee-row">
-                <td 
-                  className="border-b border-r border-neutral-200 p-0 bg-white"
-                  style={{
-                    position: 'sticky',
-                    left: 0,
-                    zIndex: 10,
-                    backgroundColor: 'white',
-                    boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
-                    height: `${cellSize}px`,
-                    minWidth: "150px", // Un poco más ancho para acomodar la información adicional
-                    width: "150px",
-                    padding: 0
-                  }}
-                >
-                  <div className="flex items-center h-full" style={{width: "100%"}}>
-                    {/* Celda principal del empleado */}
-                    <div className="flex justify-between items-center h-full px-1" 
+            {employees.map((employee) => {
+              // Obtener horas restantes para este empleado
+              const remainingHours = employeeRemainingHours[employee.id] || 0;
+              
+              // Determinar color de fondo según horas restantes (verde si tiene suficientes, amarillo si está bajo, rojo si no tiene)
+              let hoursColor = 'text-green-600'; // Por defecto, verde
+              if (remainingHours <= 8) {
+                hoursColor = 'text-amber-500'; // Amarillo si quedan pocas horas
+              }
+              if (remainingHours <= 0) {
+                hoursColor = 'text-red-500'; // Rojo si no quedan horas
+              }
+              
+              // Array para llevar control de celdas que deben saltarse
+              const skipCells: Record<string, boolean> = {};
+              
+              return (
+                <tr key={employee.id} className="employee-row">
+                  {/* Employee name column - sticky left */}
+                  <td
+                    className="border-b border-r border-neutral-200 font-medium bg-white p-0"
+                    style={{
+                      position: 'sticky',
+                      left: 0,
+                      zIndex: 10,
+                      boxShadow: '2px 0 5px rgba(0,0,0,0.05)',
+                      height: `${cellSize}px`,
+                      minWidth: "150px",
+                      width: "150px"
+                    }}
+                  >
+                    <div className="flex flex-col justify-center h-full px-1" 
                       style={{
                         width: "110px",
                         borderRight: "1px dashed #EEEEEE",
                         overflow: "hidden"
                       }}
                     >
-                      <span className="truncate text-sm font-medium pr-1" style={{maxWidth: "95px", display: "block"}}>{employee.name}</span>
-                      {/* Botón de edición de empleado - solo visible si no es modo de solo lectura y hay función onEditEmployee */}
-                      {!isReadOnly && onEditEmployee && (
-                        <button 
-                          className="text-neutral-400 hover:text-neutral-600 flex-shrink-0 p-0"
-                          onClick={(e) => {
-                            e.stopPropagation(); // Evitar interacción con la celda
-                            onEditEmployee(employee);
-                          }}
-                        >
-                          <Edit className="h-3 w-3" />
-                        </button>
-                      )}
+                      <div className="flex justify-between items-center">
+                        <span className="truncate text-sm font-medium pr-1" style={{maxWidth: "95px", display: "block"}}>{employee.name}</span>
+                        {/* Botón de edición de empleado - solo visible si no es modo de solo lectura y hay función onEditEmployee */}
+                        {!isReadOnly && onEditEmployee && (
+                          <button 
+                            className="text-neutral-400 hover:text-neutral-600 flex-shrink-0 p-0"
+                            onClick={(e) => {
+                              e.stopPropagation(); // Evitar interacción con la celda
+                              if (onEditEmployee) {
+                                onEditEmployee(employee);
+                              }
+                            }}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                              <path d="m15 5 4 4"/>
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                      
+                      {/* Información de horas restantes */}
+                      <div className={`text-[0.65rem] ${hoursColor} mt-0.5`}>
+                        {remainingHours} h restantes
+                      </div>
                     </div>
-                    
-                    {/* Celda que muestra las horas semanales restantes */}
-                    {(() => {
-                      const { maxWeeklyHours, workedHours, remainingHours } = calculateWeeklyHours(employee);
-                      
-                      // Determinar color basado en horas restantes
-                      const remainingPercentage = (remainingHours / maxWeeklyHours) * 100;
-                      const textColor = 
-                        remainingPercentage <= 10 ? "text-red-600" :
-                        remainingPercentage <= 25 ? "text-amber-600" :
-                        "text-blue-600";
-                      
-                      return (
-                        <div className="flex flex-col justify-center items-center h-full px-1" 
-                          style={{
-                            width: "30px",
-                            boxSizing: "border-box",
-                            overflow: "hidden"
-                          }}
-                        >
-                          <span className={`text-[0.55rem] ${textColor} font-semibold`} 
-                            title={`${remainingHours}h restantes de ${maxWeeklyHours}h semanales`}>
-                            {remainingHours}h
-                          </span>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </td>
-                
-                {(() => {
-                  // Usamos un array temporal para llevar control de las celdas que debemos saltarnos
-                  // porque ya están incluidas en un colSpan
-                  const skipCells: {[key: string]: boolean} = {};
+                  </td>
                   
-                  return timeSlots.map((time, timeIndex) => {
-                    // Si esta celda debe ser saltada, no renderizamos nada
+                  {/* Time slots */}
+                  {timeSlots.map((time) => {
+                    // Si esta celda debe saltarse (porque forma parte de un turno que ya se ha renderizado), no renderizarla
                     if (skipCells[time]) {
                       return null;
                     }
                     
+                    // Check if this cell is part of a shift
                     const isAssigned = isCellAssigned(employee.id, time);
                     const isFirstCell = isFirstCellInShift(employee.id, time);
-                    const shift = isFirstCell ? getShiftForCell(employee.id, time) : null;
-                    const isSelected = isCellSelected(employee.id, time);
                     
-                    // Si es la primera celda de un turno, calculamos cuántas celdas debe ocupar
-                    let colSpan = 1;
-                    if (isFirstCell && shift) {
-                      colSpan = getShiftCellSpan(employee.id, time);
+                    // If this is the first cell in a shift, render a cell that spans multiple slots
+                    if (isAssigned && isFirstCell) {
+                      const shift = getShiftForCell(employee.id, time)!;
+                      const cellSpan = getShiftCellSpan(employee.id, time);
                       
-                      // Marcar las siguientes celdas como "saltadas"
-                      for (let i = 1; i < colSpan && timeIndex + i < timeSlots.length; i++) {
-                        skipCells[timeSlots[timeIndex + i]] = true;
+                      // Marcar las siguientes celdas para saltarlas
+                      for (let i = 1; i < cellSpan; i++) {
+                        const nextIndex = timeSlots.indexOf(time) + i;
+                        if (nextIndex < timeSlots.length) {
+                          skipCells[timeSlots[nextIndex]] = true;
+                        }
                       }
-                    }
-                    
-                    return (
-                      <td 
-                        key={`${employee.id}-${time}`}
-                        data-cell-id={`${employee.id}-${time}`}
-                        colSpan={colSpan}
-                        className={`time-cell ${
-                          isAssigned ? 'assigned' : ''
-                        } ${isSelected ? 'selected' : ''} ${
-                          time.endsWith(':00') ? 'hour-marker' : ''
-                        }`}
-                        style={{
-                          width: `${cellSize * colSpan}px`, // Ancho dinámico basado en cellSize y colSpan
-                          height: `${cellSize}px`, // Altura dinámica basada en cellSize
-                          lineHeight: `${cellSize}px`, // Garantizar altura exacta
-                          padding: "0", // Sin padding para mantener tamaño exacto
-                          boxSizing: "border-box", // Incluir bordes en dimensiones
-                          backgroundColor: isSelected ? 'rgba(76, 175, 80, 0.4)' : 
-                                          isAssigned ? 'rgba(25, 118, 210, 0.2)' : 
-                                          'transparent',
-                          borderTop: isSelected ? '1px solid #4CAF50' : 
-                                   isAssigned ? '1px solid #1976D2' : '1px solid #E0E0E0',
-                          borderRight: isSelected ? '1px solid #4CAF50' : 
-                                      isAssigned ? '1px solid #1976D2' : '1px solid #E0E0E0',
-                          borderBottom: isSelected ? '1px solid #4CAF50' : 
-                                       isAssigned ? '1px solid #1976D2' : '1px solid #E0E0E0',
-                          borderLeft: time.endsWith(':00') ? '2px solid #AAAAAA' : 
-                                     time.endsWith(':30') ? '1px solid #DDDDDD' : 
-                                     '1px dashed #EEEEEE',
-                          cursor: 'pointer',
-                          WebkitUserSelect: 'none',  // Safari
-                          MozUserSelect: 'none',     // Firefox
-                          msUserSelect: 'none',      // IE/Edge
-                          userSelect: 'none',        // Standard
-                          touchAction: 'none',       // Prevenir desplazamiento en celdas individuales
-                          WebkitTapHighlightColor: 'transparent' // Quitar resaltado al tocar
-                        }}
-                        onMouseDown={(e) => {
-                          // No activar selección si la celda ya tiene un turno asignado
-                          if (!isAssigned) {
-                            handleMouseDown(employee, time);
-                          } else if (isFirstCell && shift && onDeleteShift) {
-                            // Mostrar opciones contextuales si es un turno existente
+                      
+                      // Renderizar celda de turno
+                      return (
+                        <td
+                          key={`${employee.id}-${time}`}
+                          className="shift-cell relative p-0 border-b border-neutral-200"
+                          colSpan={cellSpan}
+                          style={{
+                            height: `${cellSize}px`,
+                            borderLeft: time.endsWith(':00') ? '2px solid #AAAAAA' : 
+                                    time.endsWith(':30') ? '1px solid #DDDDDD' : 
+                                    '1px dashed #EEEEEE'
+                          }}
+                          onContextMenu={(e) => {
                             e.preventDefault();
-                            if (window.confirm(`¿Desea eliminar el turno de ${shift.startTime} a ${shift.endTime}?`)) {
-                              handleDeleteShift(shift);
+                            if (!isReadOnly && onDeleteShift) {
+                              handleOpenContextMenu(e, shift);
                             }
-                          }
-                        }}
-                        onMouseEnter={() => {
-                          if (!isAssigned) {
-                            handleMouseEnter(employee, time);
-                          }
-                        }}
-                        onClick={(e) => {
-                          e.preventDefault(); // Prevenir comportamiento por defecto
-                          e.stopPropagation(); // Detener propagación
-                          
-                          // Desactivar el estado de arrastre inmediatamente para clic simple
-                          mouseDownRef.current = false;
-                          setIsDragging(false);
-                          setStartTime(null);
-                          setActiveEmployee(null);
-                          
-                          // Limpiar batch para prevenir restauración en mouseup
-                          batchedSelectionsRef.current = null;
-                          
-                          // Celda no asignada: alternar selección
-                          if (!isAssigned) {
-                            console.log('Click en celda:', time, 'estado actual:', isSelected ? 'seleccionada' : 'no seleccionada');
+                          }}
+                          onTouchStart={(e) => {
+                            // Para dispositivos táctiles, un toque largo activa el menú contextual
+                            if (isReadOnly || !onDeleteShift) return;
                             
-                            // Forzar una nueva copia del estado para evitar problemas de referencia
-                            const newSelectedCellsByEmployee = new Map(selectedCellsByEmployee);
-                            const selectedCells = newSelectedCellsByEmployee.get(employee.id) || new Set<string>();
-                            
-                            // Hacer copia del set para evitar problemas de referencia
-                            const selectedCellsCopy = new Set<string>(selectedCells);
-                            
-                            // Alternar la selección de forma directa
-                            if (selectedCellsCopy.has(time)) {
-                              selectedCellsCopy.delete(time);
-                              console.log('Quitando manualmente selección de celda:', time);
-                            } else {
-                              selectedCellsCopy.add(time);
-                              console.log('Añadiendo manualmente selección de celda:', time);
-                            }
-                            
-                            // Actualizar el Map con el Set modificado
-                            if (selectedCellsCopy.size > 0) {
-                              newSelectedCellsByEmployee.set(employee.id, selectedCellsCopy);
-                            } else {
-                              newSelectedCellsByEmployee.delete(employee.id);
-                            }
-                            
-                            // Actualizar el estado directamente, sin pasar por el sistema de batching
-                            setSelectedCellsByEmployee(newSelectedCellsByEmployee);
-                            
-                            // Si mouseup se dispara después, ya no tendrá efecto porque batchedSelectionsRef es null
-                          } else if (isFirstCell && shift && onDeleteShift) {
-                            // Mostrar menú contextual para eliminar turno existente
-                            handleOpenContextMenu(e, shift);
-                          }
-                        }}
-                        onTouchStart={(e) => {
-                          // Para las celdas asignadas, simplemente mostrar el menú contextual
-                          if (isAssigned && isFirstCell && shift && onDeleteShift) {
+                            // Evitar que el evento se propague pero permitir el comportamiento predeterminado
                             e.stopPropagation();
-                            e.preventDefault();
-                            handleOpenContextMenu(e, shift);
-                            return;
-                          }
-                          
-                          // Si no está asignada, manejar el toggle de selección
-                          if (!isAssigned) {
-                            e.stopPropagation(); // Esto evita que se propague a elementos padres
                             
-                            // IMPORTANTE: No usamos preventDefault para permitir eventos táctiles normales
+                            // Mostrar menú contextual después de un tiempo para simular toque largo
+                            const touchTimeout = setTimeout(() => {
+                              handleOpenContextMenu(e, shift);
+                            }, 500); // 500ms es un tiempo razonable para un toque largo
                             
-                            console.log(`Celda tocada: ${time}, Seleccionada: ${isSelected}`);
+                            // Limpiar el timeout si el toque termina antes
+                            const clearTouchTimeout = () => {
+                              clearTimeout(touchTimeout);
+                              document.removeEventListener('touchend', clearTouchTimeout);
+                            };
                             
-                            // Simplemente alternar la selección
-                            const newSelectedCellsByEmployee = new Map(selectedCellsByEmployee);
-                            const selectedCells = newSelectedCellsByEmployee.get(employee.id) || new Set<string>();
-                            const selectedCellsCopy = new Set<string>(selectedCells);
-                            
-                            if (selectedCellsCopy.has(time)) {
-                              // Si ya está seleccionada, quitarla
-                              selectedCellsCopy.delete(time);
-                              console.log('Touch: Quitando selección de celda:', time);
-                            } else {
-                              // Si no está seleccionada, añadirla
-                              selectedCellsCopy.add(time);
-                              console.log('Touch: Añadiendo selección de celda:', time);
-                            }
-                            
-                            // Actualizar el mapa
-                            if (selectedCellsCopy.size > 0) {
-                              newSelectedCellsByEmployee.set(employee.id, selectedCellsCopy);
-                            } else {
-                              newSelectedCellsByEmployee.delete(employee.id);
-                            }
-                            
-                            // Actualizar el estado directamente sin delays ni complicaciones
-                            setSelectedCellsByEmployee(newSelectedCellsByEmployee);
-                            
-                            // Permitir que el usuario inicie un arrastre si lo desea
-                            mouseDownRef.current = true;
-                            setActiveEmployee(employee);
-                            setStartTime(time);
-                            
-                            // Manejar el cambio al estado de arrastre después de un tiempo
-                            const timeoutId = setTimeout(() => {
-                              if (mouseDownRef.current) {
-                                setIsDragging(true);
-                                batchedSelectionsRef.current = new Map(newSelectedCellsByEmployee);
-                              }
-                            }, 200); // Tiempo más corto para mejor respuesta
-                            
-                            if (pendingUpdateRef.current) {
-                              clearTimeout(pendingUpdateRef.current);
-                            }
-                            pendingUpdateRef.current = timeoutId;
-                          }
-                        }}
-                      >
-                        {isFirstCell && shift && (
+                            document.addEventListener('touchend', clearTouchTimeout, { once: true });
+                          }}
+                        >
                           <div 
-                            className="flex items-center justify-center h-full w-full overflow-hidden"
+                            className="h-full flex items-center justify-center bg-blue-100 text-blue-800 rounded-sm mx-0.5"
                             style={{
-                              fontSize: "0.55rem",
-                              fontWeight: "bold",
-                              color: "#1565C0",
-                              whiteSpace: "nowrap",
-                              textOverflow: "ellipsis",
-                              padding: "0 2px"
+                              fontSize: "0.65rem",
+                              width: `${cellSize * cellSpan - 4}px` // -4px for margin
                             }}
                           >
-                            {`${shift.startTime} - ${shift.endTime}`}
+                            {shift.startTime} - {shift.endTime}
                           </div>
-                        )}
-                      </td>
+                        </td>
+                      );
+                    } else if (!isAssigned) {
+                      // If not assigned, render a regular selectable cell
+                      const isSelected = isCellSelected(employee.id, time);
+                      
+                      // Determine cell color based on selection
+                      const cellClassName = isSelected
+                        ? 'selected-cell bg-blue-500 border-blue-600'
+                        : 'unselected-cell bg-white hover:bg-gray-50';
+                      
+                      return (
+                        <td
+                          key={`${employee.id}-${time}`}
+                          className={`relative p-0 border-b border-neutral-200 ${cellClassName}`}
+                          style={{
+                            height: `${cellSize}px`,
+                            width: `${cellSize}px`,
+                            cursor: isReadOnly ? 'default' : 'pointer',
+                            borderLeft: time.endsWith(':00') ? '2px solid #AAAAAA' : 
+                                      time.endsWith(':30') ? '1px solid #DDDDDD' : 
+                                      '1px dashed #EEEEEE'
+                          }}
+                          data-time={time}
+                          data-employee-id={employee.id}
+                          onMouseDown={() => handleMouseDown(employee, time)}
+                          onMouseEnter={() => handleMouseEnter(employee, time)}
+                          onTouchStart={(e) => handleTouchStart(e, employee, time)}
+                        >
+                          {/* Célda vacía o seleccionada */}
+                          <div className="w-full h-full">
+                            {isSelected && (
+                              <div className="h-full w-full flex items-center justify-center">
+                                <div className="h-2 w-2 bg-white rounded-full"></div>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      );
+                    }
+                    
+                    // Default empty cell for non-first cells in a shift
+                    return (
+                      <td
+                        key={`${employee.id}-${time}`}
+                        className="empty-shift-cell p-0 border-b border-neutral-200"
+                        style={{
+                          height: `${cellSize}px`,
+                          width: `${cellSize}px`,
+                          borderLeft: time.endsWith(':00') ? '2px solid #AAAAAA' : 
+                                   time.endsWith(':30') ? '1px solid #DDDDDD' : 
+                                   '1px dashed #EEEEEE'
+                        }}
+                      />
                     );
-                  });
-                })()}
-              </tr>
-            ))}
-            
-            {/* La fila final con resumen de costos se ha eliminado y movido a la sección superior */}
+                  })}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

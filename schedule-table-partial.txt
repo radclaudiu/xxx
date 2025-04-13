@@ -1,0 +1,300 @@
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { Button } from '@/components/ui/button';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
+import { toast } from '@/hooks/use-toast';
+import { Info, Save, Edit } from 'lucide-react';
+// Se eliminó la importación de ExportsModal ya que se movió al componente principal
+import { 
+  formatDateForAPI, 
+  generateTimeSlots, 
+  isTimeBetween, 
+  convertTimeToMinutes, 
+  calculateHoursBetween,
+  getStartOfWeek,
+  getEndOfWeek,
+  isInSameWeek
+} from '@/lib/date-helpers';
+import { Employee, Shift } from '@shared/schema';
+import { useIsMobile } from '@/hooks/use-mobile';
+
+interface ScheduleTableProps {
+  employees: Employee[];
+  shifts: Shift[];
+  date: Date;
+  onSaveShifts: (selections: {employee: Employee, startTime: string, endTime: string}[]) => void;
+  onDeleteShift?: (shiftId: number) => void;
+  estimatedDailySales?: number;
+  hourlyEmployeeCost?: number;
+  startHour?: number;
+  endHour?: number;
+  onSaveTimeRange?: (startHour: number, endHour: number) => void;
+  isReadOnly?: boolean;
+  onEditEmployee?: (employee: Employee) => void;
+}
+
+export default function ScheduleTable({ 
+  employees, 
+  shifts,
+  date,
+  onSaveShifts,
+  onDeleteShift,
+  estimatedDailySales = 0,
+  hourlyEmployeeCost = 0,
+  startHour: initialStartHour = 8,
+  endHour: initialEndHour = 22,
+  onSaveTimeRange,
+  isReadOnly = false,
+  onEditEmployee
+}: ScheduleTableProps) {
+  const isMobile = useIsMobile();
+  
+  // Cell size controls
+  const [cellSize, setCellSize] = useState(() => {
+    // En móviles, usar células más grandes por defecto para facilitar el toque
+    return isMobile ? 30 : 28;
+  });
+  
+  const increaseCellSize = () => {
+    setCellSize(prev => Math.min(prev + 2, 60)); // Aumentar límite máximo a 60px
+  };
+  
+  const decreaseCellSize = () => {
+    setCellSize(prev => Math.max(prev - 2, 20));
+  };
+  
+  // Rango horario configurable - usar los valores de props
+  const [startHour, setStartHour] = useState(initialStartHour); 
+  const [endHour, setEndHour] = useState(initialEndHour);
+  
+  // Generar intervalos de tiempo basados en el rango horario configurado
+  const timeSlots = generateTimeSlots(startHour, endHour);
+  
+  // Format date for API
+  const formattedDate = formatDateForAPI(date);
+  
+  // Store the selected cells for each employee
+  const [selectedCellsByEmployee, setSelectedCellsByEmployee] = useState<
+    Map<number, Set<string>>
+  >(new Map());
+  
+  // Clear selections when date changes
+  useEffect(() => {
+    setSelectedCellsByEmployee(new Map());
+  }, [date]);
+  
+  // Función para calcular horas de la semana (memoizada para mejor rendimiento)
+  const calculateWeeklyHours = useCallback((employee: Employee) => {
+    const currentWeekStart = getStartOfWeek(date);
+    const currentWeekEnd = getEndOfWeek(date);
+    
+    // Inicializar horas trabajadas
+    let workedHours = 0;
+    
+    // Contar horas de turnos ya guardados en la semana actual
+    shifts.forEach(shift => {
+      if (
+        shift.employeeId === employee.id && 
+        isInSameWeek(new Date(shift.date), date)
+      ) {
+        workedHours += calculateHoursBetween(shift.startTime, shift.endTime);
+      }
+    });
+    
+    // Contar horas de selecciones actuales no guardadas para hoy
+    const selectedTimes = selectedCellsByEmployee.get(employee.id);
+    if (selectedTimes && selectedTimes.size > 0) {
+      // Convertir tiempos seleccionados a array y ordenar
+      const sortedTimes = Array.from(selectedTimes).sort((a, b) => {
+        return convertTimeToMinutes(a) - convertTimeToMinutes(b);
+      });
+      
+      // Agrupar tiempos consecutivos
+      let currentGroup: string[] = [sortedTimes[0]];
+      
+      for (let i = 1; i < sortedTimes.length; i++) {
+        const prevTime = currentGroup[currentGroup.length - 1];
+        const currTime = sortedTimes[i];
+        
+        // Verificar si los tiempos son consecutivos
+        const prevIndex = timeSlots.indexOf(prevTime);
+        const currIndex = timeSlots.indexOf(currTime);
+        
+        if (currIndex - prevIndex === 1) {
+          // Tiempos consecutivos, agregar al grupo actual
+          currentGroup.push(currTime);
+        } else {
+          // Tiempos no consecutivos, calcular horas para el grupo actual
+          const startTime = currentGroup[0];
+          const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
+          const endTime = lastTimeIndex + 1 < timeSlots.length ? 
+                          timeSlots[lastTimeIndex + 1] : 
+                          currentGroup[currentGroup.length - 1];
+          
+          // Sumar horas de este grupo
+          workedHours += calculateHoursBetween(startTime, endTime);
+          
+          // Iniciar nuevo grupo
+          currentGroup = [currTime];
+        }
+      }
+      
+      // Procesar el último grupo
+      if (currentGroup.length > 0) {
+        const startTime = currentGroup[0];
+        const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
+        const endTime = lastTimeIndex + 1 < timeSlots.length ? 
+                        timeSlots[lastTimeIndex + 1] : 
+                        currentGroup[currentGroup.length - 1];
+        
+        // Sumar horas del último grupo
+        workedHours += calculateHoursBetween(startTime, endTime);
+      }
+    }
+    
+    // Calcular horas restantes
+    const maxWeeklyHours = employee.maxHoursPerWeek || 40; // Default 40 si no está definido
+    const remainingHours = Math.max(0, maxWeeklyHours - workedHours);
+    
+    return {
+      maxWeeklyHours,
+      workedHours: parseFloat(workedHours.toFixed(2)),
+      remainingHours: parseFloat(remainingHours.toFixed(2))
+    };
+  }, [date, shifts, selectedCellsByEmployee, timeSlots]);
+  
+  // Efecto para calcular y actualizar las horas restantes de cada empleado
+  useEffect(() => {
+    // Crear un nuevo objeto para almacenar las horas restantes
+    const newRemainingHours: Record<number, number> = {};
+    
+    // Calcular las horas restantes para cada empleado
+    employees.forEach(employee => {
+      const { remainingHours } = calculateWeeklyHours(employee);
+      newRemainingHours[employee.id] = remainingHours;
+    });
+    
+    // Actualizar el estado con los nuevos valores
+    setEmployeeRemainingHours(newRemainingHours);
+  }, [employees, shifts, date, selectedCellsByEmployee, calculateWeeklyHours]);
+  
+  // Actualizar estados cuando cambian los props
+  useEffect(() => {
+    setStartHour(initialStartHour);
+    setEndHour(initialEndHour);
+  }, [initialStartHour, initialEndHour]);
+  
+  // State for drag selection
+  const [isDragging, setIsDragging] = useState(false);
+  const [startTime, setStartTime] = useState<string | null>(null);
+  const [activeEmployee, setActiveEmployee] = useState<Employee | null>(null);
+  const mouseDownRef = useRef(false);
+  
+  // Variables para controlar actualizaciones durante arrastre táctil
+  const lastTouchUpdateRef = useRef<number>(0);
+  const batchedSelectionsRef = useRef<Map<number, Set<string>> | null>(null);
+  const pendingUpdateRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Estado para almacenar las horas restantes calculadas por empleado
+  const [employeeRemainingHours, setEmployeeRemainingHours] = useState<Record<number, number>>({});
+  
+  // Función para calcular horas de la semana (memoizada para mejor rendimiento)
+  const calculateWeeklyHours = useCallback((employee: Employee) => {
+    const currentWeekStart = getStartOfWeek(date);
+    const currentWeekEnd = getEndOfWeek(date);
+    
+    // Inicializar horas trabajadas
+    let workedHours = 0;
+    
+    // Contar horas de turnos ya guardados en la semana actual
+    shifts.forEach(shift => {
+      if (
+        shift.employeeId === employee.id && 
+        isInSameWeek(new Date(shift.date), date)
+      ) {
+        workedHours += calculateHoursBetween(shift.startTime, shift.endTime);
+      }
+    });
+    
+    // Contar horas de selecciones actuales no guardadas para hoy
+    const selectedTimes = selectedCellsByEmployee.get(employee.id);
+    if (selectedTimes && selectedTimes.size > 0) {
+      // Convertir tiempos seleccionados a array y ordenar
+      const sortedTimes = Array.from(selectedTimes).sort((a, b) => {
+        return convertTimeToMinutes(a) - convertTimeToMinutes(b);
+      });
+      
+      // Agrupar tiempos consecutivos
+      let currentGroup: string[] = [sortedTimes[0]];
+      
+      for (let i = 1; i < sortedTimes.length; i++) {
+        const prevTime = currentGroup[currentGroup.length - 1];
+        const currTime = sortedTimes[i];
+        
+        // Verificar si los tiempos son consecutivos
+        const prevIndex = timeSlots.indexOf(prevTime);
+        const currIndex = timeSlots.indexOf(currTime);
+        
+        if (currIndex - prevIndex === 1) {
+          // Tiempos consecutivos, agregar al grupo actual
+          currentGroup.push(currTime);
+        } else {
+          // Tiempos no consecutivos, calcular horas para el grupo actual
+          const startTime = currentGroup[0];
+          const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
+          const endTime = lastTimeIndex + 1 < timeSlots.length ? 
+                          timeSlots[lastTimeIndex + 1] : 
+                          currentGroup[currentGroup.length - 1];
+          
+          // Sumar horas de este grupo
+          workedHours += calculateHoursBetween(startTime, endTime);
+          
+          // Iniciar nuevo grupo
+          currentGroup = [currTime];
+        }
+      }
+      
+      // Procesar el último grupo
+      if (currentGroup.length > 0) {
+        const startTime = currentGroup[0];
+        const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
+        const endTime = lastTimeIndex + 1 < timeSlots.length ? 
+                        timeSlots[lastTimeIndex + 1] : 
+                        currentGroup[currentGroup.length - 1];
+        
+        // Sumar horas del último grupo
+        workedHours += calculateHoursBetween(startTime, endTime);
+      }
+    }
+    
+    // Calcular horas restantes
+    const maxWeeklyHours = employee.maxHoursPerWeek || 40; // Default 40 si no está definido
+    const remainingHours = Math.max(0, maxWeeklyHours - workedHours);
+    
+    return {
+      maxWeeklyHours,
+      workedHours: parseFloat(workedHours.toFixed(2)),
+      remainingHours: parseFloat(remainingHours.toFixed(2))
+    };
+  }, [date, shifts, selectedCellsByEmployee, timeSlots]);
+  
+  // Function to check if a cell should be marked as assigned
+  const isCellAssigned = (employeeId: number, time: string) => {
+    return shifts.some(shift => 
+      shift.employeeId === employeeId && 
+      shift.date === formattedDate && 
+      isTimeBetween(time, shift.startTime, shift.endTime)
+    );
+  };
+  
+  // Function to get shift for a cell
+  const getShiftForCell = (employeeId: number, time: string) => {
+    return shifts.find(shift => 
+      shift.employeeId === employeeId && 
+      shift.date === formattedDate && 
+      isTimeBetween(time, shift.startTime, shift.endTime)
