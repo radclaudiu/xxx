@@ -1091,7 +1091,7 @@ export default function ScheduleTable({
                 }}
               >
                 <div className="flex justify-center items-center h-full">
-                  <div className="text-[0.5rem] font-semibold">Personal</div>
+                  <div className="text-[0.6rem] font-semibold">Personal</div>
                 </div>
               </th>
               
@@ -1155,7 +1155,7 @@ export default function ScheduleTable({
                     {/* Mostrar contador cuando hay algún total */}
                     {totalCount > 0 && (
                       <div className="flex justify-center items-center h-full">
-                        <div className={`text-[0.5rem] font-bold ${textColor}`}>
+                        <div className={`text-[0.65rem] font-bold ${textColor}`}>
                           {totalCount}
                         </div>
                       </div>
@@ -1205,7 +1205,7 @@ export default function ScheduleTable({
                   >
                     {/* Mostrar minuto para todos los intervalos */}
                     <div className="flex justify-center items-center h-full">
-                      <div className="text-[0.45rem] tracking-tighter text-gray-500">{minutes}</div>
+                      <div className="text-[0.55rem] tracking-tighter text-gray-500">{minutes}</div>
                     </div>
                   </th>
                 );
@@ -1242,7 +1242,7 @@ export default function ScheduleTable({
                         overflow: "hidden"
                       }}
                     >
-                      <span className="truncate text-xs font-medium pr-1" style={{maxWidth: "95px", display: "block"}}>{employee.name}</span>
+                      <span className="truncate text-sm font-medium pr-1" style={{maxWidth: "95px", display: "block"}}>{employee.name}</span>
                       <button className="text-neutral-400 hover:text-neutral-600 flex-shrink-0 p-0">
                         <Edit className="h-3 w-3" />
                       </button>
@@ -1267,7 +1267,7 @@ export default function ScheduleTable({
                             overflow: "hidden"
                           }}
                         >
-                          <span className={`text-[0.45rem] ${textColor} font-semibold`} 
+                          <span className={`text-[0.55rem] ${textColor} font-semibold`} 
                             title={`${remainingHours}h restantes de ${maxWeeklyHours}h semanales`}>
                             {remainingHours}h
                           </span>
@@ -1559,7 +1559,7 @@ export default function ScheduleTable({
                       }}
                     >
                       {employeeCount > 0 && (
-                        <div className={`text-[0.45rem] font-semibold ${textColor}`}>
+                        <div className={`text-[0.55rem] font-semibold ${textColor}`}>
                           {costPercentage.toFixed(0)}%
                         </div>
                       )}
