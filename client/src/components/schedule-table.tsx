@@ -775,6 +775,20 @@ export default function ScheduleTable({
   
   // Calcular las horas semanales trabajadas y restantes para cada empleado
   const calculateWeeklyHours = (employee: Employee) => {
+    // Primero verificar si tenemos el valor pre-calculado por el Worker
+    if (employeeRemainingHours[employee.id] !== undefined) {
+      const maxWeeklyHours = employee.maxHoursPerWeek || 40;
+      const remainingHours = employeeRemainingHours[employee.id];
+      const workedHours = maxWeeklyHours - remainingHours;
+      
+      return {
+        maxWeeklyHours,
+        workedHours: parseFloat(workedHours.toFixed(2)),
+        remainingHours: parseFloat(remainingHours.toFixed(2))
+      };
+    }
+    
+    // Fallback al método original si el Worker aún no ha calculado los valores
     const currentWeekStart = getStartOfWeek(date);
     const currentWeekEnd = getEndOfWeek(date);
     
