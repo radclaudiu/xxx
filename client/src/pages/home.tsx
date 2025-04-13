@@ -3,6 +3,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { formatDate, formatDateForAPI, getPreviousDay, getNextDay, getStartOfWeek, calculateHoursBetween } from "@/lib/date-helpers";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { Link } from "wouter";
 import { Employee, Shift, InsertShift } from "@shared/schema";
 import ScheduleTable from "@/components/schedule-table";
 import EmployeeModal from "@/components/employee-modal";
@@ -11,7 +13,7 @@ import ExportsModal, { ExportsModalRef } from "@/components/exports-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChevronLeft, ChevronRight, Save, FolderOpen, HelpCircle, UserPlus, DollarSign, Clock, Calendar, FileText } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save, FolderOpen, HelpCircle, UserPlus, DollarSign, Clock, Calendar, FileText, Settings } from "lucide-react";
 
 export default function Home() {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());

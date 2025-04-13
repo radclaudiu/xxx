@@ -113,6 +113,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Eliminar usuario de empresa (solo administradores)
+  app.delete("/api/companies/:companyId/users/:userId", isAdmin, async (req, res) => {
+    try {
+      const companyId = parseInt(req.params.companyId);
+      const userId = parseInt(req.params.userId);
+      
+      // Verificar que la empresa existe
+      const company = await storage.getCompany(companyId);
+      if (!company) {
+        return res.status(404).json({ message: "Empresa no encontrada" });
+      }
+      
+      // Verificar que el usuario existe
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "Usuario no encontrado" });
+      }
+      
+      const success = await storage.removeUserFromCompany(userId, companyId);
+      if (!success) {
+        return res.status(404).json({ message: "Relación no encontrada" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      res.status(500).json({ message: "Error al eliminar usuario de empresa" });
+    }
+  });
+  
   // Plantillas de horario
   app.get("/api/schedule-templates", isAuthenticated, async (req, res) => {
     try {
