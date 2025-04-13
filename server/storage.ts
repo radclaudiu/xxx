@@ -3,27 +3,49 @@ import {
   Employee, InsertEmployee, 
   Shift, InsertShift,
   Schedule, InsertSchedule,
-  employees, shifts, schedules
+  User, InsertUser,
+  Company, InsertCompany,
+  UserCompany, InsertUserCompany,
+  employees, shifts, schedules,
+  users, companies, userCompanies
 } from "@shared/schema";
-import { db } from "./db";
+import { db, getDbConfig, saveDbConfig } from "./db";
 
 export interface IStorage {
+  // User auth operations
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined>;
+  
+  // Company operations
+  getCompanies(): Promise<Company[]>;
+  getCompany(id: number): Promise<Company | undefined>;
+  createCompany(company: InsertCompany): Promise<Company>;
+  updateCompany(id: number, company: Partial<InsertCompany>): Promise<Company | undefined>;
+  deleteCompany(id: number): Promise<boolean>;
+  
+  // User-Company operations
+  getUserCompanies(userId: number): Promise<(UserCompany & { company: Company })[]>;
+  assignUserToCompany(userCompany: InsertUserCompany): Promise<UserCompany>;
+  removeUserFromCompany(userId: number, companyId: number): Promise<boolean>;
+  
   // Employee operations
-  getEmployees(): Promise<Employee[]>;
+  getEmployees(companyId?: number): Promise<Employee[]>;
   getEmployee(id: number): Promise<Employee | undefined>;
   createEmployee(employee: InsertEmployee): Promise<Employee>;
   updateEmployee(id: number, employee: Partial<InsertEmployee>): Promise<Employee | undefined>;
   deleteEmployee(id: number): Promise<boolean>;
   
   // Shift operations
-  getShifts(date?: string, employeeId?: number): Promise<Shift[]>;
+  getShifts(date?: string, employeeId?: number, companyId?: number): Promise<Shift[]>;
   getShift(id: number): Promise<Shift | undefined>;
   createShift(shift: InsertShift): Promise<Shift>;
   updateShift(id: number, shift: Partial<InsertShift>): Promise<Shift | undefined>;
   deleteShift(id: number): Promise<boolean>;
   
   // Schedule operations (save/load)
-  getSchedules(): Promise<Schedule[]>;
+  getSchedules(companyId?: number): Promise<Schedule[]>;
   getSchedule(id: number): Promise<Schedule | undefined>;
   createSchedule(schedule: InsertSchedule): Promise<Schedule>;
   deleteSchedule(id: number): Promise<boolean>;
@@ -31,6 +53,16 @@ export interface IStorage {
   // Save and load entire schedule data
   saveScheduleData(scheduleId: number, employees: Employee[], shifts: Shift[]): Promise<boolean>;
   loadScheduleData(scheduleId: number): Promise<{ employees: Employee[], shifts: Shift[] } | undefined>;
+  
+  // Database configuration
+  updateDatabaseConfig(config: {
+    DATABASE_URL: string;
+    PGDATABASE?: string;
+    PGHOST?: string;
+    PGPORT?: string;
+    PGPASSWORD?: string;
+    PGUSER?: string;
+  }): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -224,6 +256,118 @@ export class MemStorage implements IStorage {
 
 // Implementación de la base de datos PostgreSQL
 export class DatabaseStorage implements IStorage {
+  // User operations
+  async getUser(id: number): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.id, id));
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.username, username));
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const [result] = await db.insert(users).values(user).returning();
+    return result;
+  }
+
+  async updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined> {
+    const [result] = await db
+      .update(users)
+      .set(user)
+      .where(eq(users.id, id))
+      .returning();
+    return result;
+  }
+
+  // Company operations
+  async getCompanies(): Promise<Company[]> {
+    return await db.select().from(companies).orderBy(asc(companies.name));
+  }
+
+  async getCompany(id: number): Promise<Company | undefined> {
+    const result = await db.select().from(companies).where(eq(companies.id, id));
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async createCompany(company: InsertCompany): Promise<Company> {
+    const [result] = await db.insert(companies).values(company).returning();
+    return result;
+  }
+
+  async updateCompany(id: number, company: Partial<InsertCompany>): Promise<Company | undefined> {
+    const [result] = await db
+      .update(companies)
+      .set(company)
+      .where(eq(companies.id, id))
+      .returning();
+    return result;
+  }
+
+  async deleteCompany(id: number): Promise<boolean> {
+    const [result] = await db
+      .delete(companies)
+      .where(eq(companies.id, id))
+      .returning({ id: companies.id });
+    return !!result;
+  }
+
+  // User-Company operations
+  async getUserCompanies(userId: number): Promise<(UserCompany & { company: Company })[]> {
+    // Unir la tabla de relaciones con la tabla de empresas
+    const userCompaniesWithDetails = await db
+      .select({
+        id: userCompanies.id,
+        user_id: userCompanies.user_id,
+        company_id: userCompanies.company_id,
+        role: userCompanies.role,
+        created_at: userCompanies.created_at,
+        company: companies
+      })
+      .from(userCompanies)
+      .innerJoin(companies, eq(userCompanies.company_id, companies.id))
+      .where(eq(userCompanies.user_id, userId));
+
+    return userCompaniesWithDetails;
+  }
+
+  async assignUserToCompany(userCompany: InsertUserCompany): Promise<UserCompany> {
+    const [result] = await db.insert(userCompanies).values(userCompany).returning();
+    return result;
+  }
+
+  async removeUserFromCompany(userId: number, companyId: number): Promise<boolean> {
+    const [result] = await db
+      .delete(userCompanies)
+      .where(
+        and(
+          eq(userCompanies.user_id, userId),
+          eq(userCompanies.company_id, companyId)
+        )
+      )
+      .returning({ id: userCompanies.id });
+    return !!result;
+  }
+
+  // Database configuration
+  async updateDatabaseConfig(config: {
+    DATABASE_URL: string;
+    PGDATABASE?: string;
+    PGHOST?: string;
+    PGPORT?: string;
+    PGPASSWORD?: string;
+    PGUSER?: string;
+  }): Promise<boolean> {
+    try {
+      saveDbConfig(config);
+      return true;
+    } catch (error) {
+      console.error("Error al actualizar la configuración de la base de datos:", error);
+      return false;
+    }
+  }
+
   // Employee operations
   async getEmployees(): Promise<Employee[]> {
     return await db.select().from(employees).orderBy(asc(employees.name));
@@ -275,20 +419,32 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Shift operations
-  async getShifts(date?: string, employeeId?: number): Promise<Shift[]> {
+  async getShifts(date?: string, employeeId?: number, companyId?: number): Promise<Shift[]> {
     let query = db.select().from(shifts);
     
-    if (date && employeeId) {
-      query = query.where(
-        and(
-          eq(shifts.date, date),
-          eq(shifts.employeeId, employeeId)
-        )
-      );
-    } else if (date) {
-      query = query.where(eq(shifts.date, date));
-    } else if (employeeId) {
-      query = query.where(eq(shifts.employeeId, employeeId));
+    // Construir las condiciones
+    let conditions: any[] = [];
+    
+    if (date) {
+      conditions.push(eq(shifts.date, date));
+    }
+    
+    if (employeeId) {
+      conditions.push(eq(shifts.employeeId, employeeId));
+    }
+    
+    if (companyId) {
+      // Si se proporciona companyId, necesitamos unir con empleados para filtrar
+      query = query
+        .innerJoin(employees, eq(shifts.employeeId, employees.id))
+        .where(eq(employees.companyId, companyId));
+    } else if (conditions.length > 0) {
+      // Aplicar condiciones normales si no hay companyId
+      if (conditions.length === 1) {
+        query = query.where(conditions[0]);
+      } else {
+        query = query.where(and(...conditions));
+      }
     }
     
     return await query;

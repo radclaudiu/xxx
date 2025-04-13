@@ -3,27 +3,28 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 
+// Usuario básico para autenticación
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
 });
 
-// Definición de tablas para empresas
+// Definición de tabla de empresas
 export const companies = pgTable("companies", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
   logo: text("logo"),
-  created_at: timestamp("created_at").defaultNow().notNull(),
-  // Otros campos relevantes para empresas
   address: text("address"),
   phone: text("phone"),
   email: text("email"),
   website: text("website"),
   active: boolean("active").default(true),
+  created_at: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Relación entre usuarios y empresas (muchos a muchos)
 export const userCompanies = pgTable("user_companies", {
   id: serial("id").primaryKey(),
   user_id: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -32,15 +33,7 @@ export const userCompanies = pgTable("user_companies", {
   created_at: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-});
-
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
-
-// Schema for employees with additional fields
+// Schema de empleados con campos adicionales
 export const employees = pgTable("employees", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -65,14 +58,14 @@ export const employees = pgTable("employees", {
   updatedAt: timestamp("updated_at"),
 });
 
-// Habilidades (Skills) - Nueva tabla
+// Habilidades (Skills)
 export const skills = pgTable("skills", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
   description: text("description"),
 });
 
-// Relación entre empleados y habilidades - Nueva tabla
+// Relación entre empleados y habilidades
 export const employeeSkills = pgTable("employee_skills", {
   id: serial("id").primaryKey(),
   employeeId: integer("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
@@ -80,7 +73,7 @@ export const employeeSkills = pgTable("employee_skills", {
   level: integer("level"), // Nivel de habilidad 1-5
 });
 
-// Schema for shifts with additional fields
+// Schema para turnos con campos adicionales
 export const shifts = pgTable("shifts", {
   id: serial("id").primaryKey(),
   employeeId: integer("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
@@ -94,12 +87,12 @@ export const shifts = pgTable("shifts", {
   actualStartTime: text("actual_start_time"), // Hora real de inicio
   actualEndTime: text("actual_end_time"), // Hora real de término
   totalHours: integer("total_hours"), // Horas totales trabajadas
-  scheduleId: integer("schedule_id"), // Relación se agregará más tarde
+  scheduleId: integer("schedule_id"), // Relación con horarios
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at"),
 });
 
-// Schema for schedules (for saving/loading entire schedules)
+// Schema para horarios (guardar/cargar horarios completos)
 export const schedules = pgTable("schedules", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -108,13 +101,29 @@ export const schedules = pgTable("schedules", {
   endDate: text("end_date"), // Format: YYYY-MM-DD
   status: text("status").default("draft"), // "draft", "published", "active", "archived"
   department: text("department"), // Departamento al que aplica el horario
+  companyId: integer("company_id").references(() => companies.id, { onDelete: 'cascade' }),
   createdBy: integer("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at"),
 });
 
-// Relaciones
-export const employeesRelations = relations(employees, ({ many }) => ({
+// Definiciones de relaciones
+export const userRelations = relations(users, ({ many }) => ({
+  userCompanies: many(userCompanies),
+  schedulesCreated: many(schedules, { relationName: "createdByUser" })
+}));
+
+export const companiesRelations = relations(companies, ({ many }) => ({
+  employees: many(employees),
+  userCompanies: many(userCompanies),
+  schedules: many(schedules),
+}));
+
+export const employeesRelations = relations(employees, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [employees.companyId],
+    references: [companies.id],
+  }),
   shifts: many(shifts),
   skills: many(employeeSkills),
 }));
@@ -145,15 +154,54 @@ export const shiftsRelations = relations(shifts, ({ one }) => ({
   }),
 }));
 
-export const schedulesRelations = relations(schedules, ({ many, one }) => ({
+export const schedulesRelations = relations(schedules, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [schedules.companyId],
+    references: [companies.id],
+  }),
   shifts: many(shifts),
   createdByUser: one(users, {
     fields: [schedules.createdBy],
     references: [users.id],
+    relationName: "createdByUser"
   }),
 }));
 
-// Exportar schemas para inserciones
+// Schemas para inserciones
+export const insertUserSchema = createInsertSchema(users).pick({
+  username: true,
+  password: true,
+});
+
+export const insertCompanySchema = createInsertSchema(companies, {
+  email: z.string().email().optional(),
+}).pick({
+  name: true,
+  description: true,
+  logo: true,
+  address: true,
+  phone: true,
+  email: true,
+  website: true,
+  active: true,
+}).partial({
+  description: true,
+  logo: true,
+  address: true,
+  phone: true,
+  email: true,
+  website: true,
+  active: true,
+});
+
+export const insertUserCompanySchema = createInsertSchema(userCompanies).pick({
+  user_id: true,
+  company_id: true,
+  role: true,
+}).partial({
+  role: true,
+});
+
 export const insertEmployeeSchema = createInsertSchema(employees, {
   email: z.string().email().optional(),
   phone: z.string().optional(),
@@ -161,6 +209,7 @@ export const insertEmployeeSchema = createInsertSchema(employees, {
 }).pick({
   name: true,
   role: true,
+  companyId: true,
   email: true,
   phone: true,
   address: true,
@@ -174,6 +223,7 @@ export const insertEmployeeSchema = createInsertSchema(employees, {
   notes: true,
 }).partial({
   role: true,
+  companyId: true,
   email: true,
   phone: true,
   address: true,
@@ -210,6 +260,7 @@ export const insertScheduleSchema = createInsertSchema(schedules).pick({
   endDate: true,
   status: true,
   department: true,
+  companyId: true,
   createdBy: true,
 }).partial({
   description: true,
@@ -217,6 +268,7 @@ export const insertScheduleSchema = createInsertSchema(schedules).pick({
   endDate: true,
   status: true,
   department: true,
+  companyId: true,
   createdBy: true,
 });
 
@@ -235,77 +287,27 @@ export const insertEmployeeSkillSchema = createInsertSchema(employeeSkills).pick
   level: true,
 });
 
-export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
-export type Employee = typeof employees.$inferSelect;
+// Tipos de exportación
+export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
 
-export type InsertShift = z.infer<typeof insertShiftSchema>;
-export type Shift = typeof shifts.$inferSelect;
-
-export type InsertSchedule = z.infer<typeof insertScheduleSchema>;
-export type Schedule = typeof schedules.$inferSelect;
-
-export type InsertSkill = z.infer<typeof insertSkillSchema>;
-export type Skill = typeof skills.$inferSelect;
-
-export type InsertEmployeeSkill = z.infer<typeof insertEmployeeSkillSchema>;
-export type EmployeeSkill = typeof employeeSkills.$inferSelect;
-
-// Las tablas companies y userCompanies ya están definidas arriba
-
-// Relaciones para empresas y asignaciones de usuarios
-export const userRelations = relations(users, ({ many }) => ({
-  userCompanies: many(userCompanies),
-}));
-
-export const companiesRelations = relations(companies, ({ many }) => ({
-  userCompanies: many(userCompanies),
-  // También podemos relacionar empresas con horarios
-  schedules: many(schedules),
-}));
-
-export const userCompaniesRelations = relations(userCompanies, ({ one }) => ({
-  user: one(users, {
-    fields: [userCompanies.user_id],
-    references: [users.id],
-  }),
-  company: one(companies, {
-    fields: [userCompanies.company_id],
-    references: [companies.id],
-  }),
-}));
-
-// Schemas de inserción para empresas y asignaciones
-export const insertCompanySchema = createInsertSchema(companies, {
-  email: z.string().email().optional(),
-}).pick({
-  name: true,
-  description: true,
-  logo: true,
-  address: true,
-  phone: true,
-  email: true,
-  website: true,
-  active: true,
-}).partial({
-  description: true,
-  logo: true,
-  address: true,
-  phone: true,
-  email: true,
-  website: true,
-  active: true,
-});
-
-export const insertUserCompanySchema = createInsertSchema(userCompanies).pick({
-  user_id: true,
-  company_id: true,
-  role: true,
-}).partial({
-  role: true,
-});
-
-export type InsertCompany = z.infer<typeof insertCompanySchema>;
 export type Company = typeof companies.$inferSelect;
+export type InsertCompany = z.infer<typeof insertCompanySchema>;
 
-export type InsertUserCompany = z.infer<typeof insertUserCompanySchema>;
 export type UserCompany = typeof userCompanies.$inferSelect;
+export type InsertUserCompany = z.infer<typeof insertUserCompanySchema>;
+
+export type Employee = typeof employees.$inferSelect;
+export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
+
+export type Shift = typeof shifts.$inferSelect;
+export type InsertShift = z.infer<typeof insertShiftSchema>;
+
+export type Schedule = typeof schedules.$inferSelect;
+export type InsertSchedule = z.infer<typeof insertScheduleSchema>;
+
+export type Skill = typeof skills.$inferSelect;
+export type InsertSkill = z.infer<typeof insertSkillSchema>;
+
+export type EmployeeSkill = typeof employeeSkills.$inferSelect;
+export type InsertEmployeeSkill = z.infer<typeof insertEmployeeSkillSchema>;
