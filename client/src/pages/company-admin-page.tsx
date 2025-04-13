@@ -80,13 +80,9 @@ export default function CompanyAdminPage() {
   const [activeTab, setActiveTab] = useState("users");
   const [currentCompanyId, setCurrentCompanyId] = useState<number | null>(null);
   
-  // Solo permitir acceso a admins y gerentes
+  // Solo permitir acceso si no hay usuario (se redirigirá a login)
   if (!user) {
-    return null; // No renderizar nada si no hay usuario (se redirigirá a login)
-  }
-  
-  if (user.role !== "admin" && user.role !== "manager") {
-    return <Redirect to="/" />;
+    return null;
   }
   
   // Consultar empresas del usuario

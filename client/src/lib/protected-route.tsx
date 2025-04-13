@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { Redirect, Route, RouteComponentProps } from "wouter";
+import { useLocation } from "wouter";
 
 type AllowedRoles = "admin" | "manager" | "employee" | "user" | "*";
 
@@ -8,14 +9,17 @@ interface ProtectedRouteProps {
   path: string;
   component: React.ComponentType<any>;
   allowedRoles?: AllowedRoles[];
+  requireCompanyRole?: { companyParam?: string; roles: string[] };
 }
 
 export function ProtectedRoute({ 
   path, 
   component: Component, 
-  allowedRoles = ["*"] 
+  allowedRoles = ["*"],
+  requireCompanyRole
 }: ProtectedRouteProps) {
-  const { user, isLoading } = useAuth();
+  const { user, hasCompanyRole, userCompanies, isLoading } = useAuth();
+  const [location] = useLocation();
 
   return (
     <Route path={path}>
@@ -32,12 +36,35 @@ export function ProtectedRoute({
           return <Redirect to="/auth" />;
         }
 
-        // Si se especifican roles permitidos, verificar que el usuario tenga el rol adecuado
+        // Verificar rol global si se especifica
         if (allowedRoles.length > 0 && !allowedRoles.includes("*")) {
+          // El administrador global siempre tiene acceso
+          if (user.role === "admin") {
+            return <Component {...params} />;
+          }
+          
           // Comprobar si el rol global del usuario está permitido
           const hasAllowedRole = allowedRoles.includes(user.role as AllowedRoles);
           
           if (!hasAllowedRole) {
+            return <Redirect to="/" />;
+          }
+        }
+
+        // Verificar rol específico por compañía si se requiere
+        if (requireCompanyRole) {
+          // Si no hay compañía seleccionada pero el usuario tiene compañías,
+          // permitimos el acceso ya que la interfaz le pedirá seleccionar una
+          if (!userCompanies || userCompanies.length === 0) {
+            return <Redirect to="/" />;
+          }
+          
+          // Si hay al menos una compañía donde el usuario es gerente, permitimos el acceso
+          const hasAnyManagerRole = userCompanies.some(uc => 
+            requireCompanyRole.roles.includes(uc.role)
+          );
+          
+          if (!hasAnyManagerRole) {
             return <Redirect to="/" />;
           }
         }
@@ -62,16 +89,17 @@ export function EmployeeRoute({
   );
 }
 
-// ManagerRoute que solo permite acceso a gerentes y administradores
+// ManagerRoute que permite acceso a gerentes de empresas y administradores
 export function ManagerRoute({
   path,
   component,
-}: Omit<ProtectedRouteProps, 'allowedRoles'>) {
+}: Omit<ProtectedRouteProps, 'allowedRoles' | 'requireCompanyRole'>) {
   return (
     <ProtectedRoute
       path={path}
       component={component}
-      allowedRoles={["manager", "admin"]}
+      allowedRoles={["admin"]} // Admin global siempre tiene acceso
+      requireCompanyRole={{ roles: ["manager"] }} // O usuarios con rol "manager" en alguna empresa
     />
   );
 }

@@ -1,25 +1,24 @@
-import { createContext, ReactNode, useContext } from "react";
+import { createContext, ReactNode, useContext, useState, useEffect } from "react";
 import {
   useQuery,
   useMutation,
   UseMutationResult,
 } from "@tanstack/react-query";
-import { User, UserCompany } from "@shared/schema";
+import { User } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
-// Tipo expandido para incluir los roles de usuario en empresas
-type AuthContextType = {
+// Definición del contexto de autenticación
+interface AuthContextType {
   user: User | null;
-  userCompanies: UserCompany[] | null;
-  currentCompanyRole: string | null;
+  userCompanies: any[] | null;
   isLoading: boolean;
   error: Error | null;
   loginMutation: UseMutationResult<User, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
   registerMutation: UseMutationResult<User, Error, RegisterData>;
-  hasRole: (role: string | string[]) => boolean;
-};
+  hasCompanyRole: (companyId: number, role: string | string[]) => boolean;
+}
 
 type LoginData = {
   email: string;
@@ -119,15 +118,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  // Obtener las relaciones de usuarios con empresas
+  const { data: userCompanies = [] } = useQuery<any[]>({
+    queryKey: ["/api/user-companies"],
+    enabled: !!user,
+  });
+
+  // Función para verificar si el usuario tiene un rol específico en una empresa
+  const hasCompanyRole = (companyId: number, role: string | string[]) => {
+    if (!user) return false;
+    
+    // Los administradores globales siempre tienen acceso
+    if (user.role === "admin") return true;
+    
+    // Verificar el rol específico en la empresa
+    const userCompany = userCompanies?.find(uc => uc.companyId === companyId);
+    
+    if (!userCompany) return false;
+    
+    if (Array.isArray(role)) {
+      return role.includes(userCompany.role);
+    }
+    
+    return userCompany.role === role;
+  };
+
   return (
     <AuthContext.Provider
       value={{
         user: user ?? null,
+        userCompanies: userCompanies ?? null,
         isLoading,
         error,
         loginMutation,
         logoutMutation,
         registerMutation,
+        hasCompanyRole
       }}
     >
       {children}
