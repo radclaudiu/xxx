@@ -249,6 +249,7 @@ export default function AdminPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/companies"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user-companies"] });
       toast({
         title: "Usuario asignado",
         description: "El usuario ha sido asignado a la empresa exitosamente",
