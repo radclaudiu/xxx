@@ -233,14 +233,17 @@ export default function Home() {
       return response.json();
     },
     onSuccess: () => {
+      console.log("Turno creado con éxito, actualizando datos");
+      
       // Invalidar la consulta con el ID de la empresa actual
       queryClient.invalidateQueries({ 
         queryKey: ["/api/shifts", currentCompanyId] 
       });
       
       // Recargar los datos de empleados para actualizar las horas semanales
+      // Usamos la misma clave que en useQuery para asegurar que se invalida correctamente
       queryClient.invalidateQueries({ 
-        queryKey: ["/api/employees", currentCompanyId] 
+        queryKey: ["/api/employees", currentCompanyId, formatDateForAPI(currentDate)]
       });
     },
     onError: (error) => {
@@ -259,14 +262,17 @@ export default function Home() {
       return response;
     },
     onSuccess: () => {
+      console.log("Turno eliminado con éxito, actualizando datos");
+      
       // Invalidar la consulta con el ID de la empresa actual
       queryClient.invalidateQueries({ 
         queryKey: ["/api/shifts", currentCompanyId] 
       });
       
       // Recargar los datos de empleados para actualizar las horas semanales
+      // Usamos la misma clave que en useQuery para asegurar que se invalida correctamente
       queryClient.invalidateQueries({ 
-        queryKey: ["/api/employees", currentCompanyId] 
+        queryKey: ["/api/employees", currentCompanyId, formatDateForAPI(currentDate)]
       });
     },
     onError: (error) => {
@@ -390,8 +396,13 @@ export default function Home() {
                           });
                           
                           // Recargar datos específicos de la empresa
-                          queryClient.invalidateQueries({ queryKey: ["/api/employees", company.id] });
-                          queryClient.invalidateQueries({ queryKey: ["/api/shifts", company.id] });
+                          console.log("Cambiando empresa, actualizando datos para fecha:", formatDateForAPI(currentDate));
+                          queryClient.invalidateQueries({ 
+                            queryKey: ["/api/employees", company.id, formatDateForAPI(currentDate)]
+                          });
+                          queryClient.invalidateQueries({ 
+                            queryKey: ["/api/shifts", company.id] 
+                          });
                         }
                       }}
                     >
