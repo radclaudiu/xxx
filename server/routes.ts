@@ -23,6 +23,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Configurar la autenticación
   setupAuth(app);
+  
+  // Ruta para obtener las empresas del usuario autenticado
+  app.get("/api/user/companies", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Usuario no autenticado" });
+    }
+    
+    try {
+      const userId = req.user?.id;
+      const userCompanies = await storage.getUserCompanies(userId);
+      
+      if (!userCompanies || userCompanies.length === 0) {
+        // Si el usuario no tiene empresas asignadas, crear una empresa por defecto
+        console.log("Usuario sin empresas, creando empresa por defecto");
+        const defaultCompany = await storage.createCompany({
+          name: "Mi Empresa",
+          address: null,
+          description: "Empresa por defecto",
+          active: true
+        });
+        
+        // Asignar la empresa al usuario
+        await storage.assignUserToCompany({
+          userId: userId,
+          companyId: defaultCompany.id,
+          role: "admin"
+        });
+        
+        // Volver a obtener las empresas del usuario
+        const updatedUserCompanies = await storage.getUserCompanies(userId);
+        return res.json(updatedUserCompanies);
+      }
+      
+      res.json(userCompanies);
+    } catch (error) {
+      console.error("Error al obtener empresas del usuario:", error);
+      res.status(500).json({ message: "Error al obtener empresas del usuario" });
+    }
+  });
+  
   // Employee routes
   app.get("/api/employees", async (req, res) => {
     try {

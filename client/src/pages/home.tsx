@@ -4,6 +4,8 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { formatDate, formatDateForAPI, getPreviousDay, getNextDay, getStartOfWeek } from "@/lib/date-helpers";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { useCompany } from "@/hooks/use-company";
+import { Redirect } from "wouter";
 import { Employee, Shift, InsertShift } from "@shared/schema";
 import ScheduleTable from "@/components/schedule-table";
 import EmployeeModal from "@/components/employee-modal";
@@ -12,7 +14,7 @@ import ExportsModal, { ExportsModalRef } from "@/components/exports-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChevronLeft, ChevronRight, Save, FolderOpen, HelpCircle, UserPlus, DollarSign, Clock, Calendar } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save, FolderOpen, HelpCircle, UserPlus, DollarSign, Clock, Calendar, Building2 } from "lucide-react";
 
 export default function Home() {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
@@ -29,6 +31,9 @@ export default function Home() {
   
   // Estado de autenticación
   const { user, isLoading, error, logoutMutation } = useAuth();
+  
+  // Estado de la empresa seleccionada
+  const { selectedCompany, companyLoading, setSelectedCompany } = useCompany();
   
   const { toast } = useToast();
   
@@ -216,6 +221,24 @@ export default function Home() {
   const handleDeleteShift = (shiftId: number) => {
     deleteShiftMutation.mutate(shiftId);
   };
+  
+  // Si no hay un usuario autenticado o está cargando, no mostramos nada
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
+          <p className="text-lg font-medium">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Si no hay empresa seleccionada, redirigimos a la página de selección de empresa
+  if (!selectedCompany && !companyLoading) {
+    console.log("No hay empresa seleccionada, redirigiendo a /company-select");
+    return <Redirect to="/company-select" />;
+  }
   
   return (
     <div className="min-h-screen flex flex-col">

@@ -5,7 +5,9 @@ import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import AuthPage from "@/pages/auth-page";
+import CompanySelectPage from "@/pages/company-select-page";
 import { AuthProvider } from "@/hooks/use-auth";
+import { CompanyProvider } from "@/hooks/use-company";
 import { ProtectedRoute } from "@/lib/protected-route";
 
 function Router() {
