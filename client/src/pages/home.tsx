@@ -10,6 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
+  Building,
   Calendar,
   ChevronLeft, 
   ChevronRight, 
@@ -23,6 +24,14 @@ import {
   Settings,
   UserPlus
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import ScheduleTable from "@/components/schedule-table";
 import EmployeeModal from "@/components/employee-modal";
 import HelpModal from "@/components/help-modal";
@@ -57,23 +66,25 @@ export default function Home() {
   // Refs
   const exportsModalRef = useRef<ExportsModalRef>(null);
   
-  // Fetch employees
+  // Fetch employees (filtrados por la empresa actual)
   const {
     data: employees = [],
     isLoading: isLoadingEmployees,
   } = useQuery<Employee[]>({
-    queryKey: ["/api/employees"],
+    queryKey: ["/api/employees", currentCompanyId],
+    enabled: !!currentCompanyId,
     select: (data) => {
       return data.sort((a, b) => a.name.localeCompare(b.name));
     },
   });
   
-  // Fetch shifts
+  // Fetch shifts (filtrados por la empresa actual)
   const {
     data: allShifts = [],
     isLoading: isLoadingShifts,
   } = useQuery<any[]>({
-    queryKey: ["/api/shifts"],
+    queryKey: ["/api/shifts", currentCompanyId],
+    enabled: !!currentCompanyId,
     select: (data) => {
       return data.map((item) => {
         if (item.shifts) {
@@ -267,7 +278,10 @@ export default function Home() {
             <h1 className="text-2xl font-bold">Sistema de Turnos de Trabajo</h1>
             {companies.length > 0 && (
               <div className="text-sm font-medium opacity-90">
-                Empresa: {companies[0].name}
+                Empresa: {
+                  companies.find(company => company.id === currentCompanyId)?.name || 
+                  companies[0].name
+                }
               </div>
             )}
           </div>
@@ -299,6 +313,49 @@ export default function Home() {
               <FolderOpen className="h-4 w-4" />
               Cargar
             </Button>
+            {/* Dropdown para cambiar de empresa (solo si hay más de una) */}
+            {companies.length > 1 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="secondary" 
+                    className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200 px-3 py-1 rounded flex items-center gap-1 text-sm font-medium"
+                  >
+                    <Building className="h-4 w-4" />
+                    Cambiar Empresa
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuLabel>Seleccionar Empresa</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {companies.map(company => (
+                    <DropdownMenuItem 
+                      key={company.id}
+                      className={company.id === currentCompanyId ? "bg-indigo-50 font-medium" : ""}
+                      onClick={() => {
+                        if (company.id !== currentCompanyId) {
+                          setCurrentCompanyId(company.id);
+                          setStartHour(company.startHour || 9);
+                          setEndHour(company.endHour || 22);
+                          
+                          toast({
+                            title: "Empresa cambiada",
+                            description: `Ahora estás trabajando con: ${company.name}`,
+                          });
+                          
+                          // Recargar datos específicos de la empresa
+                          queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
+                          queryClient.invalidateQueries({ queryKey: ["/api/shifts"] });
+                        }
+                      }}
+                    >
+                      {company.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            
             <Button 
               variant="secondary" 
               className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200 px-3 py-1 rounded flex items-center gap-1 text-sm font-medium ml-2"
