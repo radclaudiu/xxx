@@ -134,6 +134,10 @@ export function setupAuth(app: Express) {
           console.log("Sesión iniciada y guardada correctamente", req.isAuthenticated());
           console.log("Objeto de sesión:", req.session);
           console.log("Cookie de sesión:", req.session.cookie);
+          console.log("Id de sesión:", req.sessionID);
+          
+          // Establece la cookie para la sesión
+          res.setHeader('Set-Cookie', `connect.sid=${req.sessionID}; Path=/; HttpOnly`);
           
           // Elimina la contraseña del objeto de usuario antes de enviarlo
           const userResponse = { ...user };
