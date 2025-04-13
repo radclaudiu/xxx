@@ -91,9 +91,9 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit }: Emplo
       await apiRequest("DELETE", `/api/employees/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/employees", selectedCompany?.id] });
       // Also invalidate shifts as they might be related to the deleted employee
-      queryClient.invalidateQueries({ queryKey: ["/api/shifts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/shifts", selectedCompany?.id] });
       toast({
         title: "Empleado eliminado",
         description: "El empleado ha sido eliminado exitosamente.",
