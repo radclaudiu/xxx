@@ -42,10 +42,13 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
   const { toast } = useToast();
-  const { user, loginMutation, registerMutation } = useAuth();
+  const { user, isLoading, loginMutation, registerMutation } = useAuth();
 
   // Redireccionar si el usuario ya está autenticado
+  console.log("AuthPage state:", { user, isLoading, authenticated: !!user });
+  
   if (user) {
+    console.log("AuthPage: usuario autenticado, redirigiendo a /");
     return <Redirect to="/" />;
   }
 
