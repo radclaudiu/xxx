@@ -1022,9 +1022,10 @@ export default function ScheduleTable({
           width: "100%",
           maxWidth: "100%", // Limitar al ancho del contenedor padre
           overflowX: "auto", // Scroll horizontal cuando sea necesario
-          paddingRight: "10px" // Añadir un pequeño padding a la derecha para evitar corte
+          overflowY: "hidden", // Evitar scroll vertical innecesario
+          paddingRight: "0" // Eliminar padding que podría causar problemas
         }}>
-        <table className="w-full border-collapse" style={{ minWidth: "max-content", tableLayout: "fixed" }}>
+        <table className="w-full border-collapse" style={{ minWidth: "max-content", tableLayout: "fixed", maxWidth: "none" }}>
           {/* Table Header - Estructura de dos filas */}
           <thead>
             {/* Primera fila: Horas agrupadas */}
