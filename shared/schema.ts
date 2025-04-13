@@ -90,6 +90,7 @@ export const shifts = pgTable("shifts", {
   actualEndTime: text("actual_end_time"), // Hora real de término
   totalHours: integer("total_hours"), // Horas totales trabajadas
   scheduleId: integer("schedule_id"), // Relación con horarios
+  companyId: integer("company_id").references(() => companies.id, { onDelete: 'cascade' }), // Relación con empresa
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at"),
 });
@@ -248,11 +249,13 @@ export const insertShiftSchema = createInsertSchema(shifts).pick({
   status: true,
   breakTime: true,
   scheduleId: true,
+  companyId: true,
 }).partial({
   notes: true,
   status: true,
   breakTime: true,
   scheduleId: true,
+  companyId: true,
 });
 
 export const insertScheduleSchema = createInsertSchema(schedules).pick({
