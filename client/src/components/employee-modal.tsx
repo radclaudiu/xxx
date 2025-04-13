@@ -13,9 +13,10 @@ interface EmployeeModalProps {
   isOpen: boolean;
   onClose: () => void;
   employeeToEdit: Employee | null;
+  currentCompanyId: number | null;
 }
 
-export default function EmployeeModal({ isOpen, onClose, employeeToEdit }: EmployeeModalProps) {
+export default function EmployeeModal({ isOpen, onClose, employeeToEdit, currentCompanyId }: EmployeeModalProps) {
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
   const [maxHoursPerWeek, setMaxHoursPerWeek] = useState("40"); // Default 40 hours
@@ -131,10 +132,23 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit }: Emplo
       return;
     }
     
+    // Verificar que tengamos una empresa seleccionada
+    if (!currentCompanyId && !employeeToEdit) {
+      toast({
+        title: "Error",
+        description: "Debe seleccionar una empresa para agregar empleados.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const employeeData: InsertEmployee = {
       name: name.trim(),
       role: role.trim(),
-      maxHoursPerWeek: maxHours
+      maxHoursPerWeek: maxHours,
+      // Si estamos editando, mantenemos la empresa del empleado
+      // Si es nuevo, usamos la empresa actual
+      companyId: employeeToEdit ? employeeToEdit.companyId : currentCompanyId as number
     };
     
     if (employeeToEdit) {
