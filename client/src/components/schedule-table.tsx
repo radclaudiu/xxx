@@ -33,6 +33,7 @@ interface ScheduleTableProps {
   hourlyEmployeeCost?: number;
   startHour?: number;
   endHour?: number;
+  onSaveTimeRange?: (startHour: number, endHour: number) => void;
 }
 
 export default function ScheduleTable({ 
@@ -44,7 +45,8 @@ export default function ScheduleTable({
   estimatedDailySales = 0,
   hourlyEmployeeCost = 0,
   startHour: initialStartHour = 8,
-  endHour: initialEndHour = 22
+  endHour: initialEndHour = 22,
+  onSaveTimeRange
 }: ScheduleTableProps) {
   const isMobile = useIsMobile();
   
@@ -995,6 +997,18 @@ export default function ScheduleTable({
                 </SelectContent>
               </Select>
             </div>
+            
+            {/* Botón para guardar el rango horario */}
+            {onSaveTimeRange && (
+              <Button
+                onClick={() => onSaveTimeRange(startHour, endHour)}
+                size="sm"
+                variant="outline"
+                className="ml-2 h-8"
+              >
+                Guardar
+              </Button>
+            )}
           </div>
           
           {/* Se eliminó el botón de exportaciones ya que se movió al menú principal */}
