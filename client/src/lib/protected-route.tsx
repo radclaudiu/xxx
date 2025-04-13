@@ -2,7 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { Redirect, Route, RouteComponentProps } from "wouter";
 
-type AllowedRoles = "admin" | "manager" | "employee" | "*";
+type AllowedRoles = "admin" | "manager" | "employee" | "user" | "*";
 
 interface ProtectedRouteProps {
   path: string;
@@ -34,7 +34,10 @@ export function ProtectedRoute({
 
         // Si se especifican roles permitidos, verificar que el usuario tenga el rol adecuado
         if (allowedRoles.length > 0 && !allowedRoles.includes("*")) {
-          if (!allowedRoles.includes(user.role as AllowedRoles)) {
+          // Comprobar si el rol global del usuario está permitido
+          const hasAllowedRole = allowedRoles.includes(user.role as AllowedRoles);
+          
+          if (!hasAllowedRole) {
             return <Redirect to="/" />;
           }
         }

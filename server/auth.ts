@@ -208,33 +208,18 @@ export function setupAuth(app: Express) {
     
     const user = req.user;
     
-    // Obtener roles específicos de empresa para este usuario
     try {
-      const companyRoles = await db
-        .select({
-          companyId: userCompanies.companyId,
-          role: userCompanies.role
-        })
-        .from(userCompanies)
-        .where(eq(userCompanies.userId, user.id));
-      
+      // Obtener el objeto de usuario completo
       res.json({
         id: user.id,
         email: user.email,
         username: user.username,
         fullName: user.fullName,
         role: user.role,
-        companyRoles: companyRoles
       });
     } catch (error) {
-      console.error("Error al obtener roles de empresa:", error);
-      res.json({
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        fullName: user.fullName,
-        role: user.role,
-      });
+      console.error("Error al obtener datos de usuario:", error);
+      res.status(500).json({ error: "Error interno del servidor" });
     }
   });
 }
