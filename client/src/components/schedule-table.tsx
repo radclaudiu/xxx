@@ -683,11 +683,8 @@ export default function ScheduleTable({
       return;
     }
     
+    // Eliminar el turno sin mostrar notificación
     onDeleteShift(shift.id);
-    toast({
-      title: "Turno eliminado",
-      description: `Se ha eliminado el turno de ${shift.startTime} a ${shift.endTime}.`,
-    });
   };
   
   // Calcular las horas semanales trabajadas y restantes para cada empleado
