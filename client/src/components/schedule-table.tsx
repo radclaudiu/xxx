@@ -307,6 +307,9 @@ export default function ScheduleTable({
   
   // Toggle a single cell selection
   const toggleSingleCell = (employee: Employee, time: string) => {
+    // Si está en modo solo lectura, no permitir la selección
+    if (isReadOnly) return;
+    
     // Create a new Map from the current state for immutability
     const newSelectedCellsByEmployee = new Map(selectedCellsByEmployee);
     
@@ -419,6 +422,9 @@ export default function ScheduleTable({
   
   // Handler for cell interaction during drag
   const handleCellInteraction = (employee: Employee, time: string) => {
+    // Si está en modo solo lectura, no permitir la interacción
+    if (isReadOnly) return;
+    
     // Only process if we're dragging and it's the same employee
     if (!mouseDownRef.current || !isDragging || !activeEmployee || activeEmployee.id !== employee.id) return;
     
@@ -802,6 +808,9 @@ export default function ScheduleTable({
   
   // Manejar apertura de menú contextual
   const handleOpenContextMenu = (e: React.MouseEvent | React.TouchEvent, shift: Shift) => {
+    // Si está en modo solo lectura, no mostrar el menú contextual
+    if (isReadOnly) return;
+    
     e.preventDefault();
     e.stopPropagation();
     
