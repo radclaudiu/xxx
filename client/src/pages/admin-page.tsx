@@ -79,7 +79,7 @@ export default function AdminPage() {
     isLoading: isLoadingCompanies 
   } = useQuery<Company[]>({
     queryKey: ["/api/companies"],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 
   // Consultar usuarios
@@ -88,13 +88,13 @@ export default function AdminPage() {
     isLoading: isLoadingUsers 
   } = useQuery<User[]>({
     queryKey: ["/api/users"],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "throw" }),
   });
   
   // Consultar relaciones usuario-empresa
   const { data: userCompanies = [] } = useQuery({
     queryKey: ["/api/user-companies"],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 
   // Formulario para crear/editar empresa
