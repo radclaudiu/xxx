@@ -330,22 +330,26 @@ export default function Home() {
                 </Button>
               </Link>
             )}
-            <Button 
-              variant="secondary" 
-              className="bg-white text-primary px-3 py-1 rounded flex items-center gap-1 text-sm font-medium hover:bg-gray-100"
-              onClick={handleSaveSchedule}
-            >
-              <Save className="h-4 w-4" />
-              Guardar
-            </Button>
-            <Button 
-              variant="secondary" 
-              className="bg-white text-primary px-3 py-1 rounded flex items-center gap-1 text-sm font-medium hover:bg-gray-100"
-              onClick={handleLoadSchedule}
-            >
-              <FolderOpen className="h-4 w-4" />
-              Cargar
-            </Button>
+            {user?.role !== 'employee' && (
+              <Button 
+                variant="secondary" 
+                className="bg-white text-primary px-3 py-1 rounded flex items-center gap-1 text-sm font-medium hover:bg-gray-100"
+                onClick={handleSaveSchedule}
+              >
+                <Save className="h-4 w-4" />
+                Guardar
+              </Button>
+            )}
+            {user?.role !== 'employee' && (
+              <Button 
+                variant="secondary" 
+                className="bg-white text-primary px-3 py-1 rounded flex items-center gap-1 text-sm font-medium hover:bg-gray-100"
+                onClick={handleLoadSchedule}
+              >
+                <FolderOpen className="h-4 w-4" />
+                Cargar
+              </Button>
+            )}
             {/* Dropdown para cambiar de empresa (solo si hay más de una) */}
             {companies.length > 1 && (
               <DropdownMenu>
@@ -424,6 +428,7 @@ export default function Home() {
                       className="w-32 text-base"
                       min="0"
                       step="0.01"
+                      readOnly={user?.role === 'employee'}
                     />
                     <span className="ml-1 text-sm text-gray-500">€</span>
                   </div>
@@ -446,6 +451,7 @@ export default function Home() {
                       className="w-32 text-base"
                       min="0"
                       step="0.01"
+                      readOnly={user?.role === 'employee'}
                     />
                     <span className="ml-1 text-sm text-gray-500">€/hora</span>
                   </div>
