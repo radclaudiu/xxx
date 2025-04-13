@@ -1,24 +1,8 @@
-import { createContext, ReactNode, useContext, useState, useEffect } from "react";
-import {
-  useQuery,
-  useMutation,
-  UseMutationResult,
-} from "@tanstack/react-query";
+import { createContext, ReactNode, useContext } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { User } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-
-// Definición del contexto de autenticación
-interface AuthContextType {
-  user: User | null;
-  userCompanies: any[] | null;
-  isLoading: boolean;
-  error: Error | null;
-  loginMutation: UseMutationResult<User, Error, LoginData>;
-  logoutMutation: UseMutationResult<void, Error, void>;
-  registerMutation: UseMutationResult<User, Error, RegisterData>;
-  hasCompanyRole: (companyId: number, role: string | string[]) => boolean;
-}
 
 type LoginData = {
   email: string;
@@ -32,19 +16,31 @@ type RegisterData = {
   fullName: string;
 };
 
-export const AuthContext = createContext<AuthContextType | null>(null);
+// Definición del contexto inicial (vacío)
+const AuthContext = createContext<any>(null);
+
+// Proveedor del contexto de autenticación
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  
+  // Consulta para obtener el usuario actual
   const {
     data: user,
     error,
     isLoading,
-  } = useQuery<User | null, Error>({
+  } = useQuery({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     retry: false,
   });
 
+  // Consulta para obtener las relaciones usuario-empresa
+  const { data: userCompanies = [] } = useQuery({
+    queryKey: ["/api/user-companies"],
+    enabled: !!user,
+  });
+
+  // Mutación para iniciar sesión
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
       const res = await apiRequest("POST", "/api/login", credentials);
@@ -52,7 +48,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (user: User) => {
       queryClient.setQueryData(["/api/user"], user);
-      // Invalidar otras consultas que podrían depender del estado del usuario
       queryClient.invalidateQueries({ queryKey: ["/api/companies"] });
       queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
       
@@ -60,10 +55,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Inicio de sesión exitoso",
         description: `Bienvenido, ${user.fullName || user.username}`,
       });
-      
-      // La navegación se maneja en el componente AuthPage a través del useEffect
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
       toast({
         title: "Error al iniciar sesión",
         description: error.message || "Credenciales incorrectas",
@@ -72,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  // Mutación para registrarse
   const registerMutation = useMutation({
     mutationFn: async (credentials: RegisterData) => {
       const res = await apiRequest("POST", "/api/register", credentials);
@@ -79,17 +73,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (user: User) => {
       queryClient.setQueryData(["/api/user"], user);
-      // Invalidar otras consultas que podrían depender del estado del usuario
       queryClient.invalidateQueries({ queryKey: ["/api/companies"] });
       
       toast({
         title: "Registro exitoso",
         description: `Bienvenido, ${user.fullName || user.username}`,
       });
-      
-      // La navegación se maneja en el componente AuthPage a través del useEffect
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
       toast({
         title: "Error al registrarse",
         description: error.message || "No se pudo crear la cuenta",
@@ -98,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  // Mutación para cerrar sesión
   const logoutMutation = useMutation({
     mutationFn: async () => {
       await apiRequest("POST", "/api/logout");
@@ -109,19 +101,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: "Has cerrado sesión correctamente",
       });
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
       toast({
         title: "Error al cerrar sesión",
         description: error.message,
         variant: "destructive",
       });
     },
-  });
-
-  // Obtener las relaciones de usuarios con empresas
-  const { data: userCompanies = [] } = useQuery<any[]>({
-    queryKey: ["/api/user-companies"],
-    enabled: !!user,
   });
 
   // Función para verificar si el usuario tiene un rol específico en una empresa
@@ -132,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user.role === "admin") return true;
     
     // Verificar el rol específico en la empresa
-    const userCompany = userCompanies?.find(uc => uc.companyId === companyId);
+    const userCompany = userCompanies?.find((uc: any) => uc.companyId === companyId);
     
     if (!userCompany) return false;
     
@@ -143,28 +129,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return userCompany.role === role;
   };
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user: user ?? null,
-        userCompanies: userCompanies ?? null,
-        isLoading,
-        error,
-        loginMutation,
-        logoutMutation,
-        registerMutation,
-        hasCompanyRole
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+  // Proveer todos los valores del contexto
+  const value = {
+    user: user || null,
+    userCompanies: userCompanies || [],
+    isLoading,
+    error,
+    loginMutation,
+    logoutMutation,
+    registerMutation,
+    hasCompanyRole,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+// Hook personalizado para usar el contexto de autenticación
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error("useAuth debe ser usado dentro de un AuthProvider");
   }
   return context;
 }
