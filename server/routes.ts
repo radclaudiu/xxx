@@ -1,4 +1,4 @@
-import type { Express, Request } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
@@ -146,6 +146,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Middleware para verificar si el usuario es administrador o gerente de la empresa
+  const isAdminOrManager = async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "No autenticado" });
+    }
+    
+    // Si el usuario es admin, permitir acceso
+    if (req.user.role === "admin") {
+      return next();
+    }
+    
+    const companyId = parseInt(req.params.companyId);
+    
+    // Verificar si el usuario es gerente de la empresa
+    const userCompanies = await storage.getUserCompanies(req.user.id);
+    const company = userCompanies.find(uc => uc.companyId === companyId && uc.role === "manager");
+    
+    if (company) {
+      return next();
+    }
+    
+    res.status(403).json({ message: "No tiene permiso para realizar esta acción" });
+  };
+  
   // Asignar usuario a empresa (solo administradores)
   app.post("/api/companies/:companyId/users", isAdmin, async (req, res) => {
     try {
@@ -167,6 +191,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userCompany = await storage.assignUserToCompany(userId, companyId, role);
       res.status(201).json(userCompany);
     } catch (error) {
+      res.status(500).json({ message: "Error al asignar usuario a empresa" });
+    }
+  });
+  
+  // Asignar usuario a empresa por correo electrónico (admin o gerentes de la empresa)
+  app.post("/api/companies/:companyId/assign-by-email", isAdminOrManager, async (req, res) => {
+    try {
+      const companyId = parseInt(req.params.companyId);
+      const { email, role } = req.body;
+      
+      // Verificar que la empresa existe
+      const company = await storage.getCompany(companyId);
+      if (!company) {
+        return res.status(404).json({ message: "Empresa no encontrada" });
+      }
+      
+      // Buscar usuario por correo electrónico
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ message: "No se encontró ningún usuario con ese correo electrónico" });
+      }
+      
+      // Verificar que el usuario no esté ya asignado a la empresa
+      const userCompanies = await storage.getUserCompanies(user.id);
+      const existingAssignment = userCompanies.find(uc => uc.companyId === companyId);
+      
+      if (existingAssignment) {
+        return res.status(400).json({ message: "Este usuario ya está asignado a la empresa" });
+      }
+      
+      // No permitir asignar rol de admin por este método
+      const finalRole = role === "admin" ? "manager" : role;
+      
+      const userCompany = await storage.assignUserToCompany(user.id, companyId, finalRole);
+      res.status(201).json(userCompany);
+    } catch (error) {
+      console.error("Error al asignar usuario por email:", error);
       res.status(500).json({ message: "Error al asignar usuario a empresa" });
     }
   });

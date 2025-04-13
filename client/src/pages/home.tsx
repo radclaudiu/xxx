@@ -304,17 +304,15 @@ export default function Home() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            {user?.role === 'admin' && (
-              <Link href="/admin">
-                <Button 
-                  variant="secondary" 
-                  className="bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200 px-3 py-1 rounded flex items-center gap-1 text-sm font-medium"
-                >
-                  <Settings className="h-4 w-4" />
-                  Administración
-                </Button>
-              </Link>
-            )}
+            <Link href="/admin">
+              <Button 
+                variant="secondary" 
+                className="bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200 px-3 py-1 rounded flex items-center gap-1 text-sm font-medium"
+              >
+                <Settings className="h-4 w-4" />
+                Administración
+              </Button>
+            </Link>
             <Button 
               variant="secondary" 
               className="bg-white text-primary px-3 py-1 rounded flex items-center gap-1 text-sm font-medium hover:bg-gray-100"
