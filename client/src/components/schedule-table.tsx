@@ -31,6 +31,8 @@ interface ScheduleTableProps {
   onDeleteShift?: (shiftId: number) => void;
   estimatedDailySales?: number;
   hourlyEmployeeCost?: number;
+  startHour?: number;
+  endHour?: number;
 }
 
 export default function ScheduleTable({ 
@@ -40,7 +42,9 @@ export default function ScheduleTable({
   onSaveShifts,
   onDeleteShift,
   estimatedDailySales = 0,
-  hourlyEmployeeCost = 0
+  hourlyEmployeeCost = 0,
+  startHour: initialStartHour = 8,
+  endHour: initialEndHour = 22
 }: ScheduleTableProps) {
   const isMobile = useIsMobile();
   
@@ -58,9 +62,9 @@ export default function ScheduleTable({
     setCellSize(prev => Math.max(prev - 2, 20));
   };
   
-  // Rango horario configurable
-  const [startHour, setStartHour] = useState(8); // Por defecto 8:00
-  const [endHour, setEndHour] = useState(22);    // Por defecto 22:00
+  // Rango horario configurable - usar los valores de props
+  const [startHour, setStartHour] = useState(initialStartHour); 
+  const [endHour, setEndHour] = useState(initialEndHour);
   
   // Generar intervalos de tiempo basados en el rango horario configurado
   const timeSlots = generateTimeSlots(startHour, endHour);
@@ -77,6 +81,12 @@ export default function ScheduleTable({
   useEffect(() => {
     setSelectedCellsByEmployee(new Map());
   }, [date]);
+  
+  // Actualizar estados cuando cambian los props
+  useEffect(() => {
+    setStartHour(initialStartHour);
+    setEndHour(initialEndHour);
+  }, [initialStartHour, initialEndHour]);
   
   // State for drag selection
   const [isDragging, setIsDragging] = useState(false);
