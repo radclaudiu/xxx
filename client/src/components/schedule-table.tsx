@@ -719,81 +719,67 @@ export default function ScheduleTable({
   
   // Calcular las horas semanales trabajadas y restantes para cada empleado
   const calculateWeeklyHours = (employee: Employee) => {
-    // Obtener el identificador de la semana que se está visualizando
-    const currentWeekId = getWeekIdentifier(date);
+    // Obtener las fechas de inicio y fin de la semana actual
+    const startOfWeek = getStartOfWeek(date);
+    const endOfWeek = getEndOfWeek(date);
     
-    // Inicializar contador de horas trabajadas para la semana específica
+    // Inicializar contador de horas trabajadas
     let workedHours = 0;
     
-    // Calcular las horas de los turnos guardados para esa semana específica
+    // Calcular las horas trabajadas en la semana actual
     shifts.forEach(shift => {
       if (shift.employeeId === employee.id) {
         // Convertir la fecha del turno a un objeto Date
         const shiftDate = new Date(shift.date);
         
-        // Verificar si el turno pertenece a la semana actual que se está visualizando
-        if (getWeekIdentifier(shiftDate) === currentWeekId) {
+        // Verificar si el turno está dentro de la semana actual
+        if (shiftDate >= startOfWeek && shiftDate <= endOfWeek) {
           // Sumar las horas de este turno
           workedHours += calculateHoursBetween(shift.startTime, shift.endTime);
         }
       }
     });
     
-    console.log(`Empleado ${employee.name} - Semana ${currentWeekId} - Horas calculadas: ${workedHours}`);
-    
-    // Contar horas de selecciones actuales no guardadas para hoy (solo si la fecha actual está en la misma semana)
+    // Contar horas de selecciones actuales no guardadas (solo para el día actual)
     const selectedTimes = selectedCellsByEmployee.get(employee.id);
-    if (selectedTimes && selectedTimes.size > 0 && getWeekIdentifier(new Date(formattedDate)) === currentWeekId) {
-      // Convertir tiempos seleccionados a array y ordenar
-      const sortedTimes = Array.from(selectedTimes).sort((a, b) => {
-        return convertTimeToMinutes(a) - convertTimeToMinutes(b);
-      });
-      
-      // Agrupar tiempos consecutivos
-      let currentGroup: string[] = [sortedTimes[0]];
-      
-      for (let i = 1; i < sortedTimes.length; i++) {
-        const prevTime = currentGroup[currentGroup.length - 1];
-        const currTime = sortedTimes[i];
+    if (selectedTimes && selectedTimes.size > 0) {
+      // Solo considerar las selecciones del día actual si estamos en la semana actual
+      const today = new Date();
+      if (today >= startOfWeek && today <= endOfWeek) {
+        // Ordenar los tiempos seleccionados
+        const sortedTimes = Array.from(selectedTimes).sort();
         
-        // Verificar si los tiempos son consecutivos
-        const prevIndex = timeSlots.indexOf(prevTime);
-        const currIndex = timeSlots.indexOf(currTime);
-        
-        if (currIndex - prevIndex === 1) {
-          // Tiempos consecutivos, agregar al grupo actual
-          currentGroup.push(currTime);
-        } else {
-          // Tiempos no consecutivos, calcular horas para el grupo actual
-          const startTime = currentGroup[0];
-          const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
-          const endTime = lastTimeIndex + 1 < timeSlots.length ? 
-                          timeSlots[lastTimeIndex + 1] : 
-                          currentGroup[currentGroup.length - 1];
+        // Buscar selecciones consecutivas y calcular horas
+        if (sortedTimes.length > 0) {
+          let start = sortedTimes[0];
+          let end = start;
           
-          // Sumar horas de este grupo (selecciones actuales no guardadas)
-          workedHours += calculateHoursBetween(startTime, endTime);
+          for (let i = 1; i < sortedTimes.length; i++) {
+            const currentTime = sortedTimes[i];
+            const currentIndex = timeSlots.indexOf(currentTime);
+            const previousIndex = timeSlots.indexOf(end);
+            
+            // Si son consecutivos, extender el tiempo final
+            if (currentIndex === previousIndex + 1) {
+              end = currentTime;
+            } else {
+              // Si no son consecutivos, calcular horas del grupo anterior y empezar uno nuevo
+              const endTime = timeSlots[timeSlots.indexOf(end) + 1] || end;
+              workedHours += calculateHoursBetween(start, endTime);
+              start = currentTime;
+              end = currentTime;
+            }
+          }
           
-          // Iniciar nuevo grupo
-          currentGroup = [currTime];
+          // Calcular horas del último grupo
+          const endTime = timeSlots[timeSlots.indexOf(end) + 1] || end;
+          workedHours += calculateHoursBetween(start, endTime);
         }
-      }
-      
-      // Procesar el último grupo
-      if (currentGroup.length > 0) {
-        const startTime = currentGroup[0];
-        const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
-        const endTime = lastTimeIndex + 1 < timeSlots.length ? 
-                        timeSlots[lastTimeIndex + 1] : 
-                        currentGroup[currentGroup.length - 1];
-        
-        // Sumar horas del último grupo (selecciones actuales no guardadas)
-        workedHours += calculateHoursBetween(startTime, endTime);
       }
     }
     
-    // Calcular horas restantes
-    const maxWeeklyHours = employee.maxHoursPerWeek || 40; // Default 40 si no está definido
+    // Calcular horas máximas y restantes
+    const maxWeeklyHours = employee.maxHoursPerWeek || 40; // Default 40 horas
     const remainingHours = Math.max(0, maxWeeklyHours - workedHours);
     
     return {
