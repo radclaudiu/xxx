@@ -46,7 +46,7 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit }: Emplo
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/employees", selectedCompany?.id] });
       toast({
         title: "Empleado agregado",
         description: "El empleado ha sido agregado exitosamente.",
@@ -69,7 +69,7 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit }: Emplo
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/employees", selectedCompany?.id] });
       toast({
         title: "Empleado actualizado",
         description: "El empleado ha sido actualizado exitosamente.",

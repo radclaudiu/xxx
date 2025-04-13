@@ -146,7 +146,7 @@ export default function Home() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
-        queryKey: ["/api/shifts"] 
+        queryKey: ["/api/shifts", selectedCompany?.id] 
       });
     },
     onError: (error) => {
@@ -166,7 +166,7 @@ export default function Home() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
-        queryKey: ["/api/shifts"] 
+        queryKey: ["/api/shifts", selectedCompany?.id] 
       });
     },
     onError: (error) => {
