@@ -22,8 +22,13 @@ export function parseDate(dateString: string): Date {
 }
 
 // Format date as YYYY-MM-DD for API requests
-export function formatDateForAPI(date: Date | string): string {
+export function formatDateForAPI(date: Date | string | undefined | null): string {
   try {
+    // Verificamos si date es undefined o null
+    if (date === undefined || date === null) {
+      throw new Error("La fecha es undefined o null");
+    }
+    
     // Si es un string, verificamos si ya tiene el formato correcto YYYY-MM-DD
     if (typeof date === 'string') {
       // Si ya tiene el formato YYYY-MM-DD, simplemente devolvemos
@@ -31,7 +36,16 @@ export function formatDateForAPI(date: Date | string): string {
         return date;
       }
       // Si no, intentamos convertirlo a Date
-      date = new Date(date);
+      const parsedDate = new Date(date);
+      
+      // Verificar si la fecha es válida (isNaN se usa para comprobar fechas inválidas)
+      if (isNaN(parsedDate.getTime())) {
+        throw new Error(`Fecha inválida: ${date}`);
+      }
+      
+      date = parsedDate;
+    } else if (!(date instanceof Date) || isNaN(date.getTime())) {
+      throw new Error(`Fecha inválida o no es una instancia de Date: ${date}`);
     }
     
     // Método seguro que no depende de toISOString()
@@ -68,36 +82,54 @@ export function getNextDay(date: Date): Date {
 
 // Generate time slots in 15-minute increments
 export function generateTimeSlots(startHour: number, endHour: number): string[] {
-  const slots: string[] = [];
-  
-  // Crear todas las combinaciones de horas y minutos desde startHour hasta endHour
-  // Si endHour es 24, tratamos como un caso especial para incluir las subdivisiones de 23h
-  const actualEndHour = endHour === 24 ? 24 : endHour;
-  
-  for (let hour = startHour; hour < actualEndHour; hour++) {
-    // Normalizar hora para manejar casos > 23 (día siguiente)
-    const normalizedHour = hour % 24;
-    const formattedHour = normalizedHour.toString().padStart(2, '0');
+  try {
+    const slots: string[] = [];
     
-    // Para cada hora, añadir todos los intervalos de 15 minutos
-    slots.push(`${formattedHour}:00`);
-    slots.push(`${formattedHour}:15`);
-    slots.push(`${formattedHour}:30`);
-    slots.push(`${formattedHour}:45`);
+    // Validar entrada
+    if (startHour < 0 || endHour < 0 || startHour > 47 || endHour > 47) {
+      console.warn("Horas fuera de rango permitido (0-47):", startHour, endHour);
+      // Usar valores predeterminados seguros si están fuera de rango
+      startHour = Math.max(0, Math.min(startHour, 47));
+      endHour = Math.max(0, Math.min(endHour, 47));
+    }
+    
+    // Si el horario termina en 00:00 del día siguiente o más tarde
+    const actualEndHour = endHour <= startHour ? endHour + 24 : endHour;
+    
+    for (let hour = startHour; hour < actualEndHour; hour++) {
+      // Normalizar hora para manejar casos > 23 (día siguiente)
+      const normalizedHour = hour % 24;
+      const formattedHour = normalizedHour.toString().padStart(2, '0');
+      
+      // Para cada hora, añadir todos los intervalos de 15 minutos
+      slots.push(`${formattedHour}:00`);
+      slots.push(`${formattedHour}:15`);
+      slots.push(`${formattedHour}:30`);
+      slots.push(`${formattedHour}:45`);
+    }
+    
+    // Añadir la hora exacta final (sin subdivisiones)
+    if (actualEndHour % 24 === 0) {
+      // Si termina a una hora en punto que es medianoche, usar 00:00 para el siguiente día
+      slots.push('00:00');
+    } else {
+      // Para otras horas finales, añadir la hora en punto
+      const normalizedEndHour = actualEndHour % 24;
+      const formattedEndHour = normalizedEndHour.toString().padStart(2, '0');
+      slots.push(`${formattedEndHour}:00`);
+    }
+    
+    console.log(`Generadas ${slots.length} franjas horarias de ${startHour} a ${endHour}`);
+    return slots;
+  } catch (error) {
+    console.error("Error al generar franjas horarias:", error);
+    // En caso de error, devolver un conjunto básico de horas (9am a 6pm)
+    return ['09:00', '09:15', '09:30', '09:45', '10:00', '10:15', '10:30', '10:45', 
+            '11:00', '11:15', '11:30', '11:45', '12:00', '12:15', '12:30', '12:45',
+            '13:00', '13:15', '13:30', '13:45', '14:00', '14:15', '14:30', '14:45', 
+            '15:00', '15:15', '15:30', '15:45', '16:00', '16:15', '16:30', '16:45', 
+            '17:00', '17:15', '17:30', '17:45', '18:00'];
   }
-  
-  // Añadir la hora exacta final (sin subdivisiones)
-  if (endHour === 24) {
-    // Si es 24, usamos '24:00' como identificador único para medianoche
-    slots.push('24:00');
-  } else {
-    // Para otras horas finales, añadir la hora en punto
-    const normalizedEndHour = endHour % 24;
-    const formattedEndHour = normalizedEndHour.toString().padStart(2, '0');
-    slots.push(`${formattedEndHour}:00`);
-  }
-  
-  return slots;
 }
 
 // Check if a time (HH:MM) is between start and end times
