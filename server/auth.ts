@@ -5,11 +5,18 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { User as SchemaUser } from "@shared/schema";
+import { User } from "@shared/schema";
 
 declare global {
   namespace Express {
-    interface User extends SchemaUser {}
+    // extender la interfaz del usuario con nuestro tipo
+    interface User {
+      id: number;
+      username: string;
+      password: string;
+      createdAt: Date | null;
+      updatedAt: Date | null;
+    }
   }
 }
 
@@ -29,14 +36,15 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
+  const SESSION_SECRET = process.env.SESSION_SECRET || randomBytes(32).toString('hex');
+  
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "supersecret-key-change-in-production",
+    secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
-      maxAge: 24 * 60 * 60 * 1000, // 1 día
-      sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
+      maxAge: 1000 * 60 * 60 * 24 * 7, // Una semana
     }
   };
 
@@ -50,7 +58,7 @@ export function setupAuth(app: Express) {
       try {
         const user = await storage.getUserByUsername(username);
         if (!user || !(await comparePasswords(password, user.password))) {
-          return done(null, false, { message: "Credenciales incorrectas" });
+          return done(null, false);
         } else {
           return done(null, user);
         }
@@ -60,8 +68,7 @@ export function setupAuth(app: Express) {
     }),
   );
 
-  passport.serializeUser((user: SchemaUser, done) => done(null, user.id));
-  
+  passport.serializeUser((user, done) => done(null, user.id));
   passport.deserializeUser(async (id: number, done) => {
     try {
       const user = await storage.getUser(id);
@@ -71,47 +78,39 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Rutas de autenticación
   app.post("/api/register", async (req, res, next) => {
     try {
-      const { username, password } = req.body;
-      
-      if (!username || !password) {
-        return res.status(400).json({ message: "Nombre de usuario y contraseña son requeridos" });
-      }
-      
-      const existingUser = await storage.getUserByUsername(username);
+      // Verificar si el nombre de usuario ya existe
+      const existingUser = await storage.getUserByUsername(req.body.username);
       if (existingUser) {
         return res.status(400).json({ message: "El nombre de usuario ya existe" });
       }
 
-      const hashedPassword = await hashPassword(password);
+      // Crear usuario con contraseña hasheada
       const user = await storage.createUser({
-        username,
-        password: hashedPassword,
+        ...req.body,
+        password: await hashPassword(req.body.password),
       });
 
+      // Iniciar sesión
       req.login(user, (err) => {
         if (err) return next(err);
-        // Devolver usuario sin incluir la contraseña
-        const { password, ...userWithoutPassword } = user;
-        res.status(201).json(userWithoutPassword);
+        res.status(201).json(user);
       });
     } catch (error) {
-      next(error);
+      console.error("Error en registro:", error);
+      res.status(500).json({ message: "Error al registrar usuario" });
     }
   });
 
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err: any, user: SchemaUser | false, info: { message?: string }) => {
+    passport.authenticate("local", (err, user, info) => {
       if (err) return next(err);
-      if (!user) return res.status(401).json({ message: info?.message || "Credenciales incorrectas" });
+      if (!user) return res.status(401).json({ message: "Credenciales incorrectas" });
       
-      req.login(user, (err: any) => {
+      req.login(user, (err) => {
         if (err) return next(err);
-        // Devolver usuario sin incluir la contraseña
-        const { password, ...userWithoutPassword } = user;
-        return res.status(200).json(userWithoutPassword);
+        res.status(200).json(user);
       });
     })(req, res, next);
   });
@@ -124,98 +123,56 @@ export function setupAuth(app: Express) {
   });
 
   app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "No autenticado" });
-    }
-    
-    // Devolver usuario sin incluir la contraseña
-    const { password, ...userWithoutPassword } = req.user as SchemaUser;
-    res.json(userWithoutPassword);
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    res.json(req.user);
   });
 
-  // Rutas para configuración de base de datos
-  app.post("/api/db-config", async (req, res, next) => {
+  // Rutas para gestionar empresas del usuario
+  app.get("/api/user/companies", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
     try {
-      if (!req.isAuthenticated()) {
-        return res.status(401).json({ message: "No autenticado" });
-      }
-      
-      const { DATABASE_URL, PGDATABASE, PGHOST, PGPORT, PGPASSWORD, PGUSER } = req.body;
-      
-      if (!DATABASE_URL) {
-        return res.status(400).json({ message: "DATABASE_URL es requerido" });
-      }
-      
-      const result = await storage.updateDatabaseConfig({
-        DATABASE_URL,
-        PGDATABASE,
-        PGHOST,
-        PGPORT,
-        PGPASSWORD,
-        PGUSER
+      const userCompanies = await storage.getUserCompanies(req.user.id);
+      res.json(userCompanies);
+    } catch (error) {
+      console.error("Error al obtener empresas del usuario:", error);
+      res.status(500).json({ message: "Error al obtener empresas del usuario" });
+    }
+  });
+
+  // Asignar empresa a usuario (para administración)
+  app.post("/api/user/companies", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const userCompany = await storage.assignUserToCompany({
+        userId: req.user.id,
+        companyId: req.body.companyId,
+        role: req.body.role || "user",
       });
-      
-      if (result) {
-        res.status(200).json({ message: "Configuración actualizada correctamente" });
-      } else {
-        res.status(500).json({ message: "Error al actualizar la configuración" });
-      }
+      res.status(201).json(userCompany);
     } catch (error) {
-      next(error);
+      console.error("Error al asignar empresa al usuario:", error);
+      res.status(500).json({ message: "Error al asignar empresa al usuario" });
     }
   });
 
-  app.get("/api/db-config", async (req, res, next) => {
-    try {
-      if (!req.isAuthenticated()) {
-        return res.status(401).json({ message: "No autenticado" });
-      }
-      
-      const config = await storage.getDbConfig();
-      
-      // No devolver contraseñas
-      const safeConfig = {
-        ...config,
-        DATABASE_URL: config.DATABASE_URL.replace(/:[^:]*@/, ":******@"),
-        PGPASSWORD: config.PGPASSWORD ? "******" : undefined
-      };
-      
-      res.status(200).json(safeConfig);
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  // Middleware para verificar autenticación
-  app.use("/api/companies", (req, res, next) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "No autenticado" });
-    }
-    next();
-  });
-
-  // Middleware para verificar acceso a empresa
-  app.use("/api/companies/:companyId", async (req, res, next) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "No autenticado" });
-    }
-    
-    const companyId = parseInt(req.params.companyId);
-    if (isNaN(companyId)) {
-      return res.status(400).json({ message: "ID de empresa inválido" });
-    }
+  // Eliminar empresa de usuario
+  app.delete("/api/user/companies/:companyId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
     
     try {
-      const userCompanies = await storage.getUserCompanies((req.user as SchemaUser).id);
-      const hasAccess = userCompanies.some(uc => uc.company_id === companyId);
+      const companyId = parseInt(req.params.companyId);
+      const success = await storage.removeUserFromCompany(req.user.id, companyId);
       
-      if (!hasAccess) {
-        return res.status(403).json({ message: "No tienes acceso a esta empresa" });
+      if (!success) {
+        return res.status(404).json({ message: "Relación usuario-empresa no encontrada" });
       }
       
-      next();
+      res.status(204).end();
     } catch (error) {
-      next(error);
+      console.error("Error al eliminar empresa del usuario:", error);
+      res.status(500).json({ message: "Error al eliminar empresa del usuario" });
     }
   });
 }
