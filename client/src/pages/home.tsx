@@ -63,6 +63,8 @@ export default function Home() {
   const [endHour, setEndHour] = useState(22);
   // Estado para el id de la empresa actual
   const [currentCompanyId, setCurrentCompanyId] = useState<number | null>(null);
+  // Estado para el empleado que se está editando
+  const [employeeToEdit, setEmployeeToEdit] = useState<Employee | null>(null);
   
   // Refs
   const exportsModalRef = useRef<ExportsModalRef>(null);
@@ -635,8 +637,11 @@ export default function Home() {
       {/* Modals */}
       <EmployeeModal 
         isOpen={isEmployeeModalOpen} 
-        onClose={() => setIsEmployeeModalOpen(false)} 
-        employeeToEdit={null}
+        onClose={() => {
+          setIsEmployeeModalOpen(false);
+          setEmployeeToEdit(null); // Limpiar el empleado al cerrar
+        }} 
+        employeeToEdit={employeeToEdit}
         currentCompanyId={currentCompanyId}
       />
       

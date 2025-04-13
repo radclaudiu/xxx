@@ -35,6 +35,7 @@ interface ScheduleTableProps {
   endHour?: number;
   onSaveTimeRange?: (startHour: number, endHour: number) => void;
   isReadOnly?: boolean;
+  onEditEmployee?: (employee: Employee) => void;
 }
 
 export default function ScheduleTable({ 
@@ -48,7 +49,8 @@ export default function ScheduleTable({
   startHour: initialStartHour = 8,
   endHour: initialEndHour = 22,
   onSaveTimeRange,
-  isReadOnly = false
+  isReadOnly = false,
+  onEditEmployee
 }: ScheduleTableProps) {
   const isMobile = useIsMobile();
   
@@ -1266,9 +1268,18 @@ export default function ScheduleTable({
                       }}
                     >
                       <span className="truncate text-sm font-medium pr-1" style={{maxWidth: "95px", display: "block"}}>{employee.name}</span>
-                      <button className="text-neutral-400 hover:text-neutral-600 flex-shrink-0 p-0">
-                        <Edit className="h-3 w-3" />
-                      </button>
+                      {/* Botón de edición de empleado - solo visible si no es modo de solo lectura y hay función onEditEmployee */}
+                      {!isReadOnly && onEditEmployee && (
+                        <button 
+                          className="text-neutral-400 hover:text-neutral-600 flex-shrink-0 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Evitar interacción con la celda
+                            onEditEmployee(employee);
+                          }}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </button>
+                      )}
                     </div>
                     
                     {/* Celda que muestra las horas semanales restantes */}
