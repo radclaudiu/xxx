@@ -1,9 +1,10 @@
-import { useState, forwardRef, useImperativeHandle } from "react";
+import { useState, forwardRef, useImperativeHandle, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Employee, Shift } from "@shared/schema";
 import { Download, Calendar, FileText, ClipboardList, ChevronLeft, ChevronRight, BarChart2, Clock, Users, DollarSign } from "lucide-react";
 import { formatDate, getStartOfWeek, isInSameWeek, calculateHoursBetween, formatHours, formatDateForAPI } from "@/lib/date-helpers";
+import html2pdf from "html2pdf.js";
 
 interface ExportsModalProps {
   employees: Employee[];
@@ -19,6 +20,7 @@ export interface ExportsModalRef {
 const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees, shifts, currentDate }, ref) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
+  const weeklyScheduleRef = useRef<HTMLDivElement>(null);
   
   // Estado para controlar la semana seleccionada
   const [selectedWeekStart, setSelectedWeekStart] = useState(() => getStartOfWeek(currentDate));
@@ -75,21 +77,70 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
   
   // Días de la semana en español para encabezados
   const dayNames = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+  
+  // Función para generar y descargar el PDF del cuadrante semanal
+  const generateWeeklySchedulePDF = () => {
+    if (!weeklyScheduleRef.current) return;
+    
+    const element = weeklyScheduleRef.current;
+    const dateRange = weekRangeText.replace(/\//g, "-");
+    const filename = `cuadrante-semanal-${dateRange}.pdf`;
+    
+    const opt = {
+      margin: [10, 10, 10, 10] as [number, number, number, number],
+      filename: filename,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { 
+        scale: 2,
+        useCORS: true,
+        letterRendering: true
+      },
+      jsPDF: { 
+        unit: 'mm', 
+        format: 'a4', 
+        orientation: 'landscape'
+      },
+      pagebreak: { mode: 'avoid-all' }
+    };
+    
+    // Ocultamos temporalmente los botones para la exportación
+    const buttons = element.querySelectorAll('button');
+    buttons.forEach(btn => btn.style.display = 'none');
+    
+    // Aseguramos que la tabla se expanda completamente
+    const tables = element.querySelectorAll('table');
+    tables.forEach(table => {
+      table.style.width = '100%';
+      table.style.fontSize = '9pt';
+    });
+    
+    html2pdf()
+      .set(opt)
+      .from(element)
+      .save()
+      .then(() => {
+        // Restauramos los botones después de generar el PDF
+        buttons.forEach(btn => btn.style.display = '');
+        
+        // Restauramos los estilos originales
+        tables.forEach(table => {
+          table.style.width = '';
+          table.style.fontSize = '';
+        });
+      });
+  };
 
   // Renderizar el informe seleccionado
   const renderSelectedReport = () => {
     switch (selectedReport) {
       case 'week-schedule':
         return (
-          <div className="rounded-md border">
+          <div className="rounded-md border" ref={weeklyScheduleRef}>
             <div className="flex justify-end mb-4">
               <Button 
                 variant="outline" 
                 className="text-blue-600 border-blue-300"
-                onClick={() => {
-                  // Abrir ventana de impresión para exportar a PDF
-                  window.print();
-                }}
+                onClick={generateWeeklySchedulePDF}
               >
                 <Download className="h-4 w-4 mr-2" />
                 Exportar a PDF
