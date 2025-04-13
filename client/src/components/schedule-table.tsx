@@ -155,6 +155,13 @@ export default function ScheduleTable({
         mouseDownRef.current = false;
         setStartTime(null);
         setActiveEmployee(null);
+        
+        // Si es un click único, también podríamos guardar después de un breve retardo
+        // para dar tiempo a que el usuario realice múltiples selecciones si así lo desea
+        // setTimeout(() => {
+        //   handleSaveSelections();
+        // }, 1000);
+        
         return;
       }
       
@@ -167,16 +174,100 @@ export default function ScheduleTable({
       // Para arrastres reales, aplicar las selecciones
       if (batchedSelectionsRef.current) {
         // Solo actualizar si hay algo en el batch
-        setSelectedCellsByEmployee(batchedSelectionsRef.current);
+        // Guardamos la referencia actual para usarla después de actualizar el estado
+        const currentBatch = new Map(batchedSelectionsRef.current);
+        
+        // Actualizamos el estado con las selecciones actuales
+        setSelectedCellsByEmployee(currentBatch);
         
         // Limpiar el batch
         batchedSelectionsRef.current = null;
-      }
-      
-      // Limpiar cualquier actualización pendiente
-      if (pendingUpdateRef.current) {
-        clearTimeout(pendingUpdateRef.current);
-        pendingUpdateRef.current = null;
+        
+        // Limpiar cualquier actualización pendiente
+        if (pendingUpdateRef.current) {
+          clearTimeout(pendingUpdateRef.current);
+          pendingUpdateRef.current = null;
+        }
+        
+        // Guardamos automáticamente después de un pequeño retardo para dar tiempo
+        // a que el estado se actualice completamente
+        setTimeout(() => {
+          // Procesamos y guardamos las selecciones (similar a handleSaveSelections)
+          const selections: { employee: Employee, startTime: string, endTime: string }[] = [];
+          
+          // Procesamos cada empleado y sus selecciones
+          currentBatch.forEach((selectedTimes, employeeId) => {
+            if (selectedTimes.size === 0) return;
+            
+            const employee = employees.find(e => e.id === employeeId);
+            if (!employee) return;
+            
+            // Ordenamos los tiempos seleccionados
+            const sortedTimes = Array.from(selectedTimes).sort((a, b) => {
+              const [aHour, aMinute] = a.split(':').map(Number);
+              const [bHour, bMinute] = b.split(':').map(Number);
+              return (aHour * 60 + aMinute) - (bHour * 60 + bMinute);
+            });
+            
+            if (sortedTimes.length === 0) return;
+            
+            // Agrupamos tiempos consecutivos
+            let currentGroup: string[] = [sortedTimes[0]];
+            
+            for (let i = 1; i < sortedTimes.length; i++) {
+              const prevTime = currentGroup[currentGroup.length - 1];
+              const currTime = sortedTimes[i];
+              
+              // Verificamos si los tiempos son consecutivos
+              const prevIndex = timeSlots.indexOf(prevTime);
+              const currIndex = timeSlots.indexOf(currTime);
+              
+              if (currIndex - prevIndex === 1) {
+                // Si son consecutivos, añadimos al grupo actual
+                currentGroup.push(currTime);
+              } else {
+                // Si no son consecutivos, guardamos el grupo actual y comenzamos uno nuevo
+                const startTime = currentGroup[0];
+                const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
+                const endTime = lastTimeIndex + 1 < timeSlots.length ? 
+                                timeSlots[lastTimeIndex + 1] : 
+                                currentGroup[currentGroup.length - 1];
+                
+                selections.push({
+                  employee,
+                  startTime,
+                  endTime
+                });
+                
+                // Comenzamos un nuevo grupo
+                currentGroup = [currTime];
+              }
+            }
+            
+            // Procesamos el último grupo
+            if (currentGroup.length > 0) {
+              const startTime = currentGroup[0];
+              const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
+              const endTime = lastTimeIndex + 1 < timeSlots.length ? 
+                              timeSlots[lastTimeIndex + 1] : 
+                              currentGroup[currentGroup.length - 1];
+              
+              selections.push({
+                employee,
+                startTime,
+                endTime
+              });
+            }
+          });
+          
+          // Si hay selecciones, las guardamos
+          if (selections.length > 0) {
+            onSaveShifts(selections);
+            
+            // Limpiamos las selecciones después de guardar
+            setSelectedCellsByEmployee(new Map());
+          }
+        }, 100);
       }
     };
     
@@ -924,15 +1015,7 @@ export default function ScheduleTable({
         </div>
         
         <div className="flex items-center">
-          {hasSelections && (
-            <Button
-              className="bg-green-600 hover:bg-green-700 text-white"
-              onClick={handleSaveSelections}
-            >
-              <Save className="h-4 w-4 mr-2" />
-              Guardar Turnos Seleccionados
-            </Button>
-          )}
+          {/* Se eliminó el botón de guardar turnos ya que ahora se guardan automáticamente */}
         </div>
       </div>
       
