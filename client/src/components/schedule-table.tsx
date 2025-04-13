@@ -145,14 +145,31 @@ export default function ScheduleTable({
   useEffect(() => {
     // Handler for mouse up and touch end events
     const handleEndInteraction = () => {
+      // Si no estamos en modo arrastre, simplemente limpiar los estados
+      if (!isDragging) {
+        mouseDownRef.current = false;
+        setStartTime(null);
+        setActiveEmployee(null);
+        return;
+      }
+      
       setIsDragging(false);
       mouseDownRef.current = false;
       setStartTime(null);
       setActiveEmployee(null);
       
-      // Al terminar el arrastre, aplicamos las selecciones en batch si las hay
+      // Importante: NO aplicamos las selecciones en batch después de un clic simple
+      // Solo aplicamos las selecciones batch si fue un arrastre real (múltiples celdas)
       if (batchedSelectionsRef.current) {
-        setSelectedCellsByEmployee(batchedSelectionsRef.current);
+        // Verificar si hubo un arrastre real o solo un clic en una celda
+        const isRealDrag = batchedSelectionsRef.current.size > 0;
+        
+        if (isRealDrag) {
+          // Solo para arrastres reales aplicamos el batch
+          setSelectedCellsByEmployee(batchedSelectionsRef.current);
+        }
+        
+        // Limpiar el batch en cualquier caso
         batchedSelectionsRef.current = null;
       }
       
@@ -191,23 +208,32 @@ export default function ScheduleTable({
     // Get or create the set of selected cells for this employee
     const selectedCells = newSelectedCellsByEmployee.get(employee.id) || new Set<string>();
     
+    // Hacer una copia de las celdas seleccionadas para evitar problemas de referencia
+    const selectedCellsCopy = new Set<string>(selectedCells);
+    
     // Toggle the cell selection
-    if (selectedCells.has(time)) {
-      selectedCells.delete(time);
+    if (selectedCellsCopy.has(time)) {
+      selectedCellsCopy.delete(time);
       console.log('Quitando selección de celda:', time); // Debug
     } else {
-      selectedCells.add(time);
+      selectedCellsCopy.add(time);
       console.log('Añadiendo selección de celda:', time); // Debug
     }
     
     // Update the Map with the modified Set
-    if (selectedCells.size > 0) {
-      newSelectedCellsByEmployee.set(employee.id, selectedCells);
+    if (selectedCellsCopy.size > 0) {
+      newSelectedCellsByEmployee.set(employee.id, selectedCellsCopy);
     } else {
       newSelectedCellsByEmployee.delete(employee.id);
     }
     
+    // Actualizar INMEDIATAMENTE el estado para prevenir que otros eventos lo sobreescriban
     setSelectedCellsByEmployee(newSelectedCellsByEmployee);
+    
+    // También actualizar la referencia batch para que esté sincronizada
+    if (mouseDownRef.current) {
+      batchedSelectionsRef.current = newSelectedCellsByEmployee;
+    }
   };
   
   // Handler for starting an interaction (mouse or touch)
@@ -1233,6 +1259,15 @@ export default function ScheduleTable({
                           e.preventDefault(); // Prevenir comportamiento por defecto
                           e.stopPropagation(); // Detener propagación
                           
+                          // Desactivar el estado de arrastre inmediatamente para clic simple
+                          mouseDownRef.current = false;
+                          setIsDragging(false);
+                          setStartTime(null);
+                          setActiveEmployee(null);
+                          
+                          // Limpiar batch para prevenir restauración en mouseup
+                          batchedSelectionsRef.current = null;
+                          
                           // Celda no asignada: alternar selección
                           if (!isAssigned) {
                             console.log('Click en celda:', time, 'estado actual:', isSelected ? 'seleccionada' : 'no seleccionada');
@@ -1241,24 +1276,29 @@ export default function ScheduleTable({
                             const newSelectedCellsByEmployee = new Map(selectedCellsByEmployee);
                             const selectedCells = newSelectedCellsByEmployee.get(employee.id) || new Set<string>();
                             
+                            // Hacer copia del set para evitar problemas de referencia
+                            const selectedCellsCopy = new Set<string>(selectedCells);
+                            
                             // Alternar la selección de forma directa
-                            if (selectedCells.has(time)) {
-                              selectedCells.delete(time);
+                            if (selectedCellsCopy.has(time)) {
+                              selectedCellsCopy.delete(time);
                               console.log('Quitando manualmente selección de celda:', time);
                             } else {
-                              selectedCells.add(time);
+                              selectedCellsCopy.add(time);
                               console.log('Añadiendo manualmente selección de celda:', time);
                             }
                             
                             // Actualizar el Map con el Set modificado
-                            if (selectedCells.size > 0) {
-                              newSelectedCellsByEmployee.set(employee.id, selectedCells);
+                            if (selectedCellsCopy.size > 0) {
+                              newSelectedCellsByEmployee.set(employee.id, selectedCellsCopy);
                             } else {
                               newSelectedCellsByEmployee.delete(employee.id);
                             }
                             
-                            // Actualizar el estado
+                            // Actualizar el estado directamente, sin pasar por el sistema de batching
                             setSelectedCellsByEmployee(newSelectedCellsByEmployee);
+                            
+                            // Si mouseup se dispara después, ya no tendrá efecto porque batchedSelectionsRef es null
                           } else if (isFirstCell && shift && onDeleteShift) {
                             // Mostrar menú contextual para eliminar turno existente
                             handleOpenContextMenu(e, shift);
@@ -1266,6 +1306,16 @@ export default function ScheduleTable({
                         }}
                         onTouchStart={(e) => {
                           e.stopPropagation(); // Detener propagación
+                          e.preventDefault(); // Prevenir comportamiento por defecto
+                          
+                          // Desactivar el estado de arrastre inmediatamente para toque simple
+                          mouseDownRef.current = false;
+                          setIsDragging(false);
+                          setStartTime(null);
+                          setActiveEmployee(null);
+                          
+                          // Limpiar batch para prevenir restauración en touchend
+                          batchedSelectionsRef.current = null;
                           
                           // Comportamiento normal de selección para todas las celdas libres
                           if (!isAssigned) {
@@ -1275,21 +1325,53 @@ export default function ScheduleTable({
                               const newSelectedCellsByEmployee = new Map(selectedCellsByEmployee);
                               const selectedCells = newSelectedCellsByEmployee.get(employee.id) || new Set<string>();
                               
+                              // Hacer copia del set para evitar problemas de referencia
+                              const selectedCellsCopy = new Set<string>(selectedCells);
+                              
                               // Quitar la selección
-                              selectedCells.delete(time);
+                              selectedCellsCopy.delete(time);
+                              console.log('Quitando selección por toque de celda:', time);
                               
                               // Actualizar el Map
-                              if (selectedCells.size > 0) {
-                                newSelectedCellsByEmployee.set(employee.id, selectedCells);
+                              if (selectedCellsCopy.size > 0) {
+                                newSelectedCellsByEmployee.set(employee.id, selectedCellsCopy);
                               } else {
                                 newSelectedCellsByEmployee.delete(employee.id);
                               }
                               
-                              // Actualizar el estado
+                              // Actualizar el estado directamente
                               setSelectedCellsByEmployee(newSelectedCellsByEmployee);
                             } else {
-                              // Si no está seleccionada, usar el manejador táctil estándar
-                              handleTouchStart(e, employee, time);
+                              console.log('Añadiendo selección por toque de celda:', time);
+                              
+                              // Actualizar directamente sin iniciar arrastre
+                              const newSelectedCellsByEmployee = new Map(selectedCellsByEmployee);
+                              const selectedCells = newSelectedCellsByEmployee.get(employee.id) || new Set<string>();
+                              
+                              // Hacer copia y añadir
+                              const selectedCellsCopy = new Set<string>(selectedCells);
+                              selectedCellsCopy.add(time);
+                              
+                              // Actualizar
+                              newSelectedCellsByEmployee.set(employee.id, selectedCellsCopy);
+                              setSelectedCellsByEmployee(newSelectedCellsByEmployee);
+                              
+                              // Iniciar arrastre solo si el usuario mantiene presionado por más tiempo
+                              const timeoutId = setTimeout(() => {
+                                mouseDownRef.current = true;
+                                setIsDragging(true);
+                                setStartTime(time);
+                                setActiveEmployee(employee);
+                                
+                                // Inicializar el batch para arrastre
+                                batchedSelectionsRef.current = new Map(selectedCellsByEmployee);
+                              }, 500); // 500ms de retraso para determinar si es arrastre o toque simple
+                              
+                              // Guardar el ID para cancelarlo si el usuario suelta antes
+                              if (pendingUpdateRef.current) {
+                                clearTimeout(pendingUpdateRef.current);
+                              }
+                              pendingUpdateRef.current = timeoutId;
                             }
                           } else if (isFirstCell && shift && onDeleteShift) {
                             // Mostrar menú contextual para eliminar
