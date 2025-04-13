@@ -49,10 +49,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (user: User) => {
       queryClient.setQueryData(["/api/user"], user);
+      // Invalidar otras consultas que podrían depender del estado del usuario
+      queryClient.invalidateQueries({ queryKey: ["/api/companies"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
+      
       toast({
         title: "Inicio de sesión exitoso",
         description: `Bienvenido, ${user.fullName || user.username}`,
       });
+      
+      // La navegación se maneja en el componente AuthPage a través del useEffect
     },
     onError: (error: Error) => {
       toast({
@@ -70,10 +76,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (user: User) => {
       queryClient.setQueryData(["/api/user"], user);
+      // Invalidar otras consultas que podrían depender del estado del usuario
+      queryClient.invalidateQueries({ queryKey: ["/api/companies"] });
+      
       toast({
         title: "Registro exitoso",
         description: `Bienvenido, ${user.fullName || user.username}`,
       });
+      
+      // La navegación se maneja en el componente AuthPage a través del useEffect
     },
     onError: (error: Error) => {
       toast({

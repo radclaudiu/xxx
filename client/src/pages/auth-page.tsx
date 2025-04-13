@@ -34,10 +34,17 @@ export default function AuthPage() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const { user, isLoading, loginMutation, registerMutation } = useAuth();
-
-  // Redirigir si el usuario ya está autenticado
+  
+  useEffect(() => {
+    // Redirigir si el usuario ya está autenticado o después de iniciar sesión/registrarse
+    if (user) {
+      navigate("/");
+    }
+  }, [user, navigate]);
+  
+  // No renderizar nada si el usuario está autenticado (evita parpadeo)
   if (user) {
-    return <Redirect to="/" />;
+    return null;
   }
 
   // Configuración del formulario de inicio de sesión
