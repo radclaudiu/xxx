@@ -51,6 +51,8 @@ export default function Home() {
   // Estados para rangos horarios (con valores por defecto que se actualizarán desde la empresa)
   const [startHour, setStartHour] = useState(9);
   const [endHour, setEndHour] = useState(22);
+  // Estado para el id de la empresa actual
+  const [currentCompanyId, setCurrentCompanyId] = useState<number | null>(null);
   
   // Refs
   const exportsModalRef = useRef<ExportsModalRef>(null);
@@ -99,9 +101,37 @@ export default function Home() {
       // Establecer los valores desde la empresa o usar los valores por defecto
       setStartHour(companies[0].startHour || 9);
       setEndHour(companies[0].endHour || 22);
+      setCurrentCompanyId(companies[0].id);
       console.log("Rango horario cargado de la empresa:", companies[0].startHour, "-", companies[0].endHour);
     }
   }, [companies]);
+  
+  // Mutación para actualizar el rango horario de la empresa
+  const updateTimeRangeMutation = useMutation({
+    mutationFn: async ({ companyId, startHour, endHour }: { companyId: number, startHour: number, endHour: number }) => {
+      const response = await apiRequest("PATCH", `/api/companies/${companyId}`, { 
+        startHour, 
+        endHour 
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/companies"] 
+      });
+      toast({
+        title: "Configuración guardada",
+        description: "El rango horario ha sido actualizado correctamente.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `No se pudo guardar el rango horario: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
 
   // Filter shifts for the current day (for the main schedule display)
   const currentDateFormatted = formatDateForAPI(currentDate);
@@ -476,6 +506,21 @@ export default function Home() {
             hourlyEmployeeCost={parseFloat(hourlyEmployeeCost) || 0}
             startHour={startHour}
             endHour={endHour}
+            onSaveTimeRange={(newStartHour, newEndHour) => {
+              if (currentCompanyId) {
+                updateTimeRangeMutation.mutate({
+                  companyId: currentCompanyId,
+                  startHour: newStartHour,
+                  endHour: newEndHour
+                });
+              } else {
+                toast({
+                  title: "Error",
+                  description: "No se pudo determinar la empresa actual",
+                  variant: "destructive",
+                });
+              }
+            }}
           />
         </div>
       </main>

@@ -73,6 +73,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Ruta para actualizar campos específicos de una empresa (accesible para todos los usuarios autenticados)
+  app.patch("/api/companies/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Para la actualización parcial, solo permitimos actualizar campos específicos
+      // cuando se trata de usuarios regulares
+      const isAdminUser = req.user?.role === 'admin';
+      
+      // Schema específico para actualización de rango horario
+      const timeRangeSchema = z.object({
+        startHour: z.number().min(0).max(23).optional(),
+        endHour: z.number().min(0).max(23).optional(),
+      });
+      
+      // Si es admin, permitimos actualizar todos los campos, de lo contrario solo rangos horarios
+      const validatedData = isAdminUser 
+        ? insertCompanySchema.partial().parse(req.body)
+        : timeRangeSchema.parse(req.body);
+      
+      // Verificamos que el usuario tenga acceso a esta empresa
+      const userCompanies = await storage.getUserCompanies(req.user!.id);
+      const hasAccess = isAdminUser || userCompanies.some(uc => uc.companyId === id);
+      
+      if (!hasAccess) {
+        return res.status(403).json({ message: "No tienes acceso a esta empresa" });
+      }
+      
+      const company = await storage.updateCompany(id, validatedData);
+      
+      if (!company) {
+        return res.status(404).json({ message: "Empresa no encontrada" });
+      }
+      
+      res.json(company);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Datos de empresa inválidos", errors: error.errors });
+      } else {
+        console.error("Error al actualizar empresa:", error);
+        res.status(500).json({ message: "Error al actualizar empresa" });
+      }
+    }
+  });
+  
   app.delete("/api/companies/:id", isAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
