@@ -65,10 +65,11 @@ html, body {
 @layer base {
   body {
     @apply font-sans antialiased bg-background text-foreground;
-    /* Eliminar el zoom para que se ajuste mejor a la pantalla */
-    zoom: 100%;
-    -webkit-transform: none;
-    -webkit-transform-origin: initial;
+    /* Aumentar ligeramente el zoom para mejorar la legibilidad */
+    zoom: 105%;
+    -webkit-transform: scale(1.05);
+    -webkit-transform-origin: top left;
+    font-size: 1.05rem; /* Aumentar tamaño base de fuente */
   }
 }
 
@@ -85,13 +86,13 @@ html, body {
 /* Estilos para celdas de tiempo */
 .time-cell {
   box-sizing: border-box;
-  width: 20px !important;
-  height: 20px !important;
-  min-height: 20px !important;
-  max-height: 20px !important;
+  width: 22px !important;
+  height: 22px !important;
+  min-height: 22px !important;
+  max-height: 22px !important;
   padding: 0 !important;
   margin: 0 !important;
-  line-height: 20px !important;
+  line-height: 22px !important;
 }
 
 /* Para controlar la altura de las filas - será controlado por JavaScript */

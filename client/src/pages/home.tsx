@@ -199,7 +199,7 @@ export default function Home() {
       {/* Header */}
       <header className="bg-primary text-white p-2 md:p-4 shadow-md w-full">
         <div className="w-full px-1 md:px-2 flex justify-between items-center">
-          <h1 className="text-xl font-bold">Sistema de Turnos de Trabajo</h1>
+          <h1 className="text-2xl font-bold">Sistema de Turnos de Trabajo</h1>
           <div className="flex items-center gap-2">
             <Button 
               variant="secondary" 
@@ -229,8 +229,8 @@ export default function Home() {
             <div className="flex flex-wrap items-center gap-4 w-full">
               <div className="flex items-center gap-2">
                 <div className="flex flex-col">
-                  <Label htmlFor="estimatedSales" className="mb-1 text-xs font-medium flex items-center gap-1">
-                    <DollarSign className="h-3 w-3" />
+                  <Label htmlFor="estimatedSales" className="mb-1 text-sm font-medium flex items-center gap-1">
+                    <DollarSign className="h-4 w-4" />
                     Venta Estimada Diaria
                   </Label>
                   <div className="flex items-center">
@@ -240,19 +240,19 @@ export default function Home() {
                       placeholder="0.00"
                       value={estimatedDailySales}
                       onChange={(e) => setEstimatedDailySales(e.target.value)}
-                      className="w-32 text-sm"
+                      className="w-32 text-base"
                       min="0"
                       step="0.01"
                     />
-                    <span className="ml-1 text-xs text-gray-500">€</span>
+                    <span className="ml-1 text-sm text-gray-500">€</span>
                   </div>
                 </div>
               </div>
               
               <div className="flex items-center gap-2">
                 <div className="flex flex-col">
-                  <Label htmlFor="hourlyCost" className="mb-1 text-xs font-medium flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
+                  <Label htmlFor="hourlyCost" className="mb-1 text-sm font-medium flex items-center gap-1">
+                    <Clock className="h-4 w-4" />
                     Coste por Hora de Empleado
                   </Label>
                   <div className="flex items-center">
@@ -262,11 +262,11 @@ export default function Home() {
                       placeholder="0.00"
                       value={hourlyEmployeeCost}
                       onChange={(e) => setHourlyEmployeeCost(e.target.value)}
-                      className="w-32 text-sm"
+                      className="w-32 text-base"
                       min="0"
                       step="0.01"
                     />
-                    <span className="ml-1 text-xs text-gray-500">€/hora</span>
+                    <span className="ml-1 text-sm text-gray-500">€/hora</span>
                   </div>
                 </div>
               </div>
@@ -284,7 +284,7 @@ export default function Home() {
                 <ChevronLeft className="h-5 w-5" />
                 <span className="sr-only">Día anterior</span>
               </Button>
-              <div className="text-lg font-medium px-4 min-w-[200px] text-center">
+              <div className="text-xl font-medium px-4 min-w-[200px] text-center">
                 {formatDate(currentDate)}
               </div>
               <Button 

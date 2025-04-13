@@ -1042,7 +1042,7 @@ export default function ScheduleTable({
                     minWidth: "150px",
                     width: "150px"
                   }}>
-                <span className="text-xs font-semibold">Empleados</span>
+                <span className="text-sm font-semibold">Empleados</span>
               </th>
               
               {/* Agrupar cada 4 celdas (1 hora) */}
@@ -1067,7 +1067,7 @@ export default function ScheduleTable({
                     }}
                   >
                     <div className="flex justify-center items-center h-full">
-                      <div className="text-[0.6rem] font-bold tracking-tight">{hourValue}h</div>
+                      <div className="text-[0.7rem] font-bold tracking-tight">{hourValue}h</div>
                     </div>
                   </th>
                 );
