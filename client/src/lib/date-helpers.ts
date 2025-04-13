@@ -23,7 +23,22 @@ export function parseDate(dateString: string): Date {
 
 // Format date as YYYY-MM-DD for API requests
 export function formatDateForAPI(date: Date): string {
-  return date.toISOString().split('T')[0];
+  try {
+    return date.toISOString().split('T')[0];
+  } catch (error) {
+    // Si la fecha es inválida, intentar corregirla creando una nueva fecha
+    const correctedDate = new Date();
+    correctedDate.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+    correctedDate.setHours(0, 0, 0, 0);
+    
+    try {
+      return correctedDate.toISOString().split('T')[0];
+    } catch (innerError) {
+      // Si todavía falla, usa la fecha actual
+      console.error("Error formateando fecha para API:", error);
+      return new Date().toISOString().split('T')[0];
+    }
+  }
 }
 
 // Get previous day

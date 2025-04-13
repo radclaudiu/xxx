@@ -94,10 +94,16 @@ export default function Home() {
   
   // Filter shifts for the current day (for the main schedule display)
   const shifts = allShifts.filter(shift => {
-    const shiftDate = new Date(shift.date);
-    const formattedCurrentDate = formatDateForAPI(currentDate);
-    const formattedShiftDate = formatDateForAPI(shiftDate);
-    return formattedShiftDate === formattedCurrentDate;
+    try {
+      // En caso de que shift.date sea inválido, manejarlo con un try-catch
+      const shiftDate = new Date(shift.date);
+      const formattedCurrentDate = formatDateForAPI(currentDate);
+      const formattedShiftDate = formatDateForAPI(shiftDate);
+      return formattedShiftDate === formattedCurrentDate;
+    } catch (error) {
+      console.error("Error al procesar fecha de turno:", error, shift);
+      return false; // Excluir turnos con fechas problemáticas
+    }
   });
   
   // Navigate to previous day
