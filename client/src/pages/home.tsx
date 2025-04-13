@@ -196,10 +196,10 @@ export default function Home() {
   };
   
   return (
-    <div className="min-h-screen flex flex-col w-full max-w-[100vw] overflow-x-hidden">
+    <div className="min-h-screen flex flex-col">
       {/* Header */}
-      <header className="bg-primary text-white p-4 shadow-md w-full">
-        <div className="w-full max-w-full px-2 flex justify-between items-center">
+      <header className="bg-primary text-white p-4 shadow-md">
+        <div className="w-full px-2 flex justify-between items-center">
           <h1 className="text-xl font-bold">Sistema de Turnos de Trabajo</h1>
           <div className="flex items-center gap-2">
             <Button 
@@ -223,8 +223,8 @@ export default function Home() {
       </header>
       
       {/* Main Content */}
-      <main className="flex-grow p-4 w-full max-w-full overflow-x-hidden">
-        <div className="w-full max-w-full bg-white rounded-lg shadow-md p-4 overflow-x-hidden">
+      <main className="flex-grow p-4">
+        <div className="w-full bg-white rounded-lg shadow-md p-4">
           {/* Financial Inputs */}
           <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4 bg-blue-50 p-3 rounded-lg">
             <div className="flex flex-wrap items-center gap-4 w-full">

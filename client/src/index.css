@@ -9,11 +9,6 @@ html, body {
   width: 100%;
   overflow-x: hidden; /* Prevenir desplazamiento horizontal */
   max-width: 100vw; /* Limitar al ancho de la ventana */
-  box-sizing: border-box;
-}
-
-*, *:before, *:after {
-  box-sizing: inherit;
 }
 
 /* Contenedores principales con ancho completo */
@@ -21,9 +16,6 @@ html, body {
   width: 100%;
   max-width: 100vw;
   overflow-x: hidden;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
 }
 
 /* Estilos de impresión para los horarios de empleados */
