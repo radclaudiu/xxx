@@ -200,6 +200,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Endpoint para obtener relaciones usuario-empresa
+  app.get("/api/user-companies", isAdmin, async (req, res) => {
+    try {
+      const allUserCompanies = [];
+      
+      // Para cada empresa, obtener sus usuarios
+      for (const company of await storage.getCompanies()) {
+        const companyUsers = await storage.getCompanyUsers(company.id);
+        for (const userCompany of companyUsers) {
+          // Obtener datos completos del usuario
+          const user = await storage.getUser(userCompany.userId);
+          
+          allUserCompanies.push({
+            ...userCompany,
+            user: {
+              id: user?.id,
+              username: user?.username,
+              email: user?.email,
+              fullName: user?.fullName,
+              role: user?.role
+            },
+            company: {
+              id: company.id,
+              name: company.name
+            }
+          });
+        }
+      }
+      
+      res.json(allUserCompanies);
+    } catch (error) {
+      console.error("Error al obtener relaciones usuario-empresa:", error);
+      res.status(500).json({ message: "Error al obtener relaciones usuario-empresa" });
+    }
+  });
+  
   // Plantillas de horario
   app.get("/api/schedule-templates", isAuthenticated, async (req, res) => {
     try {

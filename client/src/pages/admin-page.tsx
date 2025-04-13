@@ -91,8 +91,29 @@ export default function AdminPage() {
     queryFn: getQueryFn({ on401: "throw" }),
   });
   
+  // Definir tipo para las relaciones usuario-empresa expandidas
+  interface UserCompanyExpanded {
+    userId: number;
+    companyId: number;
+    role: string;
+    user: {
+      id: number;
+      username: string;
+      email: string;
+      fullName?: string;
+      role?: string;
+    };
+    company: {
+      id: number;
+      name: string;
+    };
+  }
+
   // Consultar relaciones usuario-empresa
-  const { data: userCompanies = [] } = useQuery({
+  const { 
+    data: userCompanies = [],
+    isLoading: isLoadingUserCompanies
+  } = useQuery<UserCompanyExpanded[]>({
     queryKey: ["/api/user-companies"],
     queryFn: getQueryFn({ on401: "throw" }),
   });
@@ -257,6 +278,7 @@ export default function AdminPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/companies"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user-companies"] });
       toast({
         title: "Usuario eliminado",
         description: "El usuario ha sido eliminado de la empresa exitosamente",
@@ -353,7 +375,41 @@ export default function AdminPage() {
                     {company.email && <p><strong>Email:</strong> {company.email}</p>}
                     {company.website && <p><strong>Website:</strong> {company.website}</p>}
                     {company.taxId && <p><strong>ID Fiscal:</strong> {company.taxId}</p>}
-                    <p className="text-muted-foreground text-xs mt-2">
+                    
+                    {/* Sección de usuarios asignados */}
+                    <div className="mt-4 pt-3 border-t border-gray-200">
+                      <h4 className="font-medium mb-2 flex items-center gap-1">
+                        <UserIcon className="h-3.5 w-3.5" /> 
+                        Usuarios Asignados
+                      </h4>
+                      
+                      {userCompanies
+                        .filter(uc => uc.company.id === company.id)
+                        .map(uc => (
+                          <div key={`${uc.userId}-${uc.companyId}`} className="flex justify-between items-center py-1.5 text-xs">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-medium">{uc.user.fullName || uc.user.username}</span>
+                              <span className="text-gray-500">({uc.user.email})</span>
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-6 p-1 hover:bg-red-50 hover:text-red-600"
+                              onClick={() => handleRemoveUser(uc.user.id, company.id)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        ))}
+                        
+                      {userCompanies.filter(uc => uc.company.id === company.id).length === 0 && (
+                        <div className="text-xs text-gray-500 italic">
+                          No hay usuarios asignados a esta empresa.
+                        </div>
+                      )}
+                    </div>
+                    
+                    <p className="text-muted-foreground text-xs mt-4">
                       Creada: {new Date(company.createdAt || "").toLocaleDateString()}
                     </p>
                   </CardContent>
