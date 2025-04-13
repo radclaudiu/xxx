@@ -305,32 +305,57 @@ export class DatabaseStorage implements IStorage {
   
   // Company operations
   async getCompanies(userId?: number): Promise<Company[]> {
-    if (userId) {
-      // Obtener empresas a las que pertenece el usuario
-      const userCompanyEntries = await db
-        .select({
-          companyId: userCompanies.companyId
-        })
-        .from(userCompanies)
-        .where(eq(userCompanies.userId, userId));
+    try {
+      console.log("getCompanies llamado con userId:", userId);
       
-      const companyIds = userCompanyEntries.map(entry => entry.companyId);
-      
-      if (companyIds.length === 0) {
-        return [];
+      if (userId) {
+        // Obtener empresas a las que pertenece el usuario
+        console.log("Buscando empresas para usuario específico:", userId);
+        const userCompanyEntries = await db
+          .select({
+            companyId: userCompanies.companyId
+          })
+          .from(userCompanies)
+          .where(eq(userCompanies.userId, userId));
+        
+        console.log("Relaciones de usuario-empresa encontradas:", userCompanyEntries);
+        const companyIds = userCompanyEntries.map(entry => entry.companyId);
+        
+        if (companyIds.length === 0) {
+          console.log("No se encontraron empresas para este usuario");
+          return [];
+        }
+        
+        // Si solo hay una empresa, usar eq en lugar de inArray
+        if (companyIds.length === 1) {
+          console.log("Usando eq para una sola empresa:", companyIds[0]);
+          return await db
+            .select()
+            .from(companies)
+            .where(eq(companies.id, companyIds[0]))
+            .orderBy(asc(companies.name));
+        }
+        
+        console.log("Usando inArray para múltiples empresas:", companyIds);
+        return await db
+          .select()
+          .from(companies)
+          .where(inArray(companies.id, companyIds))
+          .orderBy(asc(companies.name));
+      } else {
+        // Obtener todas las empresas (para administradores)
+        console.log("Obteniendo todas las empresas (admin)");
+        const allCompanies = await db
+          .select()
+          .from(companies)
+          .orderBy(asc(companies.name));
+        
+        console.log("Total de empresas encontradas:", allCompanies.length);
+        return allCompanies;
       }
-      
-      return await db
-        .select()
-        .from(companies)
-        .where(inArray(companies.id, companyIds))
-        .orderBy(asc(companies.name));
-    } else {
-      // Obtener todas las empresas (para administradores)
-      return await db
-        .select()
-        .from(companies)
-        .orderBy(asc(companies.name));
+    } catch (error) {
+      console.error("Error en getCompanies:", error);
+      throw error;
     }
   }
   
