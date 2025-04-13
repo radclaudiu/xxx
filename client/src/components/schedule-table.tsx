@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { 
   Select,
@@ -83,12 +83,6 @@ export default function ScheduleTable({
     Map<number, Set<string>>
   >(new Map());
   
-  // Estado para almacenar las horas restantes por empleado calculadas por el worker
-  const [employeeRemainingHours, setEmployeeRemainingHours] = useState<Record<number, number>>({});
-  
-  // Referencia al Web Worker
-  const remainingHoursWorker = useRef<Worker | null>(null);
-  
   // Clear selections when date changes
   useEffect(() => {
     setSelectedCellsByEmployee(new Map());
@@ -99,91 +93,6 @@ export default function ScheduleTable({
     setStartHour(initialStartHour);
     setEndHour(initialEndHour);
   }, [initialStartHour, initialEndHour]);
-  
-  // Inicializar el Web Worker
-  useEffect(() => {
-    // Crear el Web Worker
-    if (typeof Worker !== 'undefined') {
-      console.log('Inicializando Web Worker para cálculo de horas');
-      
-      try {
-        remainingHoursWorker.current = new Worker('/remainingHoursWorker.js');
-        
-        // Configurar manejo de errores
-        remainingHoursWorker.current.onerror = (error) => {
-          console.error('Error en el Web Worker:', error.message);
-        };
-        
-        // Configurar el manejador de mensajes
-        remainingHoursWorker.current.onmessage = (e) => {
-          console.log('Recibida respuesta del Worker:', e.data);
-          const { remainingHours } = e.data;
-          setEmployeeRemainingHours(remainingHours);
-        };
-        
-        console.log('Web Worker inicializado correctamente');
-        
-        // Esperar a que se carguen los datos para solicitar el cálculo inicial
-        if (employees.length > 0) {
-          console.log('Solicitando cálculo inicial con', employees.length, 'empleados');
-          setTimeout(() => requestCalculation(), 500);
-        }
-      } catch (error) {
-        console.error('Error al crear el Web Worker:', error);
-      }
-    } else {
-      console.warn('Los Web Workers no están soportados en este navegador. Se utilizará la función estándar.');
-    }
-    
-    // Limpiar el worker cuando el componente se desmonta
-    return () => {
-      if (remainingHoursWorker.current) {
-        console.log('Terminando Web Worker');
-        remainingHoursWorker.current.terminate();
-        remainingHoursWorker.current = null;
-      }
-    };
-  }, []);
-  
-  // Función para solicitar el cálculo de horas restantes al Worker
-  const requestCalculation = () => {
-    if (!remainingHoursWorker.current || employees.length === 0) {
-      console.log('No se puede solicitar cálculo:', !remainingHoursWorker.current ? 'Worker no inicializado' : 'Sin empleados');
-      return;
-    }
-    
-    // Obtener fechas de inicio y fin de la semana
-    const weekStart = getStartOfWeek(date);
-    const weekEnd = getEndOfWeek(date);
-    
-    console.log('Enviando datos al worker:',
-      'Empleados:', employees.length,
-      'Turnos:', shifts.length,
-      'Semana:', weekStart.toLocaleDateString(), 'a', weekEnd.toLocaleDateString()
-    );
-    
-    // Imprimir un objeto de empleado para depuración
-    if (employees.length > 0) {
-      console.log('Ejemplo de empleado:', JSON.stringify(employees[0]));
-    }
-    
-    // Enviar datos al worker
-    remainingHoursWorker.current.postMessage({
-      employees,
-      shifts,
-      weekStart: weekStart.toISOString(),
-      weekEnd: weekEnd.toISOString()
-    });
-  };
-  
-  // Solicitar recálculo cuando cambien los datos relevantes
-  useEffect(() => {
-    // Solo si tenemos empleados válidos y el worker está inicializado
-    if (employees.length > 0 && remainingHoursWorker.current) {
-      console.log('Datos cambiados, solicitando recálculo');
-      requestCalculation();
-    }
-  }, [employees, shifts, date]);
   
   // State for drag selection
   const [isDragging, setIsDragging] = useState(false);
@@ -808,25 +717,6 @@ export default function ScheduleTable({
   
   // Calcular las horas semanales trabajadas y restantes para cada empleado
   const calculateWeeklyHours = (employee: Employee) => {
-    // Primero verificar si tenemos el valor pre-calculado por el Worker
-    if (employeeRemainingHours[employee.id] !== undefined) {
-      // Obtener las horas máximas para este empleado
-      const maxWeeklyHours = employee.maxHoursPerWeek || 40;
-      const remainingHours = employeeRemainingHours[employee.id];
-      const workedHours = maxWeeklyHours - remainingHours;
-      
-      console.log('Usando datos calculados por el Worker para empleado', employee.id, 'max:', maxWeeklyHours, 'restante:', remainingHours);
-      
-      return {
-        maxWeeklyHours,
-        workedHours: parseFloat(workedHours.toFixed(2)),
-        remainingHours: parseFloat(remainingHours.toFixed(2))
-      };
-    }
-    
-    // Fallback al método original si el Worker aún no ha calculado los valores
-    console.log('Fallback a cálculo directo para empleado', employee.id);
-    
     const currentWeekStart = getStartOfWeek(date);
     const currentWeekEnd = getEndOfWeek(date);
     
