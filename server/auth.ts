@@ -105,9 +105,9 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/login", (req, res, next) => {
+  app.post("/api/login", async (req, res, next) => {
     console.log("Intento de login:", req.body);
-    passport.authenticate("local", (err, user, info) => {
+    passport.authenticate("local", async (err, user, info) => {
       if (err) {
         console.error("Error en autenticación:", err);
         return next(err);
@@ -118,33 +118,46 @@ export function setupAuth(app: Express) {
       }
       
       console.log("Usuario autenticado:", user.username);
-      req.login(user, (err) => {
+      
+      // Primero realizamos el login
+      req.login(user, async (err) => {
         if (err) {
           console.error("Error en req.login:", err);
           return next(err);
         }
         
-        // Guarda explícitamente la sesión para asegurar que se almacena
-        req.session.save((err) => {
-          if (err) {
-            console.error("Error al guardar la sesión:", err);
-            return next(err);
-          }
+        try {
+          // Después de autenticar, sincronizamos datos de la BD remota
+          console.log(`Sincronizando datos para el usuario ${user.username}...`);
+          const { syncRemoteDataToLocal } = await import('./sync');
+          await syncRemoteDataToLocal(user.id);
+          console.log(`Sincronización completada para el usuario ${user.username}`);
           
-          console.log("Sesión iniciada y guardada correctamente", req.isAuthenticated());
-          console.log("Objeto de sesión:", req.session);
-          console.log("Cookie de sesión:", req.session.cookie);
-          console.log("Id de sesión:", req.sessionID);
-          
-          // Establece la cookie para la sesión
-          res.setHeader('Set-Cookie', `connect.sid=${req.sessionID}; Path=/; HttpOnly`);
-          
-          // Elimina la contraseña del objeto de usuario antes de enviarlo
-          const userResponse = { ...user };
-          delete userResponse.password;
-          
-          res.status(200).json(userResponse);
-        });
+          // Guarda explícitamente la sesión para asegurar que se almacena
+          req.session.save((err) => {
+            if (err) {
+              console.error("Error al guardar la sesión:", err);
+              return next(err);
+            }
+            
+            console.log("Sesión iniciada y guardada correctamente", req.isAuthenticated());
+            console.log("Objeto de sesión:", req.session);
+            console.log("Cookie de sesión:", req.session.cookie);
+            console.log("Id de sesión:", req.sessionID);
+            
+            // Establece la cookie para la sesión
+            res.setHeader('Set-Cookie', `connect.sid=${req.sessionID}; Path=/; HttpOnly`);
+            
+            // Elimina la contraseña del objeto de usuario antes de enviarlo
+            const userResponse = { ...user };
+            delete userResponse.password;
+            
+            res.status(200).json(userResponse);
+          });
+        } catch (syncError) {
+          console.error("Error en la sincronización de datos:", syncError);
+          return res.status(500).json({ message: "Error en la sincronización de datos" });
+        }
       });
     })(req, res, next);
   });
