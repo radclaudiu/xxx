@@ -11,7 +11,7 @@ import ExportsModal, { ExportsModalRef } from "@/components/exports-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChevronLeft, ChevronRight, Save, FolderOpen, HelpCircle, UserPlus, DollarSign, Clock, Calendar } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save, FolderOpen, HelpCircle, UserPlus, DollarSign, Clock, Calendar, FileText } from "lucide-react";
 
 export default function Home() {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
@@ -297,7 +297,7 @@ export default function Home() {
                   <span className="sr-only">Día siguiente</span>
                 </Button>
               </div>
-              
+
               <Button 
                 variant="outline"
                 className="flex items-center gap-1 ml-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200"
@@ -314,6 +314,18 @@ export default function Home() {
             </div>
             
             <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 px-3 py-1 rounded flex items-center gap-1 text-sm font-medium"
+                onClick={() => {
+                  if (exportsModalRef.current) {
+                    exportsModalRef.current.openWithReport('exports');
+                  }
+                }}
+              >
+                <FileText className="h-4 w-4" />
+                Exportar
+              </Button>
               <Button
                 className="bg-[#F57C00] text-white px-4 py-2 rounded flex items-center gap-1 text-sm font-medium hover:bg-opacity-90"
                 onClick={() => setIsEmployeeModalOpen(true)}
