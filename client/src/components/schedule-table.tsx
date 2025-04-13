@@ -717,21 +717,9 @@ export default function ScheduleTable({
   
   // Calcular las horas semanales trabajadas y restantes para cada empleado
   const calculateWeeklyHours = (employee: Employee) => {
-    const currentWeekStart = getStartOfWeek(date);
-    const currentWeekEnd = getEndOfWeek(date);
-    
-    // Inicializar horas trabajadas
-    let workedHours = 0;
-    
-    // Contar horas de turnos ya guardados en la semana actual
-    shifts.forEach(shift => {
-      if (
-        shift.employeeId === employee.id && 
-        isInSameWeek(new Date(shift.date), date)
-      ) {
-        workedHours += calculateHoursBetween(shift.startTime, shift.endTime);
-      }
-    });
+    // Obtener horas ya trabajadas según la base de datos
+    // Esta información se mantiene actualizada cada vez que se asigna o elimina un turno
+    let workedHours = employee.weeklyHoursWorked || 0;
     
     // Contar horas de selecciones actuales no guardadas para hoy
     const selectedTimes = selectedCellsByEmployee.get(employee.id);
@@ -763,7 +751,7 @@ export default function ScheduleTable({
                           timeSlots[lastTimeIndex + 1] : 
                           currentGroup[currentGroup.length - 1];
           
-          // Sumar horas de este grupo
+          // Sumar horas de este grupo (selecciones actuales no guardadas)
           workedHours += calculateHoursBetween(startTime, endTime);
           
           // Iniciar nuevo grupo
@@ -779,7 +767,7 @@ export default function ScheduleTable({
                         timeSlots[lastTimeIndex + 1] : 
                         currentGroup[currentGroup.length - 1];
         
-        // Sumar horas del último grupo
+        // Sumar horas del último grupo (selecciones actuales no guardadas)
         workedHours += calculateHoursBetween(startTime, endTime);
       }
     }
