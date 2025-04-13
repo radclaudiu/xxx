@@ -67,34 +67,24 @@ export default function Home() {
   // Refs
   const exportsModalRef = useRef<ExportsModalRef>(null);
   
-  // Fetch employees (filtrados por la empresa actual y con la fecha actual para forzar recarga)
+  // Fetch employees (filtrados por la empresa actual)
   const {
     data: employees = [],
     isLoading: isLoadingEmployees,
   } = useQuery<Employee[]>({
-    queryKey: ["/api/employees", currentCompanyId, formatDateForAPI(currentDate)],
+    queryKey: ["/api/employees", currentCompanyId],
     queryFn: async () => {
-      // Añadimos timestamp para evitar caché del navegador
-      const timestamp = new Date().getTime();
-      const url = currentCompanyId 
-        ? `/api/employees?companyId=${currentCompanyId}&t=${timestamp}` 
-        : `/api/employees?t=${timestamp}`;
-      
-      console.log("Consultando empleados con URL:", url);
+      const url = currentCompanyId ? `/api/employees?companyId=${currentCompanyId}` : "/api/employees";
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error("Error al cargar empleados");
       }
-      const data = await response.json();
-      console.log("Datos de empleados recibidos:", data);
-      return data;
+      return response.json();
     },
     enabled: !!currentCompanyId,
     select: (data) => {
       return data.sort((a, b) => a.name.localeCompare(b.name));
     },
-    // Desactivar caché para forzar siempre una nueva solicitud
-    staleTime: 0,
   });
   
   // Fetch shifts (filtrados por la empresa actual)
@@ -143,24 +133,6 @@ export default function Home() {
       console.log("Rango horario cargado de la empresa:", companies[0].startHour, "-", companies[0].endHour);
     }
   }, [companies]);
-  
-  // Refrescar datos cuando cambia la fecha o compañía
-  useEffect(() => {
-    if (currentCompanyId) {
-      console.log("Actualizando datos debido al cambio de fecha o compañía:", formatDateForAPI(currentDate));
-      
-      // Recargar los datos de empleados para mostrar las horas semanales actualizadas
-      // Usamos la misma clave que en useQuery para asegurar que se invalida correctamente
-      queryClient.invalidateQueries({ 
-        queryKey: ["/api/employees", currentCompanyId, formatDateForAPI(currentDate)]
-      });
-      
-      // También refrescar los turnos para asegurar que los datos están sincronizados
-      queryClient.invalidateQueries({ 
-        queryKey: ["/api/shifts", currentCompanyId] 
-      });
-    }
-  }, [currentDate, currentCompanyId]);
   
   // Mutación para actualizar el rango horario de la empresa
   const updateTimeRangeMutation = useMutation({
@@ -215,15 +187,11 @@ export default function Home() {
   // Navigate to previous day
   const handlePreviousDay = () => {
     setCurrentDate(getPreviousDay(currentDate));
-    // No necesitamos invalidar consultas aquí
-    // El useEffect se encargará de hacerlo cuando cambie currentDate
   };
   
   // Navigate to next day
   const handleNextDay = () => {
     setCurrentDate(getNextDay(currentDate));
-    // No necesitamos invalidar consultas aquí
-    // El useEffect se encargará de hacerlo cuando cambie currentDate
   };
   
   // Create shift mutation
@@ -233,17 +201,9 @@ export default function Home() {
       return response.json();
     },
     onSuccess: () => {
-      console.log("Turno creado con éxito, actualizando datos");
-      
       // Invalidar la consulta con el ID de la empresa actual
       queryClient.invalidateQueries({ 
         queryKey: ["/api/shifts", currentCompanyId] 
-      });
-      
-      // Recargar los datos de empleados para actualizar las horas semanales
-      // Usamos la misma clave que en useQuery para asegurar que se invalida correctamente
-      queryClient.invalidateQueries({ 
-        queryKey: ["/api/employees", currentCompanyId, formatDateForAPI(currentDate)]
       });
     },
     onError: (error) => {
@@ -262,17 +222,9 @@ export default function Home() {
       return response;
     },
     onSuccess: () => {
-      console.log("Turno eliminado con éxito, actualizando datos");
-      
       // Invalidar la consulta con el ID de la empresa actual
       queryClient.invalidateQueries({ 
         queryKey: ["/api/shifts", currentCompanyId] 
-      });
-      
-      // Recargar los datos de empleados para actualizar las horas semanales
-      // Usamos la misma clave que en useQuery para asegurar que se invalida correctamente
-      queryClient.invalidateQueries({ 
-        queryKey: ["/api/employees", currentCompanyId, formatDateForAPI(currentDate)]
       });
     },
     onError: (error) => {
@@ -396,13 +348,8 @@ export default function Home() {
                           });
                           
                           // Recargar datos específicos de la empresa
-                          console.log("Cambiando empresa, actualizando datos para fecha:", formatDateForAPI(currentDate));
-                          queryClient.invalidateQueries({ 
-                            queryKey: ["/api/employees", company.id, formatDateForAPI(currentDate)]
-                          });
-                          queryClient.invalidateQueries({ 
-                            queryKey: ["/api/shifts", company.id] 
-                          });
+                          queryClient.invalidateQueries({ queryKey: ["/api/employees", company.id] });
+                          queryClient.invalidateQueries({ queryKey: ["/api/shifts", company.id] });
                         }
                       }}
                     >

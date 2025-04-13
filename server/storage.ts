@@ -629,68 +629,6 @@ export class DatabaseStorage implements IStorage {
       scheduleId: shift.scheduleId || null,
     };
     
-    // Calcular horas del turno
-    const calculateHoursBetween = (startTime: string, endTime: string): number => {
-      const convertTimeToMinutes = (time: string): number => {
-        const [hours, minutes] = time.split(':').map(Number);
-        return hours * 60 + minutes;
-      };
-      
-      const startMinutes = convertTimeToMinutes(startTime);
-      const endMinutes = convertTimeToMinutes(endTime);
-      
-      // Calculate difference in minutes
-      let diff = endMinutes - startMinutes;
-      
-      // If end time is earlier than start time, assume it's the next day
-      if (diff < 0) {
-        diff += 24 * 60; // Add 24 hours in minutes
-      }
-      
-      // Convert to hours with 2 decimal places
-      return parseFloat((diff / 60).toFixed(2));
-    };
-    
-    // Obtener información del empleado
-    const employee = await this.getEmployee(shift.employeeId);
-    if (!employee) {
-      throw new Error(`Empleado con ID ${shift.employeeId} no encontrado`);
-    }
-    
-    // Obtener la semana actual
-    const getWeekNumber = (date: Date): number => {
-      // Crear una copia de la fecha
-      const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-      // Establecer a día domingo (el primer día de la semana en JS es domingo con índice 0)
-      d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-      // Obtener el primer día del año
-      const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-      // Calcular el número de semana
-      return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-    };
-    
-    const currentDate = new Date();
-    const weekNumber = getWeekNumber(currentDate);
-    
-    // Calcular horas del turno actual
-    const shiftHours = calculateHoursBetween(shift.startTime, shift.endTime);
-    
-    // Verificar si necesitamos resetear el contador de horas semanales
-    const resetWeeklyHours = employee.currentWeekNumber !== weekNumber;
-    
-    // Obtener horas actuales trabajadas (con protección contra null)
-    const currentHours = employee.weeklyHoursWorked || 0;
-    
-    // Actualizar las horas semanales trabajadas del empleado
-    await db.update(employees)
-      .set({
-        weeklyHoursWorked: resetWeeklyHours ? shiftHours : currentHours + shiftHours,
-        currentWeekNumber: weekNumber,
-        updatedAt: new Date()
-      })
-      .where(eq(employees.id, shift.employeeId));
-    
-    // Insertar el turno
     const [result] = await db.insert(shifts).values(shiftWithDefaults).returning();
     return result;
   }
@@ -705,59 +643,6 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteShift(id: number): Promise<boolean> {
-    // Primero, obtener el turno para saber sus detalles
-    const shift = await this.getShift(id);
-    if (!shift) return false;
-
-    // Calcular horas del turno
-    const calculateHoursBetween = (startTime: string, endTime: string): number => {
-      const convertTimeToMinutes = (time: string): number => {
-        const [hours, minutes] = time.split(':').map(Number);
-        return hours * 60 + minutes;
-      };
-      
-      const startMinutes = convertTimeToMinutes(startTime);
-      const endMinutes = convertTimeToMinutes(endTime);
-      
-      let diff = endMinutes - startMinutes;
-      if (diff < 0) {
-        diff += 24 * 60;
-      }
-      
-      return parseFloat((diff / 60).toFixed(2));
-    };
-
-    // Obtener información del empleado
-    const employee = await this.getEmployee(shift.employeeId);
-    if (employee) {
-      // Obtener la semana actual
-      const getWeekNumber = (date: Date): number => {
-        const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-        d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-        const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-        return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-      };
-      
-      const currentDate = new Date();
-      const weekNumber = getWeekNumber(currentDate);
-      
-      // Solo restar horas si estamos en la misma semana
-      if (employee.currentWeekNumber === weekNumber) {
-        const shiftHours = calculateHoursBetween(shift.startTime, shift.endTime);
-        
-        // Actualizar las horas semanales trabajadas del empleado (restar horas)
-        const currentHours = employee.weeklyHoursWorked || 0;
-        
-        await db.update(employees)
-          .set({
-            weeklyHoursWorked: Math.max(0, currentHours - shiftHours),
-            updatedAt: new Date()
-          })
-          .where(eq(employees.id, shift.employeeId));
-      }
-    }
-    
-    // Eliminar el turno
     const [result] = await db
       .delete(shifts)
       .where(eq(shifts.id, id))

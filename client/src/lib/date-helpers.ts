@@ -208,30 +208,3 @@ export function isInSameWeek(date1: Date, date2: Date): boolean {
   const startOfWeek2 = getStartOfWeek(date2);
   return startOfWeek1.getTime() === startOfWeek2.getTime();
 }
-
-// Obtener el número de semana del año para una fecha
-export function getWeekNumber(date: Date): number {
-  // Crear una copia de la fecha para no modificar la original
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  
-  // Establecer al primer día del año
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  
-  // Ajustar al primer día de la semana (lunes)
-  const dayOffset = yearStart.getUTCDay() > 0 ? yearStart.getUTCDay() - 1 : 6;
-  yearStart.setUTCDate(yearStart.getUTCDate() - dayOffset);
-  
-  // Obtener la diferencia en milisegundos
-  const weekMs = 604800000; // 7 días en milisegundos
-  const diffInMs = d.getTime() - yearStart.getTime();
-  
-  // Convertir la diferencia a semanas y sumar 1 porque las semanas empiezan en 1
-  return Math.ceil((diffInMs / weekMs) + 1);
-}
-
-// Función para obtener una cadena única que identifica la semana
-export function getWeekIdentifier(date: Date): string {
-  const year = date.getFullYear();
-  const weekNumber = getWeekNumber(date);
-  return `${year}-W${weekNumber}`;
-}
