@@ -20,6 +20,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined>;
   deleteUser(id: number): Promise<boolean>;
+  getAllUsers(): Promise<User[]>;
   
   // Company operations
   getCompanies(userId?: number): Promise<Company[]>;
@@ -293,6 +294,13 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning({ id: users.id });
     return !!result;
+  }
+  
+  async getAllUsers(): Promise<User[]> {
+    return await db
+      .select()
+      .from(users)
+      .orderBy(asc(users.username));
   }
   
   // Company operations

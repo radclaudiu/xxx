@@ -9,6 +9,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Configurar autenticación
   setupAuth(app);
   
+  // Rutas para usuarios - Solo administradores pueden ver todos los usuarios
+  app.get("/api/users", isAdmin, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Error al obtener usuarios" });
+    }
+  });
+  
   // Rutas para empresas - Solo administradores pueden crear/editar empresas
   app.get("/api/companies", isAuthenticated, async (req, res) => {
     try {
