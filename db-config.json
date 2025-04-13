@@ -1,0 +1,8 @@
+{
+  "DATABASE_URL": "postgresql://neondb_owner:npg_pZ2FVuzIovf5@ep-black-snowflake-a6mpbbyo.us-west-2.aws.neon.tech/neondb?sslmode=require",
+  "PGDATABASE": "neondb",
+  "PGHOST": "ep-black-snowflake-a6mpbbyo.us-west-2.aws.neon.tech",
+  "PGPORT": "5432",
+  "PGUSER": "neondb_owner",
+  "PGPASSWORD": "npg_pZ2FVuzIovf5"
+}
