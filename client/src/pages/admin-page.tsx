@@ -7,6 +7,7 @@ import {
   Company, 
   insertCompanySchema
 } from "@shared/schema";
+import { SyncPanel } from "@/components/SyncPanel";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -338,7 +339,7 @@ export default function AdminPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full md:w-[400px] grid-cols-2">
+        <TabsList className="grid w-full md:w-[600px] grid-cols-3">
           <TabsTrigger value="companies" className="flex items-center">
             <Building2 className="mr-2 h-4 w-4" />
             Empresas
@@ -346,6 +347,12 @@ export default function AdminPage() {
           <TabsTrigger value="users" className="flex items-center">
             <UserIcon className="mr-2 h-4 w-4" />
             Usuarios
+          </TabsTrigger>
+          <TabsTrigger value="sync" className="flex items-center">
+            <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Sincronización
           </TabsTrigger>
         </TabsList>
 
@@ -489,6 +496,31 @@ export default function AdminPage() {
               <p className="text-muted-foreground">Los usuarios pueden registrarse desde la página de autenticación</p>
             </div>
           )}
+        </TabsContent>
+
+        {/* Tab de sincronización con Productiva */}
+        <TabsContent value="sync" className="space-y-4 pt-4">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-semibold">Sincronización con Productiva</h2>
+          </div>
+          
+          <div className="max-w-3xl">
+            <SyncPanel />
+            
+            <div className="mt-6 p-4 bg-gray-50 border rounded-md">
+              <h3 className="text-lg font-medium mb-3">Acerca de la sincronización</h3>
+              <p className="text-sm text-gray-700 mb-2">
+                Este módulo permite importar datos desde la base de datos de Productiva, permitiendo que
+                CreaTurno funcione como un plugin para gestionar los horarios de los empleados.
+              </p>
+              <ul className="list-disc list-inside text-sm text-gray-700 space-y-1 pl-2">
+                <li>Los <strong>usuarios</strong> se importan con sus mismas credenciales</li>
+                <li>Las <strong>empresas</strong> se importan con sus datos básicos</li>
+                <li>Los <strong>empleados</strong> se importan con la información de contacto y pertenencia a empresas</li>
+                <li>Las <strong>relaciones usuario-empresa</strong> se mantienen como en Productiva</li>
+              </ul>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
 

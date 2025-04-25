@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { z } from "zod";
 import { insertEmployeeSchema, insertShiftSchema, insertScheduleSchema, insertCompanySchema, insertScheduleTemplateSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated, isAdmin } from "./auth";
+import { syncAll, syncCompanies, syncEmployees, syncUsers, syncUserCompanies, truncateTables, updateSequences } from "./sync";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configurar autenticación
@@ -692,6 +693,203 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).end();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete schedule" });
+    }
+  });
+
+  // ================================================
+  // Endpoints de sincronización con Productiva
+  // ================================================
+  
+  // Endpoint para verificar la conexión con Productiva
+  app.get("/api/sync/status", isAdmin, async (req, res) => {
+    try {
+      const startTime = Date.now();
+      const { rows } = await productivaDb.query("SELECT current_timestamp as timestamp");
+      const endTime = Date.now();
+      
+      res.json({
+        success: true,
+        connected: true,
+        timestamp: new Date().toISOString(),
+        serverTime: rows[0]?.timestamp || null,
+        latency: `${endTime - startTime}ms`,
+        message: "Conexión con Productiva establecida correctamente"
+      });
+    } catch (error) {
+      console.error("Error verificando conexión con Productiva:", error);
+      res.status(500).json({
+        success: false,
+        connected: false,
+        timestamp: new Date().toISOString(),
+        message: "Error al conectar con Productiva",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // Endpoint de sincronización completa (limpia todas las tablas y sincroniza)
+  app.post("/api/sync", isAdmin, async (req, res) => {
+    try {
+      const startTime = Date.now();
+      const results = await syncAll();
+      const endTime = Date.now();
+      
+      res.json({ 
+        success: true, 
+        timestamp: new Date().toISOString(),
+        duration: `${((endTime - startTime) / 1000).toFixed(2)} segundos`,
+        summary: {
+          totalRegistros: results.summary.total,
+          registrosImportados: results.summary.added,
+          errores: results.summary.errors
+        },
+        detalle: {
+          usuarios: results.users,
+          empresas: results.companies,
+          empleados: results.employees,
+          relacionesUsuarioEmpresa: results.userCompanies
+        }
+      });
+    } catch (error) {
+      console.error("Error en sincronización:", error);
+      res.status(500).json({ 
+        success: false, 
+        timestamp: new Date().toISOString(),
+        message: "Error en sincronización", 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
+  // Endpoints individuales para sincronización por entidad
+  app.post("/api/sync/users", isAdmin, async (req, res) => {
+    try {
+      const startTime = Date.now();
+      const results = await syncUsers();
+      await updateSequences();
+      const endTime = Date.now();
+      
+      res.json({
+        success: true,
+        timestamp: new Date().toISOString(),
+        duration: `${((endTime - startTime) / 1000).toFixed(2)} segundos`,
+        summary: {
+          totalRegistros: results.total,
+          registrosImportados: results.added,
+          errores: results.errors
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        success: false, 
+        timestamp: new Date().toISOString(),
+        message: "Error al sincronizar usuarios", 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
+  app.post("/api/sync/companies", isAdmin, async (req, res) => {
+    try {
+      const startTime = Date.now();
+      const results = await syncCompanies();
+      await updateSequences();
+      const endTime = Date.now();
+      
+      res.json({
+        success: true,
+        timestamp: new Date().toISOString(),
+        duration: `${((endTime - startTime) / 1000).toFixed(2)} segundos`,
+        summary: {
+          totalRegistros: results.total,
+          registrosImportados: results.added,
+          errores: results.errors
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        success: false, 
+        timestamp: new Date().toISOString(),
+        message: "Error al sincronizar empresas", 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
+  app.post("/api/sync/employees", isAdmin, async (req, res) => {
+    try {
+      const startTime = Date.now();
+      const results = await syncEmployees();
+      await updateSequences();
+      const endTime = Date.now();
+      
+      res.json({
+        success: true,
+        timestamp: new Date().toISOString(),
+        duration: `${((endTime - startTime) / 1000).toFixed(2)} segundos`,
+        summary: {
+          totalRegistros: results.total,
+          registrosImportados: results.added,
+          errores: results.errors
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        success: false, 
+        timestamp: new Date().toISOString(),
+        message: "Error al sincronizar empleados", 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
+  app.post("/api/sync/relations", isAdmin, async (req, res) => {
+    try {
+      const startTime = Date.now();
+      const results = await syncUserCompanies();
+      await updateSequences();
+      const endTime = Date.now();
+      
+      res.json({
+        success: true,
+        timestamp: new Date().toISOString(),
+        duration: `${((endTime - startTime) / 1000).toFixed(2)} segundos`,
+        summary: {
+          totalRegistros: results.total,
+          registrosImportados: results.added,
+          errores: results.errors
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        success: false, 
+        timestamp: new Date().toISOString(),
+        message: "Error al sincronizar relaciones usuario-empresa", 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
+  // Endpoint para limpiar todas las tablas
+  app.post("/api/sync/truncate", isAdmin, async (req, res) => {
+    try {
+      const startTime = Date.now();
+      const result = await truncateTables();
+      const endTime = Date.now();
+      
+      res.json({
+        success: true,
+        timestamp: new Date().toISOString(),
+        duration: `${((endTime - startTime) / 1000).toFixed(2)} segundos`,
+        message: "Tablas limpiadas correctamente"
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        success: false, 
+        timestamp: new Date().toISOString(),
+        message: "Error al limpiar tablas", 
+        error: error instanceof Error ? error.message : String(error) 
+      });
     }
   });
 
