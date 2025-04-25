@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  # Base de datos PostgreSQL
+  db:
+    image: postgres:13
+    container_name: productiva-db
+    restart: always
+    environment:
+      POSTGRES_USER: productiva
+      POSTGRES_PASSWORD: productiva123
+      POSTGRES_DB: productiva
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U productiva"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Aplicación Productiva
+  productiva:
+    build: ./productiva
+    container_name: productiva-app
+    restart: always
+    volumes:
+      - ./productiva:/app
+      - productiva_uploads:/app/uploads
+    environment:
+      - SQLALCHEMY_DATABASE_URI=postgresql://productiva:productiva123@db:5432/productiva
+      - SESSION_SECRET=PRODUCTION-KEY-2025-SECURE-SESSION-7F3h7e2JK1v9
+      - FLASK_ENV=production
+    ports:
+      - "5000:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  # Servidor temporal simple para Horarios
+  horarios:
+    image: node:18
+    container_name: horarios-app
+    restart: always
+    volumes:
+      - ./server.js:/app/server.js
+    environment:
+      - DATABASE_URL=postgresql://productiva:productiva123@db:5432/horarios-app
+      - PRODUCTIVA_DB_URL=ostgresql://productiva:productiva123@db:5432/productiva
+      - JWT_SECRET=tu_secreto_jwt
+      - JWT_EXPIRY=7d
+    ports:
+      - "5001:5001"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
+    working_dir: /app
+    command: >
+      bash -c "npm init -y &&
+      npm install express pg &&
+      node server.js"
+
+  cloudflare-ddns:
+    image: timothyjmiller/cloudflare-ddns:latest
+    container_name: cloudflare-ddns
+    restart: always
+    environment:
+      - API_KEY=JasmISY6BXpIesapwuRWYxWrHrasC1caCfh1UkdI
+      - ZONE=00e401e8295e023a7a6b83d0883bfd36
+      - HOST=gestemps.es
+    volumes:
+      - ./config.json:/config.json
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  productiva_uploads: 
