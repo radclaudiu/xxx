@@ -1,12 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Redirect, useLocation } from "wouter";
+import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
+import { 
+  User, 
+  Company, 
+} from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { 
   Card, 
   CardContent, 
@@ -16,62 +23,20 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
-} from "@/components/ui/tabs";
-import { 
-  Form, 
-  FormControl, 
-  FormDescription, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
-} from "@/components/ui/form";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { 
-  ArrowLeft, 
-  Building, 
-  Loader2, 
-  Mail, 
-  UserPlus, 
-  Users 
-} from "lucide-react";
+import { useLocation } from "wouter";
+import { Loader2, ArrowLeft, Building, Mail, UserPlus, Users } from "lucide-react";
 
-// Esquema para el formulario de asignación de usuarios
-const assignUserSchema = z.object({
+// Esquema para asignar usuario por email
+const assignUserByEmailSchema = z.object({
   email: z.string().email({ message: "Email inválido" }),
   role: z.string().min(1, { message: "Seleccione un rol" }),
 });
-
-// Tipo para las relaciones usuario-empresa expandidas
-interface UserCompanyExpanded {
-  userId: number;
-  companyId: number;
-  role: string;
-  user: {
-    id: number;
-    username: string;
-    email: string;
-    fullName?: string;
-    role?: string;
-  };
-  company: {
-    id: number;
-    name: string;
-  };
-}
 
 export default function CompanyAdminPage() {
   const { user } = useAuth();
@@ -79,63 +44,67 @@ export default function CompanyAdminPage() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState("users");
   const [currentCompanyId, setCurrentCompanyId] = useState<number | null>(null);
-  
-  // Solo permitir acceso si no hay usuario (se redirigirá a login)
-  if (!user) {
-    return null;
-  }
-  
-  // Consultar empresas del usuario
+
+  // Obtener la lista de empresas a las que tiene acceso el usuario
   const { 
-    data: companies = [] as any[], 
+    data: companies = [], 
     isLoading: isLoadingCompanies 
-  } = useQuery<any[]>({
-    queryKey: ["/api/companies"],
-    enabled: !!user,
+  } = useQuery<Company[]>({
+    queryKey: ["/api/user-companies/companies"],
+    queryFn: getQueryFn({ on401: "throw" }),
   });
-  
-  // Consultar relaciones usuario-empresa
+
+  // Obtener información sobre la empresa actual
+  const currentCompany = companies.find(c => c.id === currentCompanyId);
+
+  // Definir tipo para las relaciones usuario-empresa expandidas
+  interface UserCompanyExpanded {
+    userId: number;
+    companyId: number;
+    role: string;
+    user: {
+      id: number;
+      username: string;
+      email: string;
+      fullName?: string;
+      role?: string;
+    };
+    company: {
+      id: number;
+      name: string;
+    };
+  }
+
+  // Obtener usuarios asignados a la empresa actual
   const { 
-    data: userCompanies = [] as UserCompanyExpanded[], 
+    data: userCompanies = [], 
     isLoading: isLoadingUserCompanies 
   } = useQuery<UserCompanyExpanded[]>({
     queryKey: ["/api/user-companies"],
-    enabled: !!user,
+    queryFn: getQueryFn({ on401: "throw" }),
   });
-  
-  // Establecer la primera empresa como predeterminada si no hay ninguna seleccionada
-  useEffect(() => {
-    if (companies.length > 0 && !currentCompanyId) {
-      setCurrentCompanyId(companies[0].id);
-    }
-  }, [companies, currentCompanyId]);
-  
-  // Formulario para asignar usuario a empresa
-  const assignUserForm = useForm<z.infer<typeof assignUserSchema>>({
-    resolver: zodResolver(assignUserSchema),
+
+  // Formulario para asignar usuario por email
+  const assignUserForm = useForm<z.infer<typeof assignUserByEmailSchema>>({
+    resolver: zodResolver(assignUserByEmailSchema),
     defaultValues: {
       email: "",
-      role: "employee", // Por defecto, rol de empleado
+      role: "employee"
     },
   });
-  
-  // Asignar usuario a empresa por correo electrónico
+
+  // Asignar usuario a la empresa actual
   const assignUserByEmailMutation = useMutation({
-    mutationFn: async (data: { 
-      companyId: number; 
-      userData: z.infer<typeof assignUserSchema> 
-    }) => {
-      const res = await apiRequest(
-        "POST", 
-        `/api/companies/${data.companyId}/assign-by-email`, 
-        data.userData
-      );
-      
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Error al asignar usuario");
+    mutationFn: async (data: z.infer<typeof assignUserByEmailSchema>) => {
+      if (!currentCompanyId) {
+        throw new Error("No se ha seleccionado una empresa");
       }
       
+      const res = await apiRequest(
+        "POST", 
+        `/api/companies/${currentCompanyId}/users/byEmail`, 
+        data
+      );
       return await res.json();
     },
     onSuccess: () => {
@@ -154,8 +123,8 @@ export default function CompanyAdminPage() {
       });
     },
   });
-  
-  // Eliminar usuario de empresa
+
+  // Eliminar usuario de la empresa
   const removeUserMutation = useMutation({
     mutationFn: async ({ userId, companyId }: { userId: number; companyId: number }) => {
       const res = await apiRequest(
@@ -181,32 +150,18 @@ export default function CompanyAdminPage() {
       });
     },
   });
-  
-  // Manejar envío de formulario para asignar usuario
-  const onAssignUserSubmit = (values: z.infer<typeof assignUserSchema>) => {
-    if (currentCompanyId) {
-      assignUserByEmailMutation.mutate({
-        companyId: currentCompanyId,
-        userData: values,
-      });
-    } else {
-      toast({
-        title: "Error",
-        description: "Debe seleccionar una empresa",
-        variant: "destructive",
-      });
-    }
+
+  // Manejar envío del formulario para asignar usuario
+  const onAssignUserSubmit = (values: z.infer<typeof assignUserByEmailSchema>) => {
+    assignUserByEmailMutation.mutate(values);
   };
-  
-  // Confirmar eliminación de usuario de empresa
+
+  // Confirmar y eliminar usuario de la empresa
   const handleRemoveUser = (userId: number, companyId: number) => {
     if (confirm("¿Está seguro que desea eliminar este usuario de la empresa?")) {
       removeUserMutation.mutate({ userId, companyId });
     }
   };
-  
-  // Obtener la empresa actual
-  const currentCompany = companies.find(c => c.id === currentCompanyId);
   
   // Filtrar usuarios asignados a la empresa actual
   const companyUsers = userCompanies.filter(uc => uc.companyId === currentCompanyId);
@@ -476,7 +431,7 @@ export default function CompanyAdminPage() {
                                   </div>
                                   
                                   {/* No mostrar botón eliminar para uno mismo o para administradores */}
-                                  {uc.user.id !== user.id && uc.user.role !== "admin" && (
+                                  {uc.user.id !== user?.id && uc.user.role !== "admin" && (
                                     <Button 
                                       variant="outline" 
                                       size="sm"
