@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/table";
 import { Redirect } from "wouter";
 import { Loader2, Plus, Building2, User as UserIcon, Trash2, Edit } from "lucide-react";
+import { SideMenu } from "@/components/side-menu";
 
 // Esquema para creación/edición de empresa
 const companyFormSchema = z.object({
@@ -333,196 +334,229 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Panel de Administración</h1>
+    <div className="flex h-screen w-full overflow-hidden">
+      {/* Menú lateral */}
+      <div className="w-72 flex-shrink-0 h-full">
+        <SideMenu activeItem={activeTab} onSelectItem={setActiveTab} />
       </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full md:w-[600px] grid-cols-3">
-          <TabsTrigger value="companies" className="flex items-center">
-            <Building2 className="mr-2 h-4 w-4" />
-            Empresas
-          </TabsTrigger>
-          <TabsTrigger value="users" className="flex items-center">
-            <UserIcon className="mr-2 h-4 w-4" />
-            Usuarios
-          </TabsTrigger>
-          <TabsTrigger value="sync" className="flex items-center">
-            <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Sincronización
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Tab de empresas */}
-        <TabsContent value="companies" className="space-y-4 pt-4">
+      
+      {/* Contenido principal */}
+      <div className="flex-grow p-6 overflow-y-auto">
+        <div className="max-w-5xl mx-auto space-y-6">
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-semibold">Gestión de Empresas</h2>
-            <Button onClick={() => setIsCompanyModalOpen(true)} className="flex items-center">
-              <Plus className="mr-2 h-4 w-4" /> Nueva Empresa
-            </Button>
+            <h1 className="text-3xl font-bold">Panel de Administración</h1>
           </div>
 
-          {isLoadingCompanies ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {companies.map(company => (
-                <Card key={company.id} className="overflow-hidden">
-                  <CardHeader className="pb-2">
-                    <CardTitle>{company.name}</CardTitle>
-                    <CardDescription>
-                      {company.address} {company.address && company.phone && "•"} {company.phone}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pb-2 text-sm">
-                    {company.email && <p><strong>Email:</strong> {company.email}</p>}
-                    {company.website && <p><strong>Website:</strong> {company.website}</p>}
-                    {company.taxId && <p><strong>ID Fiscal:</strong> {company.taxId}</p>}
-                    
-                    {/* Sección de usuarios asignados */}
-                    <div className="mt-4 pt-3 border-t border-gray-200">
-                      <h4 className="font-medium mb-2 flex items-center gap-1">
-                        <UserIcon className="h-3.5 w-3.5" /> 
-                        Usuarios Asignados
-                      </h4>
-                      
-                      {userCompanies
-                        .filter(uc => uc.company.id === company.id)
-                        .map(uc => (
-                          <div key={`${uc.userId}-${uc.companyId}`} className="flex justify-between items-center py-1.5 text-xs">
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-medium">{uc.user.fullName || uc.user.username}</span>
-                              <span className="text-gray-500">({uc.user.email})</span>
-                            </div>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-6 p-1 hover:bg-red-50 hover:text-red-600"
-                              onClick={() => handleRemoveUser(uc.user.id, company.id)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        ))}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            {/* Ocultamos el TabsList ya que usamos el menú lateral en su lugar */}
+            <TabsList className="hidden">
+              <TabsTrigger value="companies">Empresas</TabsTrigger>
+              <TabsTrigger value="users">Usuarios</TabsTrigger>
+              <TabsTrigger value="sync">Sincronización</TabsTrigger>
+              <TabsTrigger value="credentials">Credenciales</TabsTrigger>
+              <TabsTrigger value="tags">Etiquetas</TabsTrigger>
+              <TabsTrigger value="permissions">Permisos</TabsTrigger>
+              <TabsTrigger value="settings">Configuración</TabsTrigger>
+            </TabsList>
+
+            {/* Tab de empresas */}
+            <TabsContent value="companies" className="space-y-4 pt-4">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-semibold">Gestión de Empresas</h2>
+                <Button onClick={() => setIsCompanyModalOpen(true)} className="flex items-center">
+                  <Plus className="mr-2 h-4 w-4" /> Nueva Empresa
+                </Button>
+              </div>
+
+              {isLoadingCompanies ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {companies.map(company => (
+                    <Card key={company.id} className="overflow-hidden">
+                      <CardHeader className="pb-2">
+                        <CardTitle>{company.name}</CardTitle>
+                        <CardDescription>
+                          {company.address} {company.address && company.phone && "•"} {company.phone}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="pb-2 text-sm">
+                        {company.email && <p><strong>Email:</strong> {company.email}</p>}
+                        {company.website && <p><strong>Website:</strong> {company.website}</p>}
+                        {company.taxId && <p><strong>ID Fiscal:</strong> {company.taxId}</p>}
                         
-                      {userCompanies.filter(uc => uc.company.id === company.id).length === 0 && (
-                        <div className="text-xs text-gray-500 italic">
-                          No hay usuarios asignados a esta empresa.
+                        {/* Sección de usuarios asignados */}
+                        <div className="mt-4 pt-3 border-t border-gray-200">
+                          <h4 className="font-medium mb-2 flex items-center gap-1">
+                            <UserIcon className="h-3.5 w-3.5" /> 
+                            Usuarios Asignados
+                          </h4>
+                          
+                          {userCompanies
+                            .filter(uc => uc.company.id === company.id)
+                            .map(uc => (
+                              <div key={`${uc.userId}-${uc.companyId}`} className="flex justify-between items-center py-1.5 text-xs">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-medium">{uc.user.fullName || uc.user.username}</span>
+                                  <span className="text-gray-500">({uc.user.email})</span>
+                                </div>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-6 p-1 hover:bg-red-50 hover:text-red-600"
+                                  onClick={() => handleRemoveUser(uc.user.id, company.id)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            ))}
+                            
+                          {userCompanies.filter(uc => uc.company.id === company.id).length === 0 && (
+                            <div className="text-xs text-gray-500 italic">
+                              No hay usuarios asignados a esta empresa.
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                    
-                    <p className="text-muted-foreground text-xs mt-4">
-                      Creada: {new Date(company.createdAt || "").toLocaleDateString()}
-                    </p>
-                  </CardContent>
-                  <CardFooter className="flex justify-between border-t pt-4">
-                    <div>
-                      <Button variant="outline" size="sm" className="mr-2" onClick={() => loadCompanyToEdit(company)}>
-                        <Edit className="h-4 w-4 mr-1" /> Editar
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => openAssignUserModal(company.id)}>
-                        <UserIcon className="h-4 w-4 mr-1" /> Asignar
-                      </Button>
-                    </div>
-                    <Button variant="destructive" size="sm" onClick={() => handleDeleteCompany(company.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-          )}
-
-          {companies.length === 0 && !isLoadingCompanies && (
-            <div className="text-center p-8 border rounded-lg">
-              <h3 className="text-lg font-medium">No hay empresas registradas</h3>
-              <p className="text-muted-foreground">Comience creando una nueva empresa</p>
-            </div>
-          )}
-        </TabsContent>
-
-        {/* Tab de usuarios */}
-        <TabsContent value="users" className="space-y-4 pt-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-semibold">Usuarios del Sistema</h2>
-          </div>
-
-          {isLoadingUsers ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Rol</TableHead>
-                    <TableHead>Empresas</TableHead>
-                    <TableHead>Creado</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.map(user => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">{user.id}</TableCell>
-                      <TableCell>{user.fullName || user.username}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.role}</TableCell>
-                      <TableCell>
-                        {userCompanies.filter(uc => uc.userId === user.id).length} empresas
-                      </TableCell>
-                      <TableCell>
-                        {new Date(user.createdAt || "").toLocaleDateString()}
-                      </TableCell>
-                    </TableRow>
+                        
+                        <p className="text-muted-foreground text-xs mt-4">
+                          Creada: {new Date(company.createdAt || "").toLocaleDateString()}
+                        </p>
+                      </CardContent>
+                      <CardFooter className="flex justify-between border-t pt-4">
+                        <div>
+                          <Button variant="outline" size="sm" className="mr-2" onClick={() => loadCompanyToEdit(company)}>
+                            <Edit className="h-4 w-4 mr-1" /> Editar
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => openAssignUserModal(company.id)}>
+                            <UserIcon className="h-4 w-4 mr-1" /> Asignar
+                          </Button>
+                        </div>
+                        <Button variant="destructive" size="sm" onClick={() => handleDeleteCompany(company.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </CardFooter>
+                    </Card>
                   ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+                </div>
+              )}
 
-          {users.length === 0 && !isLoadingUsers && (
-            <div className="text-center p-8 border rounded-lg">
-              <h3 className="text-lg font-medium">No hay usuarios registrados</h3>
-              <p className="text-muted-foreground">Los usuarios pueden registrarse desde la página de autenticación</p>
-            </div>
-          )}
-        </TabsContent>
+              {companies.length === 0 && !isLoadingCompanies && (
+                <div className="text-center p-8 border rounded-lg">
+                  <h3 className="text-lg font-medium">No hay empresas registradas</h3>
+                  <p className="text-muted-foreground">Comience creando una nueva empresa</p>
+                </div>
+              )}
+            </TabsContent>
 
-        {/* Tab de sincronización con Productiva */}
-        <TabsContent value="sync" className="space-y-4 pt-4">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-semibold">Sincronización con Productiva</h2>
-          </div>
-          
-          <div className="max-w-3xl">
-            <SyncPanel />
+            {/* Tab de usuarios */}
+            <TabsContent value="users" className="space-y-4 pt-4">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-semibold">Usuarios del Sistema</h2>
+              </div>
+
+              {isLoadingUsers ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Nombre</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Rol</TableHead>
+                        <TableHead>Empresas</TableHead>
+                        <TableHead>Creado</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {users.map(user => (
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium">{user.id}</TableCell>
+                          <TableCell>{user.fullName || user.username}</TableCell>
+                          <TableCell>{user.email}</TableCell>
+                          <TableCell>{user.role}</TableCell>
+                          <TableCell>
+                            {userCompanies.filter(uc => uc.userId === user.id).length} empresas
+                          </TableCell>
+                          <TableCell>
+                            {new Date(user.createdAt || "").toLocaleDateString()}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              {users.length === 0 && !isLoadingUsers && (
+                <div className="text-center p-8 border rounded-lg">
+                  <h3 className="text-lg font-medium">No hay usuarios registrados</h3>
+                  <p className="text-muted-foreground">Los usuarios pueden registrarse desde la página de autenticación</p>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Tab de sincronización con Productiva */}
+            <TabsContent value="sync" className="space-y-4 pt-4">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-semibold">Sincronización con Productiva</h2>
+              </div>
+              
+              <div className="max-w-3xl">
+                <SyncPanel />
+                
+                <div className="mt-6 p-4 bg-gray-50 border rounded-md">
+                  <h3 className="text-lg font-medium mb-3">Acerca de la sincronización</h3>
+                  <p className="text-sm text-gray-700 mb-2">
+                    Este módulo permite importar datos desde la base de datos de Productiva, permitiendo que
+                    CreaTurno funcione como un plugin para gestionar los horarios de los empleados.
+                  </p>
+                  <ul className="list-disc list-inside text-sm text-gray-700 space-y-1 pl-2">
+                    <li>Los <strong>usuarios</strong> se importan con sus mismas credenciales</li>
+                    <li>Las <strong>empresas</strong> se importan con sus datos básicos</li>
+                    <li>Los <strong>empleados</strong> se importan con la información de contacto y pertenencia a empresas</li>
+                    <li>Las <strong>relaciones usuario-empresa</strong> se mantienen como en Productiva</li>
+                  </ul>
+                </div>
+              </div>
+            </TabsContent>
             
-            <div className="mt-6 p-4 bg-gray-50 border rounded-md">
-              <h3 className="text-lg font-medium mb-3">Acerca de la sincronización</h3>
-              <p className="text-sm text-gray-700 mb-2">
-                Este módulo permite importar datos desde la base de datos de Productiva, permitiendo que
-                CreaTurno funcione como un plugin para gestionar los horarios de los empleados.
-              </p>
-              <ul className="list-disc list-inside text-sm text-gray-700 space-y-1 pl-2">
-                <li>Los <strong>usuarios</strong> se importan con sus mismas credenciales</li>
-                <li>Las <strong>empresas</strong> se importan con sus datos básicos</li>
-                <li>Los <strong>empleados</strong> se importan con la información de contacto y pertenencia a empresas</li>
-                <li>Las <strong>relaciones usuario-empresa</strong> se mantienen como en Productiva</li>
-              </ul>
-            </div>
-          </div>
-        </TabsContent>
-      </Tabs>
+            {/* Contenido para las otras pestañas - Serán implementadas según necesidad */}
+            <TabsContent value="credentials" className="space-y-4 pt-4">
+              <div className="p-6 bg-gray-50 rounded-lg">
+                <h2 className="text-2xl font-semibold mb-4">Gestión de Credenciales</h2>
+                <p>Esta sección está en desarrollo.</p>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="tags" className="space-y-4 pt-4">
+              <div className="p-6 bg-gray-50 rounded-lg">
+                <h2 className="text-2xl font-semibold mb-4">Gestión de Etiquetas</h2>
+                <p>Esta sección está en desarrollo.</p>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="permissions" className="space-y-4 pt-4">
+              <div className="p-6 bg-gray-50 rounded-lg">
+                <h2 className="text-2xl font-semibold mb-4">Gestión de Permisos</h2>
+                <p>Esta sección está en desarrollo.</p>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="settings" className="space-y-4 pt-4">
+              <div className="p-6 bg-gray-50 rounded-lg">
+                <h2 className="text-2xl font-semibold mb-4">Configuración General</h2>
+                <p>Esta sección está en desarrollo.</p>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
 
       {/* Modal de crear/editar empresa */}
       <Dialog open={isCompanyModalOpen} onOpenChange={setIsCompanyModalOpen}>
@@ -669,7 +703,7 @@ export default function AdminPage() {
                       >
                         <option value={0}>Seleccionar usuario</option>
                         {users
-                          .filter(u => u.id !== user.id) // No mostrar el usuario actual (admin)
+                          .filter(u => u.id !== user?.id) // No mostrar el usuario actual (admin)
                           .map(u => (
                             <option key={u.id} value={u.id}>
                               {u.fullName || u.username} ({u.email})

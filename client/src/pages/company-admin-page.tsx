@@ -212,44 +212,127 @@ export default function CompanyAdminPage() {
   const companyUsers = userCompanies.filter(uc => uc.companyId === currentCompanyId);
   
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center gap-3">
-        <Button 
-          variant="outline" 
-          className="p-2 rounded-full" 
-          onClick={() => setLocation("/")}
-        >
-          <ArrowLeft className="h-5 w-5" />
-          <span className="sr-only">Regresar</span>
-        </Button>
-        <h1 className="text-3xl font-bold">Administración de Empresa</h1>
+    <div className="flex h-screen w-full overflow-hidden">
+      {/* Menú lateral */}
+      <div className="w-72 flex-shrink-0 h-full border-r">
+        <div className="py-4">
+          <div className="px-6 py-3">
+            <Button 
+              variant="ghost" 
+              className="p-2 flex items-center gap-2 text-sm mb-4 hover:bg-gray-100" 
+              onClick={() => setLocation("/")}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>Regresar</span>
+            </Button>
+            
+            <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
+              Administrar Empresa
+            </h3>
+          </div>
+          
+          {isLoadingCompanies ? (
+            <div className="px-6 py-3 flex items-center">
+              <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" />
+              <span>Cargando empresas...</span>
+            </div>
+          ) : (
+            <>
+              {/* Selector de empresa */}
+              <div className="px-6 py-2">
+                <div className="flex items-center gap-3 mt-2">
+                  <Building className="h-5 w-5 text-muted-foreground" />
+                  <Select
+                    value={currentCompanyId?.toString() || ""}
+                    onValueChange={(value) => setCurrentCompanyId(parseInt(value))}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Seleccionar empresa" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {companies.map(company => (
+                        <SelectItem key={company.id} value={company.id.toString()}>
+                          {company.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              {/* Menú de opciones */}
+              <nav className="mt-4 px-3 space-y-1">
+                <div
+                  className={`flex items-center px-4 py-3 text-sm rounded-md cursor-pointer transition-colors ${
+                    activeTab === "users" 
+                      ? "bg-primary text-white" 
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`}
+                  onClick={() => setActiveTab("users")}
+                >
+                  <div className="flex items-center">
+                    <Users className="h-5 w-5 mr-2" />
+                    <div>
+                      <div className="font-medium">Gestión de Usuarios</div>
+                      <div className={`text-xs ${activeTab === "users" ? "text-gray-100" : "text-gray-500"}`}>
+                        Administrar usuarios de la empresa
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div
+                  className={`flex items-center px-4 py-3 text-sm rounded-md cursor-pointer transition-colors ${
+                    activeTab === "roles" 
+                      ? "bg-primary text-white" 
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`}
+                  onClick={() => setActiveTab("roles")}
+                >
+                  <div className="flex items-center">
+                    <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    <div>
+                      <div className="font-medium">Roles y Permisos</div>
+                      <div className={`text-xs ${activeTab === "roles" ? "text-gray-100" : "text-gray-500"}`}>
+                        Configurar roles de usuario
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div
+                  className={`flex items-center px-4 py-3 text-sm rounded-md cursor-pointer transition-colors ${
+                    activeTab === "config" 
+                      ? "bg-primary text-white" 
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`}
+                  onClick={() => setActiveTab("config")}
+                >
+                  <div className="flex items-center">
+                    <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <div>
+                      <div className="font-medium">Configuración</div>
+                      <div className={`text-xs ${activeTab === "config" ? "text-gray-100" : "text-gray-500"}`}>
+                        Ajustes de la empresa
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </nav>
+            </>
+          )}
+        </div>
       </div>
       
-      {isLoadingCompanies ? (
-        <div className="flex justify-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      ) : (
-        <>
-          {/* Selector de empresa */}
-          <div className="flex items-center gap-3 mt-2">
-            <Building className="h-5 w-5 text-muted-foreground" />
-            <Select
-              value={currentCompanyId?.toString() || ""}
-              onValueChange={(value) => setCurrentCompanyId(parseInt(value))}
-            >
-              <SelectTrigger className="w-[300px]">
-                <SelectValue placeholder="Seleccionar empresa" />
-              </SelectTrigger>
-              <SelectContent>
-                {companies.map(company => (
-                  <SelectItem key={company.id} value={company.id.toString()}>
-                    {company.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      {/* Contenido principal */}
+      <div className="flex-grow p-6 overflow-y-auto">
+        <div className="max-w-5xl mx-auto space-y-6">
+          <h1 className="text-3xl font-bold">Administración de Empresa</h1>
           
           {currentCompany && (
             <div className="mt-6">
@@ -258,11 +341,10 @@ export default function CompanyAdminPage() {
               </h2>
               
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full md:w-[300px] grid-cols-1">
-                  <TabsTrigger value="users" className="flex items-center">
-                    <Users className="mr-2 h-4 w-4" />
-                    Gestión de Usuarios
-                  </TabsTrigger>
+                <TabsList className="hidden">
+                  <TabsTrigger value="users">Gestión de Usuarios</TabsTrigger>
+                  <TabsTrigger value="roles">Roles y Permisos</TabsTrigger>
+                  <TabsTrigger value="config">Configuración</TabsTrigger>
                 </TabsList>
               
                 <TabsContent value="users" className="space-y-6 pt-4">
@@ -417,11 +499,96 @@ export default function CompanyAdminPage() {
                     </CardContent>
                   </Card>
                 </TabsContent>
+                
+                {/* Contenido para la pestaña de Roles */}
+                <TabsContent value="roles" className="space-y-6 pt-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                        Gestión de Roles y Permisos
+                      </CardTitle>
+                      <CardDescription>
+                        Administre los roles y permisos de los usuarios en {currentCompany.name}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="p-6 bg-gray-50 rounded-lg text-center">
+                        <h3 className="text-lg font-medium mb-2">Próximamente</h3>
+                        <p className="text-gray-600">Esta funcionalidad estará disponible en una próxima actualización.</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                {/* Contenido para la pestaña de Configuración */}
+                <TabsContent value="config" className="space-y-6 pt-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Configuración de la Empresa
+                      </CardTitle>
+                      <CardDescription>
+                        Ajuste la configuración de {currentCompany.name}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-5">
+                        <div className="border-b pb-5">
+                          <h3 className="text-lg font-medium mb-3">Información General</h3>
+                          <div className="flex items-baseline justify-between">
+                            <span className="text-gray-600">Nombre:</span>
+                            <span className="font-medium">{currentCompany.name}</span>
+                          </div>
+                          <div className="flex items-baseline justify-between mt-2">
+                            <span className="text-gray-600">Dirección:</span>
+                            <span className="font-medium">{currentCompany.address || "No especificada"}</span>
+                          </div>
+                          <div className="flex items-baseline justify-between mt-2">
+                            <span className="text-gray-600">Teléfono:</span>
+                            <span className="font-medium">{currentCompany.phone || "No especificado"}</span>
+                          </div>
+                          <div className="flex items-baseline justify-between mt-2">
+                            <span className="text-gray-600">Email:</span>
+                            <span className="font-medium">{currentCompany.email || "No especificado"}</span>
+                          </div>
+                        </div>
+                      
+                        <div className="pt-2">
+                          <h3 className="text-lg font-medium mb-3">Configuración Avanzada</h3>
+                          <p className="text-gray-600 mb-4">Estas configuraciones se implementarán en futuras actualizaciones.</p>
+                          
+                          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md mb-3">
+                            <div>
+                              <h4 className="font-medium">Notificaciones por Email</h4>
+                              <p className="text-xs text-gray-500">Enviar notificaciones a los empleados cuando se modifican sus turnos</p>
+                            </div>
+                            <div className="text-gray-400 italic text-sm">Próximamente</div>
+                          </div>
+                          
+                          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md mb-3">
+                            <div>
+                              <h4 className="font-medium">Integración con Calendario</h4>
+                              <p className="text-xs text-gray-500">Sincronizar turnos con Google Calendar o Microsoft Outlook</p>
+                            </div>
+                            <div className="text-gray-400 italic text-sm">Próximamente</div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
               </Tabs>
             </div>
           )}
-        </>
-      )}
+        </div>
+      </div>
     </div>
   );
 }
