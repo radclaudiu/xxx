@@ -158,7 +158,44 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
       gridContainers.forEach(grid => {
         (grid as HTMLElement).style.display = 'grid';
         (grid as HTMLElement).style.gridTemplateColumns = 'repeat(3, 1fr)';
-        (grid as HTMLElement).style.gap = '5px';
+        (grid as HTMLElement).style.gap = '8px';
+      });
+      
+      // Asegurar que los bordes de las tarjetas sean visibles en el PDF
+      const employeeCards = elementClone.querySelectorAll('.border');
+      employeeCards.forEach(card => {
+        (card as HTMLElement).style.border = '1px solid #ccc';
+        (card as HTMLElement).style.borderRadius = '4px';
+        (card as HTMLElement).style.padding = '8px';
+        (card as HTMLElement).style.margin = '4px';
+        (card as HTMLElement).style.backgroundColor = '#ffffff';
+      });
+      
+      // Asegurar que la hora se muestre correctamente
+      const timeSlots = elementClone.querySelectorAll('.flex.justify-between');
+      timeSlots.forEach(slot => {
+        (slot as HTMLElement).style.display = 'flex';
+        (slot as HTMLElement).style.justifyContent = 'space-between';
+        (slot as HTMLElement).style.marginBottom = '4px';
+        
+        // Dar estilos concretos a los textos
+        const textElements = slot.querySelectorAll('span');
+        if (textElements.length >= 2) {
+          (textElements[0] as HTMLElement).style.fontWeight = 'bold';
+          (textElements[0] as HTMLElement).style.minWidth = '50px';
+          (textElements[1] as HTMLElement).style.textAlign = 'right';
+          (textElements[1] as HTMLElement).style.color = '#333';
+        }
+      });
+      
+      // Mejorar la visibilidad de los nombres de empleados
+      const employeeNames = elementClone.querySelectorAll('.text-base.font-bold');
+      employeeNames.forEach(name => {
+        (name as HTMLElement).style.borderBottom = '1px solid #ddd';
+        (name as HTMLElement).style.paddingBottom = '4px';
+        (name as HTMLElement).style.marginBottom = '6px';
+        (name as HTMLElement).style.fontWeight = 'bold';
+        (name as HTMLElement).style.fontSize = '14px';
       });
     } else {
       // Para el cuadrante semanal
@@ -166,6 +203,14 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
       tables.forEach(table => {
         table.style.width = '100%';
         table.style.fontSize = '9pt';
+        table.style.borderCollapse = 'collapse';
+        
+        // Asegurar que todas las celdas tengan bordes
+        const cells = table.querySelectorAll('td, th');
+        cells.forEach(cell => {
+          (cell as HTMLElement).style.border = '1px solid #ccc';
+          (cell as HTMLElement).style.padding = '4px';
+        });
       });
     }
     
@@ -352,12 +397,12 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                 const formattedName = formatEmployeeName(employee.name);
                 
                 return (
-                <div key={employee.id} className="mb-4 print:break-inside-avoid border p-2 rounded-sm">
-                  <div className="mb-2 border-b pb-1">
-                    <h3 className="text-base font-bold">{formattedName}</h3>
+                <div key={employee.id} className="mb-4 print:break-inside-avoid border border-gray-300 p-3 rounded-md shadow-sm bg-white">
+                  <div className="mb-2 border-b pb-1 border-gray-200">
+                    <h3 className="text-base font-bold text-gray-800">{formattedName}</h3>
                   </div>
                   
-                  <div className="text-xs space-y-1">
+                  <div className="text-xs space-y-2">
                     {weekDays.map((day, index) => {
                       // Buscar turnos para este empleado en este día
                       const dayShifts = getWeekShifts().filter(shift => {
@@ -376,13 +421,13 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                       );
                       
                       return (
-                        <div key={index} className="flex justify-between">
-                          <span className="font-medium">{dayNames[index].substring(0, 3)} {day.getDate()}</span>
-                          <span>
+                        <div key={index} className="flex justify-between items-center py-1">
+                          <span className="font-medium text-gray-700">{dayNames[index].substring(0, 3)} {day.getDate()}</span>
+                          <span className="text-gray-800">
                             {shiftsArray.length > 0 ? (
                               shiftsArray.join(", ")
                             ) : (
-                              "Libre"
+                              <span className="text-gray-400 italic">Libre</span>
                             )}
                           </span>
                         </div>
