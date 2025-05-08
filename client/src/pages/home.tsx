@@ -112,6 +112,38 @@ export default function Home() {
     },
   });
   
+  // Fetch ventas diarias estimadas para la fecha actual
+  const {
+    data: dailySalesData,
+    isLoading: isLoadingDailySales
+  } = useQuery({
+    queryKey: ['/api/companies', currentCompanyId, 'daily-sales', formatDateForAPI(currentDate)],
+    queryFn: async () => {
+      if (!currentCompanyId) return null;
+      const response = await fetch(`/api/companies/${currentCompanyId}/daily-sales?date=${formatDateForAPI(currentDate)}`);
+      if (!response.ok) {
+        // Si no hay datos, es posible que la API devuelva 404, pero no es un error crítico
+        if (response.status === 404) {
+          return null;
+        }
+        throw new Error('Error al cargar datos de ventas diarias');
+      }
+      return response.json();
+    },
+    enabled: !!currentCompanyId,
+    onSuccess: (data) => {
+      if (data && data.length > 0) {
+        // Actualizar los valores de venta estimada y coste por hora
+        setEstimatedDailySales(data[0].estimatedSales?.toString() || '0');
+        setHourlyEmployeeCost(data[0].hourlyEmployeeCost?.toString() || '0');
+      } else {
+        // Si no hay datos para esta fecha, establecer valores predeterminados
+        setEstimatedDailySales('0');
+        setHourlyEmployeeCost('0');
+      }
+    }
+  });
+  
   // Fetch companies
   const {
     data: companies = [],

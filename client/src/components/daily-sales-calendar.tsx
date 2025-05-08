@@ -116,24 +116,14 @@ export default function DailySalesCalendar({ companyId }: DailySalesCalendarProp
     });
   };
 
-  // Función para renderizar días con datos especiales
-  const renderDay = (day: Date) => {
-    if (!dailySales) return null;
+  // Función para marcar días con datos
+  const getDayClass = (date: Date): string => {
+    if (!dailySales) return "";
     
-    const formattedDay = formatDateForAPI(day);
-    const dailySale = dailySales.find(ds => ds.date === formattedDay);
+    const formattedDate = formatDateForAPI(date);
+    const hasDailySale = dailySales.some(ds => ds.date === formattedDate);
     
-    // Si hay datos para este día, mostrar un punto o algún indicador visual
-    if (dailySale) {
-      return (
-        <div className="h-full w-full flex items-center justify-center relative">
-          {day.getDate()}
-          <div className="absolute bottom-1 w-1 h-1 bg-primary rounded-full"></div>
-        </div>
-      );
-    }
-    
-    return day.getDate();
+    return hasDailySale ? "bg-primary/10 font-bold" : "";
   };
 
   return (
@@ -151,12 +141,15 @@ export default function DailySalesCalendar({ companyId }: DailySalesCalendarProp
             selected={selectedDate}
             onSelect={setSelectedDate}
             className="rounded-md border"
-            components={{
-              Day: ({ day, ...props }) => (
-                <button {...props}>
-                  {renderDay(day)}
-                </button>
-              )
+            modifiers={{
+              hasDailySale: (date) => {
+                if (!dailySales) return false;
+                const formattedDate = formatDateForAPI(date);
+                return dailySales.some(ds => ds.date === formattedDate);
+              }
+            }}
+            modifiersClassNames={{
+              hasDailySale: "bg-primary/10 font-bold"
             }}
           />
         </CardContent>
