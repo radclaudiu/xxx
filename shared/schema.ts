@@ -414,9 +414,8 @@ export const insertDailySalesSchema = createInsertSchema(dailySales).pick({
   companyId: true,
   date: true,
   estimatedSales: true,
-  hourlyEmployeeCost: true,
-}).partial({
-  hourlyEmployeeCost: true,
+}).extend({
+  hourlyEmployeeCost: z.number().optional(),
 });
 
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
