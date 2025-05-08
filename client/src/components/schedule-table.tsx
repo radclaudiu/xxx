@@ -947,7 +947,22 @@ export default function ScheduleTable({
           }}
         >
           <div className="text-xs font-semibold mb-2 text-gray-600 border-b pb-1">
-            Turno: {contextMenu.shift.startTime} - {contextMenu.shift.endTime}
+            {(() => {
+              // Determinar si el turno cruza la medianoche
+              const startMinutes = convertTimeToMinutes(contextMenu.shift.startTime);
+              const endMinutes = convertTimeToMinutes(contextMenu.shift.endTime);
+              const isMidnightCrossing = endMinutes <= startMinutes || 
+                (contextMenu.shift.endTime === '00:00' && contextMenu.shift.startTime !== '00:00');
+              
+              return (
+                <span className="flex items-center">
+                  Turno: {contextMenu.shift.startTime} - {contextMenu.shift.endTime}
+                  {isMidnightCrossing && (
+                    <span className="ml-1 text-purple-600 text-[0.65rem]">+1</span>
+                  )}
+                </span>
+              );
+            })()}
           </div>
           <button
             onClick={(e) => {
