@@ -513,7 +513,7 @@ export default function AdminPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         {/* No mostrar acciones para el usuario autenticado o para el admin principal */}
-                        {userItem.id !== user?.id && (userItem.username !== "admin" || userItem.role !== "admin") && (
+                        {userItem.id !== user?.id && !(userItem.username === "admin" && userItem.role === "admin") && (
                           <Button 
                             variant="destructive" 
                             size="sm"
