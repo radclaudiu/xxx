@@ -496,7 +496,8 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
           // Alternar colores de fondo para las filas
           if (index % 2 === 1) {
             pdf.setFillColor(248, 248, 248);
-            pdf.rect(margin, currentY - 4, tableWidth, rowHeight * (nightHours.details.length || 1), 'F');
+            // Altura fija para cada fila, independientemente de los detalles
+            pdf.rect(margin, currentY - 4, tableWidth, 8, 'F');
           }
           
           // Nombre del empleado
@@ -514,29 +515,21 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
           pdf.setFontSize(8);
           
           if (nightHours.details.length > 0) {
-            // Formato más compacto para detalles
-            // Agrupamos los detalles en grupos de 3 por línea
-            const ITEMS_PER_LINE = 3;
-            const detailGroups = [];
-            
-            // Dividir los detalles en grupos
-            for (let i = 0; i < nightHours.details.length; i += ITEMS_PER_LINE) {
-              detailGroups.push(nightHours.details.slice(i, i + ITEMS_PER_LINE));
+            // En lugar de agrupar, mostraremos solo el total
+            if (nightHours.details.length > 5) {
+              // Si hay más de 5 días, solo mostramos cuántos días en total y no detallamos
+              const diasText = `${nightHours.details.length} días con horas nocturnas`;
+              pdf.text(diasText, pageWidth - margin - 60, currentY);
+              currentY += 6; // Incrementamos una sola línea para el resumen
+            } else {
+              // Si son pocos días, mostramos el detalle pero en una sola línea con formato compacto
+              const detailsText = nightHours.details.map(detail => 
+                `${formatDate(new Date(detail.date))}`
+              ).join(', ');
+              
+              pdf.text(detailsText, pageWidth - margin - 60, currentY);
+              currentY += 6; // Incrementamos solo una línea
             }
-            
-            // Mostrar los detalles en formato más compacto
-            detailGroups.forEach((group, groupIndex) => {
-              const detailsText = group.map(detail => 
-                `${formatDate(new Date(detail.date))}:${detail.hours.toFixed(1)}h`
-              ).join(' | ');
-              
-              pdf.text(detailsText, pageWidth - margin - 60, currentY + (groupIndex * 4));
-              
-              // Solo incrementamos Y después del último grupo
-              if (groupIndex === detailGroups.length - 1) {
-                currentY += Math.max(4, detailGroups.length * 4) + 2;
-              }
-            });
           } else {
             pdf.setTextColor(150, 150, 150);
             pdf.text("Sin horas nocturnas", pageWidth - margin - 50, currentY);
