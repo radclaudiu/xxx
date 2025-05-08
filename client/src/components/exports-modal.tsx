@@ -152,6 +152,9 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
     document.body.appendChild(elementClone);
     elementClone.style.position = 'absolute';
     elementClone.style.left = '-9999px';
+    elementClone.style.overflow = 'visible';
+    elementClone.style.height = 'auto';
+    elementClone.style.width = selectedReport === 'print-template' ? '210mm' : '297mm'; // Ancho de hoja A4
     
     // Ajustar estilos específicos para imprimir
     if (selectedReport === 'print-template') {
@@ -216,12 +219,12 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
       });
     }
     
-    // Ajuste importante: dar estilos globales al elemento clonado
-    elementClone.style.width = selectedReport === 'print-template' ? '210mm' : '297mm'; // Ancho de hoja A4
+    // Completar estilos globales para el PDF
     elementClone.style.backgroundColor = 'white';
     elementClone.style.padding = '15mm';
     elementClone.style.boxSizing = 'border-box';
     elementClone.style.fontFamily = 'Arial, sans-serif';
+    elementClone.style.margin = '0';
     
     // Corregir display específico para cada tipo de componente
     if (selectedReport === 'print-template') {
@@ -511,7 +514,22 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                           </span>
                           <span className="text-gray-800" style={{ textAlign: 'right' }}>
                             {shiftsArray.length > 0 ? (
-                              shiftsArray.join(", ")
+                              <span>
+                                {shiftsArray.map((shift, i) => {
+                                  const containsMidnightIndicator = shift.includes(' +1');
+                                  return (
+                                    <span key={i}>
+                                      {i > 0 && ", "}
+                                      <span style={{ 
+                                        color: containsMidnightIndicator ? '#8a4df7' : 'inherit',
+                                        fontWeight: containsMidnightIndicator ? 'bold' : 'normal'
+                                      }}>
+                                        {shift}
+                                      </span>
+                                    </span>
+                                  );
+                                })}
+                              </span>
                             ) : (
                               <span className="text-gray-400 italic" style={{ color: '#aaa', fontStyle: 'italic' }}>Libre</span>
                             )}
