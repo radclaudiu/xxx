@@ -103,7 +103,216 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
   
   // Función para generar y descargar el PDF del informe seleccionado
   const generateWeeklySchedulePDF = () => {
-    // Determinar cuál referencia usar según el tipo de reporte
+    // Notificar al usuario que el proceso ha comenzado
+    toast({
+      title: "Generando PDF",
+      description: "El proceso puede tardar unos segundos...",
+    });
+    
+    if (selectedReport === 'week-schedule') {
+      // Para el cuadrante semanal, usamos html2canvas + jsPDF
+      const element = weeklyScheduleRef.current;
+      if (!element) {
+        console.error("No se encontró el elemento de referencia para el reporte:", selectedReport);
+        toast({
+          title: "Error al generar PDF",
+          description: "No se pudo encontrar el contenido del informe",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const dateRange = weekRangeText.replace(/\//g, "-");
+      const filename = `cuadrante-semanal-${dateRange}.pdf`;
+      
+      try {
+        // Capturar tabla como imagen
+        html2canvas(element, {
+          scale: 2,
+          backgroundColor: '#ffffff',
+          useCORS: true,
+          logging: true,
+          allowTaint: true
+        }).then(canvas => {
+          const imgData = canvas.toDataURL('image/png');
+          const pdf = new jsPDF({
+            orientation: 'landscape',
+            unit: 'mm',
+            format: 'a4'
+          });
+          
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = pdf.internal.pageSize.getHeight();
+          const imgWidth = pdfWidth - 20; // 10mm de margen a cada lado
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          
+          pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
+          pdf.save(filename);
+          
+          toast({
+            title: "Cuadrante semanal generado",
+            description: "El PDF se ha descargado correctamente",
+            variant: "default"
+          });
+        });
+        return;
+      } catch (error) {
+        console.error("Error al generar el PDF del cuadrante semanal:", error);
+        toast({
+          title: "Error al generar el PDF",
+          description: "Ocurrió un problema durante la generación",
+          variant: "destructive"
+        });
+        return;
+      }
+    } else if (selectedReport === 'print-template') {
+      // Para horarios individuales, generamos el PDF directamente
+      try {
+        // Crear un nuevo PDF
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4'
+        });
+        
+        // Título
+        pdf.setFontSize(16);
+        pdf.text(`Horarios Individuales - Semana: ${weekRangeText}`, pdf.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+        
+        // Configurar disposición de tarjetas
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const marginX = 10;
+        const marginY = 25; // Margen top después del título
+        const cardsPerRow = 3;
+        const cardWidth = (pageWidth - (marginX * 2)) / cardsPerRow;
+        const cardHeight = 42; // Altura de cada tarjeta
+        const spacing = 5; // Espacio entre tarjetas
+        
+        // Inicializar posición
+        let currentX = marginX;
+        let currentY = marginY;
+        let cardCount = 0;
+        
+        // Para cada empleado, crear una tarjeta
+        employees.forEach((employee, employeeIndex) => {
+          // Verificar si necesitamos cambiar de fila
+          if (cardCount > 0 && cardCount % cardsPerRow === 0) {
+            currentX = marginX;
+            currentY += cardHeight + spacing;
+          }
+          
+          // Verificar si necesitamos una nueva página
+          if (currentY + cardHeight > pdf.internal.pageSize.getHeight() - marginX) {
+            pdf.addPage();
+            currentX = marginX;
+            currentY = marginY;
+          }
+          
+          // Borde de la tarjeta
+          pdf.setDrawColor(200, 200, 200);
+          pdf.rect(currentX, currentY, cardWidth, cardHeight);
+          
+          // Nombre del empleado (formateado)
+          const formattedName = formatEmployeeName(employee.name);
+          pdf.setFontSize(11);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(formattedName, currentX + 3, currentY + 6);
+          
+          // Línea separadora bajo el nombre
+          pdf.setDrawColor(220, 220, 220);
+          pdf.line(currentX, currentY + 8, currentX + cardWidth, currentY + 8);
+          
+          // Establecer fuente para los horarios
+          pdf.setFontSize(8);
+          pdf.setFont('helvetica', 'normal');
+          
+          // Mostrar horarios por día
+          let lineY = currentY + 12;
+          weekDays.forEach((day, dayIndex) => {
+            // Día de la semana
+            const dayName = dayNames[dayIndex].substring(0, 3);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text(`${dayName} ${day.getDate()}:`, currentX + 3, lineY);
+            
+            // Buscar turnos para este empleado en este día
+            const dayShifts = getWeekShifts().filter(shift => {
+              const shiftDate = new Date(shift.date);
+              return (
+                shift.employeeId === employee.id && 
+                shiftDate.getDate() === day.getDate() &&
+                shiftDate.getMonth() === day.getMonth() &&
+                shiftDate.getFullYear() === day.getFullYear()
+              );
+            });
+            
+            // Formatear horarios con indicador de medianoche
+            let shiftsText = 'Libre';
+            
+            if (dayShifts.length > 0) {
+              shiftsText = dayShifts.map(shift => {
+                const [startHour, startMinute] = shift.startTime.split(':').map(Number);
+                const [endHour, endMinute] = shift.endTime.split(':').map(Number);
+                const isMidnightCrossing = (endHour < startHour) || (endHour === 0 && endMinute === 0);
+                
+                return isMidnightCrossing
+                  ? `${shift.startTime}-${shift.endTime}+1`
+                  : `${shift.startTime}-${shift.endTime}`;
+              }).join(', ');
+              
+              // Texto de turno
+              pdf.setFont('helvetica', 'normal');
+              
+              // Colorear turnos de medianoche en morado
+              if (shiftsText.includes('+1')) {
+                pdf.setTextColor(138, 77, 247); // Morado para turnos de medianoche
+              } else {
+                pdf.setTextColor(0, 0, 0); // Negro normal
+              }
+            } else {
+              pdf.setTextColor(150, 150, 150); // Gris para "Libre"
+              pdf.setFont('helvetica', 'italic');
+            }
+            
+            // Alinear texto de turnos a la derecha
+            const textWidth = pdf.getTextWidth(shiftsText);
+            pdf.text(shiftsText, currentX + cardWidth - 3 - textWidth, lineY);
+            
+            // Resetear color de texto
+            pdf.setTextColor(0, 0, 0);
+            
+            // Avanzar a la siguiente línea
+            lineY += 4;
+          });
+          
+          // Actualizar posición para la siguiente tarjeta
+          currentX += cardWidth;
+          cardCount++;
+        });
+        
+        // Guardar el PDF
+        const dateRange = weekRangeText.replace(/\//g, "-");
+        pdf.save(`horarios-empleados-${dateRange}.pdf`);
+        
+        // Notificar éxito
+        toast({
+          title: "Horarios individuales generados",
+          description: "El PDF se ha descargado correctamente",
+          variant: "default"
+        });
+        
+        return;
+      } catch (error) {
+        console.error("Error al generar el PDF de horarios individuales:", error);
+        toast({
+          title: "Error al generar el PDF",
+          description: "Ocurrió un problema durante la generación",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+    
+    // Para el resto de tipos de reportes, usamos el enfoque anterior
     let element: HTMLDivElement | null = null;
     
     if (selectedReport === 'week-schedule') {
