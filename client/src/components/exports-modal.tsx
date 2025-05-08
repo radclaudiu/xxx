@@ -2,7 +2,7 @@ import { useState, forwardRef, useImperativeHandle, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Employee, Shift } from "@shared/schema";
-import { Download, Calendar, FileText, ClipboardList, ChevronLeft, ChevronRight, BarChart2, Clock, Users, DollarSign } from "lucide-react";
+import { Download, Calendar, FileText, ChevronLeft, ChevronRight, Moon, CalendarClock } from "lucide-react";
 import { formatDate, getStartOfWeek, isInSameWeek, calculateHoursBetween, formatHours, formatDateForAPI } from "@/lib/date-helpers";
 import { useToast } from "@/hooks/use-toast";
 
@@ -100,6 +100,103 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
   
   // Días de la semana en español para encabezados
   const dayNames = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+  
+  // Función para calcular horas nocturnas (entre 22:00 y 06:00)
+  const calculateNightHours = (employeeId: number, isMonthly: boolean) => {
+    // Determinar el rango de fechas a considerar
+    let startDate: Date;
+    let endDate: Date;
+    
+    if (isMonthly) {
+      // Para informe mensual: primer y último día del mes actual
+      const currentDate = new Date(selectedWeekStart);
+      startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+    } else {
+      // Para informe semanal: usar la semana seleccionada
+      startDate = new Date(weekDays[0]);
+      endDate = new Date(weekDays[6]);
+      endDate.setHours(23, 59, 59, 999);
+    }
+    
+    // Filtrar turnos para este empleado en el período especificado
+    const employeeShifts = shifts.filter(shift => {
+      const shiftDate = new Date(shift.date);
+      return (
+        shift.employeeId === employeeId &&
+        shiftDate >= startDate && 
+        shiftDate <= endDate
+      );
+    });
+    
+    // Calcular horas nocturnas para cada turno
+    const details: { date: string; hours: number }[] = [];
+    let totalNightHours = 0;
+    
+    employeeShifts.forEach(shift => {
+      // Convertir a objetos Date para facilitar comparaciones
+      const shiftDate = new Date(shift.date);
+      const shiftStartParts = shift.startTime.split(':').map(Number);
+      const shiftEndParts = shift.endTime.split(':').map(Number);
+      
+      // Crear objetos Date para inicio y fin del turno
+      const shiftStart = new Date(shiftDate);
+      shiftStart.setHours(shiftStartParts[0], shiftStartParts[1], 0, 0);
+      
+      const shiftEnd = new Date(shiftDate);
+      shiftEnd.setHours(shiftEndParts[0], shiftEndParts[1], 0, 0);
+      
+      // Si el turno termina antes de que empiece (ej: 23:00 - 07:00), ajustar fin al día siguiente
+      if (shiftEndParts[0] < shiftStartParts[0] || (shiftEndParts[0] === 0 && shiftEndParts[1] === 0)) {
+        shiftEnd.setDate(shiftEnd.getDate() + 1);
+      }
+      
+      // Definir período nocturno para este día
+      const nightStart = new Date(shiftDate);
+      nightStart.setHours(22, 0, 0, 0);
+      
+      const nightEnd = new Date(shiftDate);
+      nightEnd.setHours(6, 0, 0, 0);
+      if (nightStart.getTime() > nightEnd.getTime()) {
+        nightEnd.setDate(nightEnd.getDate() + 1);
+      }
+      
+      // Calcular superposición con horario nocturno
+      let nightHours = 0;
+      
+      // Caso 1: El turno está completamente dentro del horario nocturno
+      if (shiftStart >= nightStart && shiftEnd <= nightEnd) {
+        nightHours = calculateHoursBetween(shift.startTime, shift.endTime);
+      }
+      // Caso 2: El turno comienza antes del horario nocturno pero termina durante el mismo
+      else if (shiftStart < nightStart && shiftEnd > nightStart && shiftEnd <= nightEnd) {
+        const nightStartTime = '22:00';
+        nightHours = calculateHoursBetween(nightStartTime, shift.endTime);
+      }
+      // Caso 3: El turno comienza durante el horario nocturno pero termina después
+      else if (shiftStart >= nightStart && shiftStart < nightEnd && shiftEnd > nightEnd) {
+        const nightEndTime = '06:00';
+        nightHours = calculateHoursBetween(shift.startTime, nightEndTime);
+      }
+      // Caso 4: El turno abarca todo el período nocturno
+      else if (shiftStart < nightStart && shiftEnd > nightEnd) {
+        nightHours = 8; // De 22:00 a 06:00 son 8 horas
+      }
+      
+      if (nightHours > 0) {
+        details.push({
+          date: shift.date,
+          hours: nightHours
+        });
+        totalNightHours += nightHours;
+      }
+    });
+    
+    return {
+      totalHours: totalNightHours,
+      details: details
+    };
+  };
   
   // Función para generar y descargar el PDF del informe seleccionado
   const generateWeeklySchedulePDF = () => {
@@ -646,55 +743,28 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
               <Button 
                 variant="outline" 
                 className="h-28 flex flex-col items-center justify-center gap-2 p-2"
-                onClick={() => setSelectedReport('cost-report')}
-              >
-                <DollarSign className="h-8 w-8 text-amber-500" />
-                <div className="text-center">Informe de Costes</div>
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                className="h-28 flex flex-col items-center justify-center gap-2 p-2"
-                onClick={() => setSelectedReport('productivity-report')}
-              >
-                <BarChart2 className="h-8 w-8 text-indigo-500" />
-                <div className="text-center">Informe de Productividad</div>
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                className="h-28 flex flex-col items-center justify-center gap-2 p-2"
-                onClick={() => setSelectedReport('time-report')}
-              >
-                <Clock className="h-8 w-8 text-blue-500" />
-                <div className="text-center">Informe de Horas</div>
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                className="h-28 flex flex-col items-center justify-center gap-2 p-2"
-                onClick={() => setSelectedReport('attendance-report')}
-              >
-                <Users className="h-8 w-8 text-green-500" />
-                <div className="text-center">Informe de Asistencia</div>
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                className="h-28 flex flex-col items-center justify-center gap-2 p-2"
-                onClick={() => setSelectedReport('export-csv')}
-              >
-                <ClipboardList className="h-8 w-8 text-orange-500" />
-                <div className="text-center">Exportar Datos (CSV)</div>
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                className="h-28 flex flex-col items-center justify-center gap-2 p-2"
                 onClick={() => setSelectedReport('print-template')}
               >
                 <FileText className="h-8 w-8 text-teal-500" />
                 <div className="text-center">Horario por Empleado</div>
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="h-28 flex flex-col items-center justify-center gap-2 p-2"
+                onClick={() => setSelectedReport('night-hours-weekly')}
+              >
+                <Moon className="h-8 w-8 text-violet-500" />
+                <div className="text-center">Horas Nocturnas Semanal</div>
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="h-28 flex flex-col items-center justify-center gap-2 p-2"
+                onClick={() => setSelectedReport('night-hours-monthly')}
+              >
+                <CalendarClock className="h-8 w-8 text-purple-500" />
+                <div className="text-center">Horas Nocturnas Mensual</div>
               </Button>
             </div>
           </>
