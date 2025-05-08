@@ -120,29 +120,38 @@ export default function Home() {
     queryKey: ['/api/companies', currentCompanyId, 'daily-sales', formatDateForAPI(currentDate)],
     queryFn: async () => {
       if (!currentCompanyId) return null;
-      const response = await fetch(`/api/companies/${currentCompanyId}/daily-sales?date=${formatDateForAPI(currentDate)}`);
-      if (!response.ok) {
-        // Si no hay datos, es posible que la API devuelva 404, pero no es un error crítico
-        if (response.status === 404) {
-          return null;
+      try {
+        const response = await fetch(`/api/companies/${currentCompanyId}/daily-sales?date=${formatDateForAPI(currentDate)}`);
+        if (!response.ok) {
+          // Si no hay datos, es posible que la API devuelva 404, pero no es un error crítico
+          if (response.status === 404) {
+            return [];
+          }
+          throw new Error('Error al cargar datos de ventas diarias');
         }
-        throw new Error('Error al cargar datos de ventas diarias');
+        return response.json();
+      } catch (error) {
+        console.error("Error fetching daily sales:", error);
+        return [];
       }
-      return response.json();
     },
-    enabled: !!currentCompanyId,
-    onSuccess: (data) => {
-      if (data && data.length > 0) {
+    enabled: !!currentCompanyId
+  });
+
+  // Efecto para actualizar los valores cuando cambian los datos de venta diaria
+  useEffect(() => {
+    if (dailySalesData) {
+      if (dailySalesData.length > 0) {
         // Actualizar los valores de venta estimada y coste por hora
-        setEstimatedDailySales(data[0].estimatedSales?.toString() || '0');
-        setHourlyEmployeeCost(data[0].hourlyEmployeeCost?.toString() || '0');
+        setEstimatedDailySales(dailySalesData[0].estimatedSales?.toString() || '0');
+        setHourlyEmployeeCost(dailySalesData[0].hourlyEmployeeCost?.toString() || '0');
       } else {
         // Si no hay datos para esta fecha, establecer valores predeterminados
         setEstimatedDailySales('0');
         setHourlyEmployeeCost('0');
       }
     }
-  });
+  }, [dailySalesData]);
   
   // Fetch companies
   const {
@@ -306,6 +315,57 @@ export default function Home() {
     deleteShiftMutation.mutate(shiftId);
   };
   
+  // Mutación para guardar datos de ventas diarias
+  const saveDailySalesMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentCompanyId) return null;
+      
+      const data = {
+        date: formatDateForAPI(currentDate),
+        estimatedSales: parseFloat(estimatedDailySales) || 0,
+        hourlyEmployeeCost: parseFloat(hourlyEmployeeCost) || 0
+      };
+      
+      const response = await apiRequest(
+        'POST', 
+        `/api/companies/${currentCompanyId}/daily-sales`, 
+        data
+      );
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Datos guardados",
+        description: "Los datos de ventas diarias estimadas se han guardado correctamente"
+      });
+      // Invalidar consulta para recargar datos
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/companies', currentCompanyId, 'daily-sales'] 
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "No se pudieron guardar los datos",
+        variant: "destructive"
+      });
+    }
+  });
+  
+  // Función para manejar el guardado de datos de ventas diarias
+  const handleSaveDailySales = () => {
+    if (!currentCompanyId) {
+      toast({
+        title: "Error",
+        description: "No se pudo determinar la empresa actual",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    saveDailySalesMutation.mutate();
+  };
+  
   return (
     <div className="min-h-screen flex flex-col w-full max-w-[100vw] overflow-x-hidden">
       {/* Header */}
@@ -456,6 +516,27 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+              
+              {/* Botón para guardar datos de ventas diarias */}
+              {user?.role !== 'employee' && (
+                <Button
+                  variant="secondary"
+                  className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200 px-3 py-1 rounded flex items-center gap-1 text-sm font-medium"
+                  onClick={handleSaveDailySales}
+                  disabled={saveDailySalesMutation.isPending}
+                >
+                  {saveDailySalesMutation.isPending ? (
+                    <>
+                      <span className="animate-spin">⏳</span>
+                      Guardando...
+                    </>
+                  ) : (
+                    <>
+                      💾 Guardar Datos de Ventas
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
             
             {/* Cost Summary Row */}
