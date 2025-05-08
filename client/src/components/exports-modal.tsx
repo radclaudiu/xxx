@@ -186,7 +186,7 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
         const marginY = 20; // Margen reducido
         const cardsPerRow = 3;
         const cardWidth = (pageWidth - (marginX * 2)) / cardsPerRow;
-        const cardHeight = 36; // Altura aún más reducida
+        const cardHeight = 38; // Altura ajustada para mejor legibilidad
         const spacing = 4; // Menos espacio entre tarjetas
         
         // Inicializar posición
@@ -217,8 +217,8 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
           
           // No dibujamos ninguna línea ni borde
           
-          // Establecer fuente para los horarios
-          pdf.setFontSize(7);
+          // Establecer fuente más grande para los horarios
+          pdf.setFontSize(8);
           pdf.setFont('helvetica', 'normal');
           
           // Mostrar horarios por día
@@ -244,7 +244,7 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
             let shiftsText = 'Libre';
             
             if (dayShifts.length > 0) {
-              shiftsText = dayShifts.map(shift => {
+              shiftsText = dayShifts.map((shift, i) => {
                 const [startHour, startMinute] = shift.startTime.split(':').map(Number);
                 const [endHour, endMinute] = shift.endTime.split(':').map(Number);
                 const isMidnightCrossing = (endHour < startHour) || (endHour === 0 && endMinute === 0);
@@ -255,7 +255,7 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                 return isMidnightCrossing
                   ? `${compactStart}-${compactEnd}+`
                   : `${compactStart}-${compactEnd}`;
-              }).join(',');
+              }).join(' | '); // Cambiado a separador más visible con espacios
               
               // Texto de turno
               pdf.setFont('helvetica', 'normal');
@@ -278,8 +278,8 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
             // Resetear color de texto
             pdf.setTextColor(0, 0, 0);
             
-            // Avanzar a la siguiente línea (menos espacio)
-            lineY += 3.5;
+            // Avanzar a la siguiente línea (más espacio)
+            lineY += 4.0;
           });
           
           // Actualizar posición para la siguiente tarjeta
