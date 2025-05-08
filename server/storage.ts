@@ -63,6 +63,14 @@ export interface IStorage {
   createSchedule(schedule: InsertSchedule): Promise<Schedule>;
   deleteSchedule(id: number): Promise<boolean>;
   
+  // Daily Sales operations
+  getDailySales(companyId: number, date?: string): Promise<DailySales[]>;
+  getDailySale(id: number): Promise<DailySales | undefined>;
+  getDailySaleByDate(companyId: number, date: string): Promise<DailySales | undefined>;
+  createDailySale(dailySale: InsertDailySales): Promise<DailySales>;
+  updateDailySale(id: number, dailySale: Partial<InsertDailySales>): Promise<DailySales | undefined>;
+  deleteDailySale(id: number): Promise<boolean>;
+  
   // Save and load entire schedule data
   saveScheduleData(scheduleId: number, employees: Employee[], shifts: Shift[]): Promise<boolean>;
   loadScheduleData(scheduleId: number): Promise<{ employees: Employee[], shifts: Shift[] } | undefined>;
@@ -259,6 +267,58 @@ export class MemStorage implements IStorage {
 
 // Implementación de la base de datos PostgreSQL
 export class DatabaseStorage implements IStorage {
+  // Daily Sales operations
+  async getDailySales(companyId: number, date?: string): Promise<DailySales[]> {
+    let query = db.select().from(dailySales).where(eq(dailySales.companyId, companyId));
+    
+    if (date) {
+      query = query.where(eq(dailySales.date, date));
+    }
+    
+    return await query.orderBy(desc(dailySales.date));
+  }
+  
+  async getDailySale(id: number): Promise<DailySales | undefined> {
+    const [dailySale] = await db.select().from(dailySales).where(eq(dailySales.id, id));
+    return dailySale;
+  }
+  
+  async getDailySaleByDate(companyId: number, date: string): Promise<DailySales | undefined> {
+    const [dailySale] = await db
+      .select()
+      .from(dailySales)
+      .where(and(
+        eq(dailySales.companyId, companyId),
+        eq(dailySales.date, date)
+      ));
+    return dailySale;
+  }
+  
+  async createDailySale(dailySale: InsertDailySales): Promise<DailySales> {
+    const [newDailySale] = await db.insert(dailySales).values(dailySale).returning();
+    return newDailySale;
+  }
+  
+  async updateDailySale(id: number, dailySale: Partial<InsertDailySales>): Promise<DailySales | undefined> {
+    const [updatedDailySale] = await db
+      .update(dailySales)
+      .set({
+        ...dailySale,
+        updatedAt: new Date()
+      })
+      .where(eq(dailySales.id, id))
+      .returning();
+    return updatedDailySale;
+  }
+  
+  async deleteDailySale(id: number): Promise<boolean> {
+    const [result] = await db
+      .delete(dailySales)
+      .where(eq(dailySales.id, id))
+      .returning({ id: dailySales.id });
+    return !!result;
+  }
+  
   // User operations
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));

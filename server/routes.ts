@@ -2,7 +2,10 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
-import { insertEmployeeSchema, insertShiftSchema, insertScheduleSchema, insertCompanySchema, insertScheduleTemplateSchema } from "@shared/schema";
+import { 
+  insertEmployeeSchema, insertShiftSchema, insertScheduleSchema, 
+  insertCompanySchema, insertScheduleTemplateSchema, insertDailySalesSchema 
+} from "@shared/schema";
 import { setupAuth, isAuthenticated, isAdmin } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -725,6 +728,226 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).end();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete schedule" });
+    }
+  });
+
+  // Daily Sales Endpoints - para la venta estimada diaria
+  app.get("/api/companies/:companyId/daily-sales", isAuthenticated, async (req, res) => {
+    try {
+      const companyId = parseInt(req.params.companyId);
+      const { date } = req.query;
+      
+      // Verificar que el usuario tenga acceso a esta empresa
+      const isAdminUser = req.user?.role === 'admin';
+      if (!isAdminUser) {
+        const userCompanies = await storage.getUserCompanies(req.user!.id);
+        const hasAccess = userCompanies.some(uc => uc.companyId === companyId);
+        
+        if (!hasAccess) {
+          return res.status(403).json({ message: "No tienes acceso a esta empresa" });
+        }
+      }
+      
+      // Si se especificó una fecha, obtener solo ese registro
+      if (date && typeof date === 'string') {
+        const dailySale = await storage.getDailySaleByDate(companyId, date);
+        if (dailySale) {
+          return res.json([dailySale]);
+        } else {
+          return res.json([]);
+        }
+      }
+      
+      // Si no se especificó fecha, obtener todos los registros de la empresa
+      const dailySales = await storage.getDailySales(companyId);
+      res.json(dailySales);
+    } catch (error) {
+      console.error("Error al obtener ventas diarias:", error);
+      res.status(500).json({ message: "Error al obtener datos de ventas diarias" });
+    }
+  });
+  
+  app.get("/api/companies/:companyId/daily-sales/:date", isAuthenticated, async (req, res) => {
+    try {
+      const companyId = parseInt(req.params.companyId);
+      const date = req.params.date;
+      
+      // Verificar que el usuario tenga acceso a esta empresa
+      const isAdminUser = req.user?.role === 'admin';
+      if (!isAdminUser) {
+        const userCompanies = await storage.getUserCompanies(req.user!.id);
+        const hasAccess = userCompanies.some(uc => uc.companyId === companyId);
+        
+        if (!hasAccess) {
+          return res.status(403).json({ message: "No tienes acceso a esta empresa" });
+        }
+      }
+      
+      const dailySale = await storage.getDailySaleByDate(companyId, date);
+      
+      if (!dailySale) {
+        return res.status(404).json({ message: "No hay datos para esta fecha" });
+      }
+      
+      res.json(dailySale);
+    } catch (error) {
+      console.error("Error al obtener venta diaria:", error);
+      res.status(500).json({ message: "Error al obtener datos de venta diaria" });
+    }
+  });
+  
+  app.post("/api/companies/:companyId/daily-sales", isAuthenticated, async (req, res) => {
+    try {
+      const companyId = parseInt(req.params.companyId);
+      
+      // Verificar que el usuario tenga acceso a esta empresa como gerente o admin
+      const isAdminUser = req.user?.role === 'admin';
+      if (!isAdminUser) {
+        const userCompanies = await storage.getUserCompanies(req.user!.id);
+        const hasManagerAccess = userCompanies.some(
+          uc => uc.companyId === companyId && (uc.role === 'manager' || uc.role === 'admin')
+        );
+        
+        if (!hasManagerAccess) {
+          return res.status(403).json({ 
+            message: "No tienes permisos para modificar datos de esta empresa" 
+          });
+        }
+      }
+      
+      // Validar datos de entrada
+      const validatedData = insertDailySalesSchema.parse({
+        ...req.body,
+        companyId,
+      });
+      
+      // Verificar si ya existe un registro para esta fecha
+      const existingData = await storage.getDailySaleByDate(companyId, validatedData.date);
+      
+      if (existingData) {
+        // Actualizar registro existente
+        const updatedData = await storage.updateDailySale(existingData.id, validatedData);
+        return res.json(updatedData);
+      } else {
+        // Crear nuevo registro
+        const newDailySale = await storage.createDailySale(validatedData);
+        return res.status(201).json(newDailySale);
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Datos inválidos", 
+          errors: error.errors 
+        });
+      }
+      
+      console.error("Error al guardar venta diaria:", error);
+      res.status(500).json({ message: "Error al guardar datos de venta diaria" });
+    }
+  });
+  
+  app.put("/api/companies/:companyId/daily-sales/:id", isAuthenticated, async (req, res) => {
+    try {
+      const companyId = parseInt(req.params.companyId);
+      const id = parseInt(req.params.id);
+      
+      // Verificar que el usuario tenga acceso a esta empresa como gerente o admin
+      const isAdminUser = req.user?.role === 'admin';
+      if (!isAdminUser) {
+        const userCompanies = await storage.getUserCompanies(req.user!.id);
+        const hasManagerAccess = userCompanies.some(
+          uc => uc.companyId === companyId && (uc.role === 'manager' || uc.role === 'admin')
+        );
+        
+        if (!hasManagerAccess) {
+          return res.status(403).json({ 
+            message: "No tienes permisos para modificar datos de esta empresa" 
+          });
+        }
+      }
+      
+      // Obtener registro actual para verificar que pertenece a la empresa indicada
+      const currentRecord = await storage.getDailySale(id);
+      if (!currentRecord) {
+        return res.status(404).json({ message: "Registro no encontrado" });
+      }
+      
+      if (currentRecord.companyId !== companyId) {
+        return res.status(403).json({ 
+          message: "El registro no pertenece a la empresa indicada" 
+        });
+      }
+      
+      // Validar datos de entrada
+      const validatedData = insertDailySalesSchema.partial().parse({
+        ...req.body,
+        companyId, // Asegurar que no se cambie la empresa
+      });
+      
+      // Actualizar registro
+      const updatedData = await storage.updateDailySale(id, validatedData);
+      
+      if (!updatedData) {
+        return res.status(404).json({ message: "No se pudo actualizar el registro" });
+      }
+      
+      res.json(updatedData);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Datos inválidos", 
+          errors: error.errors 
+        });
+      }
+      
+      console.error("Error al actualizar venta diaria:", error);
+      res.status(500).json({ message: "Error al actualizar datos de venta diaria" });
+    }
+  });
+  
+  app.delete("/api/companies/:companyId/daily-sales/:id", isAuthenticated, async (req, res) => {
+    try {
+      const companyId = parseInt(req.params.companyId);
+      const id = parseInt(req.params.id);
+      
+      // Verificar que el usuario tenga acceso a esta empresa como gerente o admin
+      const isAdminUser = req.user?.role === 'admin';
+      if (!isAdminUser) {
+        const userCompanies = await storage.getUserCompanies(req.user!.id);
+        const hasManagerAccess = userCompanies.some(
+          uc => uc.companyId === companyId && (uc.role === 'manager' || uc.role === 'admin')
+        );
+        
+        if (!hasManagerAccess) {
+          return res.status(403).json({ 
+            message: "No tienes permisos para eliminar datos de esta empresa" 
+          });
+        }
+      }
+      
+      // Obtener registro actual para verificar que pertenece a la empresa indicada
+      const currentRecord = await storage.getDailySale(id);
+      if (!currentRecord) {
+        return res.status(404).json({ message: "Registro no encontrado" });
+      }
+      
+      if (currentRecord.companyId !== companyId) {
+        return res.status(403).json({ 
+          message: "El registro no pertenece a la empresa indicada" 
+        });
+      }
+      
+      // Eliminar registro
+      const success = await storage.deleteDailySale(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "No se pudo eliminar el registro" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error al eliminar venta diaria:", error);
+      res.status(500).json({ message: "Error al eliminar datos de venta diaria" });
     }
   });
 
