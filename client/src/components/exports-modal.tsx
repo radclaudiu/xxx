@@ -364,19 +364,12 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                         totalHours += calculateHoursBetween(shift.startTime, shift.endTime);
                       });
                       
-                      // Formatear los detalles de turnos como array con indicador para turnos de medianoche
+                      // Formatear los detalles de turnos como array con formato compacto
                       const shiftsDetails = dayShifts.map(shift => {
-                        // Determinar si el turno cruza la medianoche
-                        const [startHour, startMinute] = shift.startTime.split(':').map(Number);
-                        const [endHour, endMinute] = shift.endTime.split(':').map(Number);
-                        const isMidnightCrossing = (endHour < startHour) || (endHour === 0 && endMinute === 0);
-                        
                         // Formato más compacto, sin ceros en las horas y sin espacios
                         const compactStart = shift.startTime.replace(/^0/, '');
                         const compactEnd = shift.endTime.replace(/^0/, '');
-                        return isMidnightCrossing
-                          ? `${compactStart}-${compactEnd}+1`
-                          : `${compactStart}-${compactEnd}`;
+                        return `${compactStart}-${compactEnd}`;
                       });
                       
                       return { totalHours, shiftsDetails };
