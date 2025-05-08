@@ -4,8 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Employee, Shift } from "@shared/schema";
 import { Download, Calendar, FileText, ClipboardList, ChevronLeft, ChevronRight, BarChart2, Clock, Users, DollarSign } from "lucide-react";
 import { formatDate, getStartOfWeek, isInSameWeek, calculateHoursBetween, formatHours, formatDateForAPI } from "@/lib/date-helpers";
+import { useToast } from "@/hooks/use-toast";
 
 import html2pdf from "html2pdf.js";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 // Función para formatear el nombre del empleado (nombre + iniciales apellidos)
 const formatEmployeeName = (fullName: string) => {
@@ -40,6 +43,7 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
   const weeklyScheduleRef = useRef<HTMLDivElement>(null);
   const printTemplateRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
   
   // Estado para controlar la semana seleccionada
   const [selectedWeekStart, setSelectedWeekStart] = useState(() => getStartOfWeek(currentDate));
@@ -110,8 +114,19 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
     
     if (!element) {
       console.error("No se encontró el elemento de referencia para el reporte:", selectedReport);
+      toast({
+        title: "Error al generar PDF",
+        description: "No se pudo encontrar el contenido del informe",
+        variant: "destructive"
+      });
       return;
     }
+    
+    // Notificar al usuario que el proceso ha comenzado
+    toast({
+      title: "Generando PDF",
+      description: "El proceso puede tardar unos segundos...",
+    });
     
     // Configurar nombre del archivo según el tipo de reporte
     const dateRange = weekRangeText.replace(/\//g, "-");
@@ -127,47 +142,38 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
     
     console.log("Generando PDF para:", selectedReport);
     
-    // Configurar márgenes para el PDF (en mm)
-    const pdfMargin = 10;
+    // Crear un nuevo contenedor para el contenido del PDF
+    const container = document.createElement('div');
+    container.innerHTML = element.innerHTML;
     
-    // Opciones básicas para el PDF
-    let pdfOptions: any = {
-      margin: pdfMargin,
-      filename: filename,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { 
-        scale: 2,
-        useCORS: true,
-        letterRendering: true
-      },
-      jsPDF: { 
-        unit: 'mm', 
-        format: 'a4', 
-        orientation: selectedReport === 'print-template' ? 'portrait' : 'landscape'
-      }
-    };
+    // Agregar el contenedor al documento y estilizarlo para la conversión a PDF
+    document.body.appendChild(container);
     
-    // Crear una copia del elemento para modificarla sin afectar a la original
-    const elementClone = element.cloneNode(true) as HTMLElement;
-    document.body.appendChild(elementClone);
-    elementClone.style.position = 'absolute';
-    elementClone.style.left = '-9999px';
-    elementClone.style.overflow = 'visible';
-    elementClone.style.height = 'auto';
-    elementClone.style.width = selectedReport === 'print-template' ? '210mm' : '297mm'; // Ancho de hoja A4
+    // Establecer estilos básicos para el contenedor
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    container.style.top = '0';
+    container.style.width = selectedReport === 'print-template' ? '210mm' : '297mm';
+    container.style.height = 'auto';
+    container.style.backgroundColor = 'white';
+    container.style.padding = '15mm';
+    container.style.margin = '0';
+    container.style.overflow = 'visible';
+    container.style.boxSizing = 'border-box';
+    container.style.fontFamily = 'Arial, sans-serif';
     
-    // Ajustar estilos específicos para imprimir
+    // Aplicar estilos específicos al contenido
     if (selectedReport === 'print-template') {
       // Para el reporte de horarios individuales
-      const gridContainers = elementClone.querySelectorAll('.grid');
+      const gridContainers = container.querySelectorAll('.grid');
       gridContainers.forEach(grid => {
         (grid as HTMLElement).style.display = 'grid';
         (grid as HTMLElement).style.gridTemplateColumns = 'repeat(3, 1fr)';
         (grid as HTMLElement).style.gap = '8px';
       });
       
-      // Asegurar que los bordes de las tarjetas sean visibles en el PDF
-      const employeeCards = elementClone.querySelectorAll('.border');
+      // Estilos para tarjetas de empleados
+      const employeeCards = container.querySelectorAll('.border');
       employeeCards.forEach(card => {
         (card as HTMLElement).style.border = '1px solid #ccc';
         (card as HTMLElement).style.borderRadius = '4px';
@@ -176,14 +182,14 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
         (card as HTMLElement).style.backgroundColor = '#ffffff';
       });
       
-      // Asegurar que la hora se muestre correctamente
-      const timeSlots = elementClone.querySelectorAll('.flex.justify-between');
+      // Elementos flex para horarios
+      const timeSlots = container.querySelectorAll('.flex.justify-between');
       timeSlots.forEach(slot => {
         (slot as HTMLElement).style.display = 'flex';
         (slot as HTMLElement).style.justifyContent = 'space-between';
         (slot as HTMLElement).style.marginBottom = '4px';
         
-        // Dar estilos concretos a los textos
+        // Textos específicos
         const textElements = slot.querySelectorAll('span');
         if (textElements.length >= 2) {
           (textElements[0] as HTMLElement).style.fontWeight = 'bold';
@@ -193,8 +199,8 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
         }
       });
       
-      // Mejorar la visibilidad de los nombres de empleados
-      const employeeNames = elementClone.querySelectorAll('.text-base.font-bold');
+      // Nombres de empleados
+      const employeeNames = container.querySelectorAll('.text-base.font-bold');
       employeeNames.forEach(name => {
         (name as HTMLElement).style.borderBottom = '1px solid #ddd';
         (name as HTMLElement).style.paddingBottom = '4px';
@@ -202,80 +208,99 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
         (name as HTMLElement).style.fontWeight = 'bold';
         (name as HTMLElement).style.fontSize = '14px';
       });
+      
+      // Corregir todos los elementos flex
+      const flexItems = container.querySelectorAll('.flex');
+      flexItems.forEach(flex => {
+        (flex as HTMLElement).style.display = 'flex';
+      });
     } else {
       // Para el cuadrante semanal
-      const tables = elementClone.querySelectorAll('table');
+      const tables = container.querySelectorAll('table');
       tables.forEach(table => {
-        table.style.width = '100%';
-        table.style.fontSize = '9pt';
-        table.style.borderCollapse = 'collapse';
+        (table as HTMLElement).style.width = '100%';
+        (table as HTMLElement).style.fontSize = '9pt';
+        (table as HTMLElement).style.borderCollapse = 'collapse';
         
-        // Asegurar que todas las celdas tengan bordes
+        // Celdas de tabla
         const cells = table.querySelectorAll('td, th');
         cells.forEach(cell => {
           (cell as HTMLElement).style.border = '1px solid #ccc';
           (cell as HTMLElement).style.padding = '4px';
         });
       });
-    }
-    
-    // Completar estilos globales para el PDF
-    elementClone.style.backgroundColor = 'white';
-    elementClone.style.padding = '15mm';
-    elementClone.style.boxSizing = 'border-box';
-    elementClone.style.fontFamily = 'Arial, sans-serif';
-    elementClone.style.margin = '0';
-    
-    // Corregir display específico para cada tipo de componente
-    if (selectedReport === 'print-template') {
-      // Corregir el grid contenedor para la vista de horarios individuales
-      const gridContainers = elementClone.querySelectorAll('.grid');
-      gridContainers.forEach(grid => {
-        (grid as HTMLElement).style.display = 'grid';
-      });
       
-      // Corregir los elementos flex para la vista de horarios individuales
-      const flexItems = elementClone.querySelectorAll('.flex');
-      flexItems.forEach(flex => {
-        (flex as HTMLElement).style.display = 'flex';
-      });
-    } else {
-      // Para el resto de reportes, asegurar que todas las etiquetas div sean visibles
-      const allDivs = elementClone.querySelectorAll('div:not(.grid):not(.flex)');
+      // Para divs estándar
+      const allDivs = container.querySelectorAll('div:not(.grid):not(.flex)');
       allDivs.forEach(div => {
         (div as HTMLElement).style.display = 'block';
       });
     }
     
-    // Esperar un momento para que los estilos se apliquen completamente
+    // Esperar a que los estilos se apliquen y el DOM se actualice
     setTimeout(() => {
-      // Generar el PDF
-      try {
-        console.log("Iniciando generación de PDF después del timeout");
-        html2pdf()
-          .from(elementClone)
-          .set(pdfOptions)
-          .save()
-          .then(() => {
-            // Eliminar el clon una vez generado el PDF
-            document.body.removeChild(elementClone);
-            console.log("PDF generado con éxito");
-          })
-          .catch(error => {
-            if (elementClone.parentNode) {
-              document.body.removeChild(elementClone);
-            }
-            console.error("Error al generar el PDF:", error);
-            alert("Error al generar el PDF. Por favor, inténtelo de nuevo.");
+      // Convertir a imagen primero para asegurar el renderizado completo
+      html2canvas(container, {
+        scale: 2,
+        useCORS: true,
+        logging: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      }).then(canvas => {
+        try {
+          // Obtener la imagen y crear el PDF
+          const imgData = canvas.toDataURL('image/png');
+          const pdf = new jsPDF({
+            orientation: selectedReport === 'print-template' ? 'portrait' : 'landscape',
+            unit: 'mm',
+            format: 'a4'
           });
-      } catch (error) {
-        console.error("Error al iniciar la generación del PDF:", error);
-        if (elementClone.parentNode) {
-          document.body.removeChild(elementClone);
+          
+          // Calcular proporciones para que la imagen se ajuste correctamente
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = pdf.internal.pageSize.getHeight();
+          const imgWidth = pdfWidth - 20; // 10mm de margen a cada lado
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          
+          // Añadir la imagen al PDF
+          pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
+          
+          // Guardar el PDF
+          pdf.save(filename);
+          
+          // Eliminar el contenedor temporal
+          document.body.removeChild(container);
+          
+          // Notificar éxito
+          toast({
+            title: "PDF generado correctamente",
+            description: "El archivo se ha descargado en su dispositivo",
+            variant: "default"
+          });
+          
+        } catch (error) {
+          console.error("Error al generar el PDF:", error);
+          if (container.parentNode) {
+            document.body.removeChild(container);
+          }
+          toast({
+            title: "Error al generar el PDF",
+            description: "Ocurrió un problema durante la generación",
+            variant: "destructive"
+          });
         }
-        alert("Error al generar el PDF. Por favor, inténtelo de nuevo.");
-      }
-    }, 300); // Dar tiempo para que los estilos se apliquen
+      }).catch(error => {
+        console.error("Error en html2canvas:", error);
+        if (container.parentNode) {
+          document.body.removeChild(container);
+        }
+        toast({
+          title: "Error al procesar el contenido",
+          description: "No se pudo capturar el contenido del informe",
+          variant: "destructive"
+        });
+      });
+    }, 1000); // Mayor tiempo de espera para permitir renderizado completo
   };
 
   // Renderizar el informe seleccionado
