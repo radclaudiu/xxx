@@ -175,17 +175,17 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
           format: 'a4'
         });
         
-        // Título
-        pdf.setFontSize(16);
-        pdf.text(`Horarios Individuales - Semana: ${weekRangeText}`, pdf.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+        // Título (reducido en tamaño y con texto más corto para evitar desbordamiento)
+        pdf.setFontSize(14);
+        pdf.text(`Horarios: ${weekRangeText}`, pdf.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
         
-        // Configurar disposición de tarjetas
+        // Configurar disposición de tarjetas (sin bordes)
         const pageWidth = pdf.internal.pageSize.getWidth();
         const marginX = 10;
         const marginY = 25; // Margen top después del título
         const cardsPerRow = 3;
         const cardWidth = (pageWidth - (marginX * 2)) / cardsPerRow;
-        const cardHeight = 42; // Altura de cada tarjeta
+        const cardHeight = 40; // Altura reducida
         const spacing = 5; // Espacio entre tarjetas
         
         // Inicializar posición
@@ -208,19 +208,15 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
             currentY = marginY;
           }
           
-          // Borde de la tarjeta
-          pdf.setDrawColor(200, 200, 200);
-          pdf.rect(currentX, currentY, cardWidth, cardHeight);
-          
-          // Nombre del empleado (formateado)
+          // Nombre del empleado (formateado) - sin borde alrededor
           const formattedName = formatEmployeeName(employee.name);
           pdf.setFontSize(11);
           pdf.setFont('helvetica', 'bold');
           pdf.text(formattedName, currentX + 3, currentY + 6);
           
-          // Línea separadora bajo el nombre
-          pdf.setDrawColor(220, 220, 220);
-          pdf.line(currentX, currentY + 8, currentX + cardWidth, currentY + 8);
+          // Línea separadora sutil bajo el nombre
+          pdf.setDrawColor(240, 240, 240); // Gris muy claro, casi invisible
+          pdf.line(currentX + 1, currentY + 8, currentX + cardWidth - 1, currentY + 8);
           
           // Establecer fuente para los horarios
           pdf.setFontSize(8);
@@ -254,9 +250,12 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                 const [endHour, endMinute] = shift.endTime.split(':').map(Number);
                 const isMidnightCrossing = (endHour < startHour) || (endHour === 0 && endMinute === 0);
                 
+                // Formato más compacto, sin ceros en las horas y sin espacios
+                const compactStart = shift.startTime.replace(/^0/, '');
+                const compactEnd = shift.endTime.replace(/^0/, '');
                 return isMidnightCrossing
-                  ? `${shift.startTime}-${shift.endTime}+1`
-                  : `${shift.startTime}-${shift.endTime}`;
+                  ? `${compactStart}-${compactEnd}+1`
+                  : `${compactStart}-${compactEnd}`;
               }).join(', ');
               
               // Texto de turno
@@ -373,10 +372,12 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                         const [endHour, endMinute] = shift.endTime.split(':').map(Number);
                         const isMidnightCrossing = (endHour < startHour) || (endHour === 0 && endMinute === 0);
                         
-                        // Formatear con indicador para turnos que cruzan medianoche
+                        // Formato más compacto, sin ceros en las horas y sin espacios
+                        const compactStart = shift.startTime.replace(/^0/, '');
+                        const compactEnd = shift.endTime.replace(/^0/, '');
                         return isMidnightCrossing
-                          ? `${shift.startTime} - ${shift.endTime} +1`
-                          : `${shift.startTime} - ${shift.endTime}`;
+                          ? `${compactStart}-${compactEnd}+1`
+                          : `${compactStart}-${compactEnd}`;
                       });
                       
                       return { totalHours, shiftsDetails };
@@ -537,10 +538,12 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                         const [endHour, endMinute] = shift.endTime.split(':').map(Number);
                         const isMidnightCrossing = (endHour < startHour) || (endHour === 0 && endMinute === 0);
                         
-                        // Formatear con indicador para turnos que cruzan medianoche
+                        // Formato más compacto, sin ceros en las horas y sin espacios
+                        const compactStart = shift.startTime.replace(/^0/, '');
+                        const compactEnd = shift.endTime.replace(/^0/, '');
                         return isMidnightCrossing
-                          ? `${shift.startTime} - ${shift.endTime} +1`
-                          : `${shift.startTime} - ${shift.endTime}`;
+                          ? `${compactStart}-${compactEnd}+1`
+                          : `${compactStart}-${compactEnd}`;
                       });
                       
                       return (
