@@ -237,6 +237,39 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
       });
     }
     
+    // Asegurar que el grid tenga visibilidad adecuada
+    const gridElements = container.querySelectorAll('.grid');
+    gridElements.forEach(el => {
+      (el as HTMLElement).style.display = 'grid';
+      (el as HTMLElement).style.width = '100%';
+      (el as HTMLElement).style.gridTemplateColumns = 'repeat(3, 1fr)';
+      (el as HTMLElement).style.gap = '8px';
+      (el as HTMLElement).style.visibility = 'visible';
+    });
+    
+    // Forzar visibilidad para el contenedor principal y asegurarnos de que toda la estructura se renderice
+    const printContainer = container.querySelector('.print-employee-schedule');
+    if (printContainer) {
+      (printContainer as HTMLElement).style.visibility = 'visible';
+      (printContainer as HTMLElement).style.padding = '15px';
+      (printContainer as HTMLElement).style.width = '100%';
+      
+      // Seleccionar el contenedor grid y todos sus hijos
+      const gridContainer = printContainer.querySelector('.grid');
+      if (gridContainer) {
+        (gridContainer as HTMLElement).style.display = 'grid';
+        (gridContainer as HTMLElement).style.width = '100%';
+        (gridContainer as HTMLElement).style.gridTemplateColumns = 'repeat(3, 1fr)';
+        
+        // Asegurar que todas las tarjetas de empleados son visibles
+        const employeeCards = gridContainer.querySelectorAll('div[class*="border"]');
+        employeeCards.forEach(card => {
+          (card as HTMLElement).style.visibility = 'visible';
+          (card as HTMLElement).style.display = 'block';
+        });
+      }
+    }
+    
     // Esperar a que los estilos se apliquen y el DOM se actualice
     setTimeout(() => {
       // Convertir a imagen primero para asegurar el renderizado completo
@@ -245,7 +278,16 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
         useCORS: true,
         logging: true,
         allowTaint: true,
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff',
+        onclone: (document, clonedDoc) => {
+          // Aplicar estilos adicionales en el clon justo antes de renderizar
+          const grids = clonedDoc.querySelectorAll('.grid');
+          grids.forEach(grid => {
+            (grid as HTMLElement).style.display = 'grid';
+            (grid as HTMLElement).style.width = '100%';
+            (grid as HTMLElement).style.visibility = 'visible';
+          });
+        }
       }).then(canvas => {
         try {
           // Obtener la imagen y crear el PDF
@@ -477,7 +519,7 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
             
             {/* Vista compacta de una sola página */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print:grid-cols-3"
-                 style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                 style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', width: '100%' }}>
               {employees.map(employee => {
                 // Formatear el nombre del empleado (nombre + iniciales)
                 const formattedName = formatEmployeeName(employee.name);
