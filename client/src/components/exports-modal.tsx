@@ -534,7 +534,9 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                                display: 'flex', 
                                justifyContent: 'space-between', 
                                alignItems: 'center',
-                               padding: '0.25rem 0'
+                               padding: '0.5rem 0',
+                               marginBottom: '0.1rem',
+                               borderBottom: index < 6 ? '1px dotted #eee' : 'none'
                              }}>
                           <span className="font-medium text-gray-700"
                                 style={{ fontWeight: '600', minWidth: '50px' }}>
@@ -546,8 +548,11 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                                 {shiftsArray.map((shift, i) => {
                                   return (
                                     <span key={i}>
-                                      {i > 0 && ", "}
-                                      <span>
+                                      {i > 0 && <span style={{ color: '#888', margin: '0 0.3em' }}>|</span>}
+                                      <span style={{ 
+                                        letterSpacing: '0.05em', 
+                                        padding: '0 0.15em'
+                                      }}>
                                         {shift}
                                       </span>
                                     </span>
