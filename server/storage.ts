@@ -295,17 +295,29 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createDailySale(dailySale: InsertDailySales): Promise<DailySales> {
-    const [newDailySale] = await db.insert(dailySales).values(dailySale).returning();
+    // Asegurarse de que los valores numéricos se traten como strings para campos numeric
+    const processedData = {
+      ...dailySale,
+      estimatedSales: dailySale.estimatedSales !== undefined ? String(dailySale.estimatedSales) : undefined,
+      hourlyEmployeeCost: dailySale.hourlyEmployeeCost !== undefined ? String(dailySale.hourlyEmployeeCost) : undefined
+    };
+    
+    const [newDailySale] = await db.insert(dailySales).values(processedData).returning();
     return newDailySale;
   }
   
   async updateDailySale(id: number, dailySale: Partial<InsertDailySales>): Promise<DailySales | undefined> {
+    // Asegurarse de que los valores numéricos se traten como strings para campos numeric
+    const processedData = {
+      ...dailySale,
+      estimatedSales: dailySale.estimatedSales !== undefined ? String(dailySale.estimatedSales) : undefined,
+      hourlyEmployeeCost: dailySale.hourlyEmployeeCost !== undefined ? String(dailySale.hourlyEmployeeCost) : undefined,
+      updatedAt: new Date()
+    };
+    
     const [updatedDailySale] = await db
       .update(dailySales)
-      .set({
-        ...dailySale,
-        updatedAt: new Date()
-      })
+      .set(processedData)
       .where(eq(dailySales.id, id))
       .returning();
     return updatedDailySale;

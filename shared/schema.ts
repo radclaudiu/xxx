@@ -410,12 +410,14 @@ export const insertEmployeeSkillSchema = createInsertSchema(employeeSkills).pick
   level: true,
 });
 
-export const insertDailySalesSchema = createInsertSchema(dailySales).pick({
+export const insertDailySalesSchema = createInsertSchema(dailySales, {
+  estimatedSales: z.coerce.string().optional(), // Asegura que se trata como string
+  hourlyEmployeeCost: z.coerce.string().optional(), // Asegura que se trata como string
+}).pick({
   companyId: true,
   date: true,
   estimatedSales: true,
-}).extend({
-  hourlyEmployeeCost: z.number().optional(),
+  hourlyEmployeeCost: true,
 });
 
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;

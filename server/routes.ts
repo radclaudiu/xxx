@@ -835,6 +835,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error("Error de validación Zod:", JSON.stringify(error.errors));
         return res.status(400).json({ 
           message: "Datos inválidos", 
           errors: error.errors 
