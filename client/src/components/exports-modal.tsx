@@ -520,19 +520,12 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                         );
                       });
                       
-                      // Formatear horarios, incluyendo indicador para turnos que cruzan medianoche
+                      // Formatear horarios con formato compacto
                       const shiftsArray = dayShifts.map(shift => {
-                        // Determinar si el turno cruza la medianoche
-                        const [startHour, startMinute] = shift.startTime.split(':').map(Number);
-                        const [endHour, endMinute] = shift.endTime.split(':').map(Number);
-                        const isMidnightCrossing = (endHour < startHour) || (endHour === 0 && endMinute === 0);
-                        
                         // Formato más compacto, sin ceros en las horas y sin espacios
                         const compactStart = shift.startTime.replace(/^0/, '');
                         const compactEnd = shift.endTime.replace(/^0/, '');
-                        return isMidnightCrossing
-                          ? `${compactStart}-${compactEnd}+1`
-                          : `${compactStart}-${compactEnd}`;
+                        return `${compactStart}-${compactEnd}`;
                       });
                       
                       return (
@@ -551,14 +544,10 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                             {shiftsArray.length > 0 ? (
                               <span>
                                 {shiftsArray.map((shift, i) => {
-                                  const containsMidnightIndicator = shift.includes('+1');
                                   return (
                                     <span key={i}>
                                       {i > 0 && ", "}
-                                      <span style={{ 
-                                        color: containsMidnightIndicator ? '#8a4df7' : 'inherit',
-                                        fontWeight: containsMidnightIndicator ? 'bold' : 'normal'
-                                      }}>
+                                      <span>
                                         {shift}
                                       </span>
                                     </span>

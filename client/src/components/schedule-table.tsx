@@ -955,11 +955,8 @@ export default function ScheduleTable({
                 (contextMenu.shift.endTime === '00:00' && contextMenu.shift.startTime !== '00:00');
               
               return (
-                <span className="flex items-center">
+                <span>
                   Turno: {contextMenu.shift.startTime} - {contextMenu.shift.endTime}
-                  {isMidnightCrossing && (
-                    <span className="ml-1 text-purple-600 text-[0.65rem]">+1</span>
-                  )}
                 </span>
               );
             })()}
@@ -1085,10 +1082,10 @@ export default function ScheduleTable({
                       {i < 10 ? `0${i}:00` : `${i}:00`}
                     </SelectItem>
                   ))}
-                  {/* Opciones del día siguiente (marcadas) */}
+                  {/* Opciones del día siguiente (sin +1) */}
                   {Array.from({length: 12}, (_, i) => (
                     <SelectItem key={`end-next-${i}`} value={`${i}-next`}>
-                      {i < 10 ? `0${i}:00` : `${i}:00`} +1
+                      {i < 10 ? `0${i}:00` : `${i}:00`}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1604,14 +1601,7 @@ export default function ScheduleTable({
                               padding: "0 2px"
                             }}
                           >
-                            {isMidnightCrossing ? (
-                              <span className="flex items-center">
-                                <span>{shift.startTime} - {shift.endTime}</span>
-                                <span className="text-purple-600 ml-[1px]">+1</span>
-                              </span>
-                            ) : (
-                              <span>{shift.startTime} - {shift.endTime}</span>
-                            )}
+                            <span>{shift.startTime} - {shift.endTime}</span>
                           </div>
                         )}
                       </td>
