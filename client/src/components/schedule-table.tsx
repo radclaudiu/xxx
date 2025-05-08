@@ -227,27 +227,82 @@ export default function ScheduleTable({
             
             if (sortedTimes.length === 0) return;
             
-            // Agrupamos tiempos consecutivos
-            let currentGroup: string[] = [sortedTimes[0]];
+            // Detectamos si hay franjas que cruzan la medianoche
+            let hasMidnightCrossing = false;
             
-            for (let i = 1; i < sortedTimes.length; i++) {
+            // Revisamos si hay selecciones que incluyen tiempos antes y después de la medianoche
+            const hasPreMidnight = sortedTimes.some(time => {
+              const [hours] = time.split(':').map(Number);
+              return hours >= 19 && hours <= 23; // Horas típicas de tarde/noche
+            });
+            
+            const hasPostMidnight = sortedTimes.some(time => {
+              const [hours] = time.split(':').map(Number);
+              return hours >= 0 && hours <= 5; // Horas de madrugada
+            });
+            
+            // Si hay horas antes y después de medianoche, probablemente sea un turno que cruza la medianoche
+            hasMidnightCrossing = hasPreMidnight && hasPostMidnight;
+            
+            // Si cruza la medianoche, reorganizamos para que estén juntos
+            let reorganizedTimes = [...sortedTimes];
+            
+            if (hasMidnightCrossing) {
+              // Ordenamos para que primero vengan las horas de tarde/noche (antes de medianoche)
+              // y luego las horas de madrugada (después de medianoche)
+              reorganizedTimes.sort((a, b) => {
+                const [aHours] = a.split(':').map(Number);
+                const [bHours] = b.split(':').map(Number);
+                
+                // Si a es hora de madrugada (0-5) y b no, a va después
+                if (aHours >= 0 && aHours <= 5 && (bHours < 0 || bHours > 5)) {
+                  return 1;
+                }
+                // Si b es hora de madrugada (0-5) y a no, b va después
+                if (bHours >= 0 && bHours <= 5 && (aHours < 0 || aHours > 5)) {
+                  return -1;
+                }
+                
+                // Si ambos son del mismo lado de la medianoche, ordenar normalmente
+                return (aHours * 60 + Number(a.split(':')[1])) - (bHours * 60 + Number(b.split(':')[1]));
+              });
+            }
+            
+            // Agrupamos tiempos consecutivos considerando la posible transición por medianoche
+            let currentGroup: string[] = [reorganizedTimes[0]];
+            
+            for (let i = 1; i < reorganizedTimes.length; i++) {
               const prevTime = currentGroup[currentGroup.length - 1];
-              const currTime = sortedTimes[i];
+              const currTime = reorganizedTimes[i];
               
               // Verificamos si los tiempos son consecutivos
               const prevIndex = timeSlots.indexOf(prevTime);
               const currIndex = timeSlots.indexOf(currTime);
               
-              if (currIndex - prevIndex === 1) {
+              // Caso especial para la medianoche: si prevTime es 23:45 y currTime es 00:00
+              const isPrevLastOfDay = prevTime === '23:45';
+              const isCurrFirstOfDay = currTime === '00:00';
+              const isMidnightTransition = isPrevLastOfDay && isCurrFirstOfDay;
+              
+              // Consideramos consecutivos si la diferencia es 1 o si es transición por medianoche
+              if (currIndex - prevIndex === 1 || isMidnightTransition) {
                 // Si son consecutivos, añadimos al grupo actual
                 currentGroup.push(currTime);
               } else {
                 // Si no son consecutivos, guardamos el grupo actual y comenzamos uno nuevo
                 const startTime = currentGroup[0];
                 const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
-                const endTime = lastTimeIndex + 1 < timeSlots.length ? 
-                                timeSlots[lastTimeIndex + 1] : 
-                                currentGroup[currentGroup.length - 1];
+                let endTime;
+                
+                // Si el último tiempo es 23:45, el siguiente sería 00:00 del día siguiente
+                if (currentGroup[currentGroup.length - 1] === '23:45') {
+                  endTime = '00:00';
+                } else {
+                  // Caso normal: el siguiente intervalo en la lista
+                  endTime = lastTimeIndex + 1 < timeSlots.length ? 
+                            timeSlots[lastTimeIndex + 1] : 
+                            currentGroup[currentGroup.length - 1];
+                }
                 
                 selections.push({
                   employee,
@@ -264,9 +319,17 @@ export default function ScheduleTable({
             if (currentGroup.length > 0) {
               const startTime = currentGroup[0];
               const lastTimeIndex = timeSlots.indexOf(currentGroup[currentGroup.length - 1]);
-              const endTime = lastTimeIndex + 1 < timeSlots.length ? 
-                              timeSlots[lastTimeIndex + 1] : 
-                              currentGroup[currentGroup.length - 1];
+              let endTime;
+              
+              // Si el último tiempo es 23:45, el siguiente sería 00:00 del día siguiente
+              if (currentGroup[currentGroup.length - 1] === '23:45') {
+                endTime = '00:00';
+              } else {
+                // Caso normal: el siguiente intervalo en la lista
+                endTime = lastTimeIndex + 1 < timeSlots.length ? 
+                          timeSlots[lastTimeIndex + 1] : 
+                          currentGroup[currentGroup.length - 1];
+              }
               
               selections.push({
                 employee,

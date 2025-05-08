@@ -137,9 +137,20 @@ export function isTimeBetween(time: string, startTime: string, endTime: string):
   // Convert times to comparable values (minutes since midnight)
   const timeMinutes = convertTimeToMinutes(time);
   const startMinutes = convertTimeToMinutes(startTime);
-  const endMinutes = convertTimeToMinutes(endTime);
+  let endMinutes = convertTimeToMinutes(endTime);
   
-  return timeMinutes >= startMinutes && timeMinutes < endMinutes;
+  // Si la hora de fin es menor que la hora de inicio, significa que cruza la medianoche
+  if (endMinutes <= startMinutes) {
+    endMinutes += 24 * 60; // Añadir 24 horas en minutos
+  }
+  
+  // Si la hora actual es menor que la hora de inicio, podría ser del día siguiente
+  let adjustedTimeMinutes = timeMinutes;
+  if (timeMinutes < startMinutes && timeMinutes < endMinutes % (24 * 60)) {
+    adjustedTimeMinutes += 24 * 60; // Añadir 24 horas para comparar con el día siguiente
+  }
+  
+  return adjustedTimeMinutes >= startMinutes && adjustedTimeMinutes < endMinutes;
 }
 
 // Convert time (HH:MM) to minutes since midnight
@@ -161,15 +172,23 @@ export function formatTime(time: string): string {
 // Calculate hours between two times (returns decimal hours)
 export function calculateHoursBetween(startTime: string, endTime: string): number {
   const startMinutes = convertTimeToMinutes(startTime);
-  const endMinutes = convertTimeToMinutes(endTime);
+  let endMinutes = convertTimeToMinutes(endTime);
   
   // Calculate difference in minutes
   let diff = endMinutes - startMinutes;
   
-  // If end time is earlier than start time, assume it's the next day
-  if (diff < 0) {
+  // Si end es 00:00 (medianoche) y startTime no son las 00:00, asumimos que es 00:00 del día siguiente
+  if (endTime === '00:00' && startTime !== '00:00') {
+    // Si la hora de fin es exactamente medianoche, considerarlo como el final del día (24:00)
+    diff = (24 * 60) - startMinutes;
+  }
+  // Si la endTime es menor o igual a startTime (por ejemplo, 01:00 vs 23:00), asumimos día siguiente 
+  else if (diff <= 0) {
     diff += 24 * 60; // Add 24 hours in minutes
   }
+  
+  // Para evitar valores negativos (no debería ocurrir pero por precaución)
+  diff = Math.max(0, diff);
   
   // Convert to hours with 2 decimal places
   return parseFloat((diff / 60).toFixed(2));
