@@ -38,7 +38,7 @@ export default function DailySalesCalendar({ companyId }: DailySalesCalendarProp
 
   // Mutation para guardar/actualizar datos de ventas diarias
   const saveDailySalesMutation = useMutation({
-    mutationFn: async (data: { date: string; estimatedSales: number }) => {
+    mutationFn: async (data: { date: string; estimatedSales: string }) => {
       const response = await apiRequest(
         'POST', 
         `/api/companies/${companyId}/daily-sales`, 
@@ -108,7 +108,7 @@ export default function DailySalesCalendar({ companyId }: DailySalesCalendarProp
     
     saveDailySalesMutation.mutate({
       date: formatDateForAPI(selectedDate),
-      estimatedSales: parseFloat(estimatedSales)
+      estimatedSales: estimatedSales // Enviamos directamente el string
     });
   };
 
