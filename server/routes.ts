@@ -20,6 +20,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Eliminar usuario - Solo administradores pueden eliminar usuarios
+  app.delete("/api/users/:id", isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      // No permitir eliminar al usuario que está realizando la solicitud
+      if (userId === req.user?.id) {
+        return res.status(400).json({ message: "No puedes eliminar tu propio usuario" });
+      }
+      
+      // Verificar si el usuario existe
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "Usuario no encontrado" });
+      }
+      
+      // No permitir eliminar al admin principal
+      if (user.role === "admin" && user.username === "admin") {
+        return res.status(400).json({ message: "No se puede eliminar el usuario administrador principal" });
+      }
+      
+      const success = await storage.deleteUser(userId);
+      if (success) {
+        res.status(204).end();
+      } else {
+        res.status(500).json({ message: "Error al eliminar el usuario" });
+      }
+    } catch (error) {
+      console.error("Error al eliminar usuario:", error);
+      res.status(500).json({ message: "Error al eliminar el usuario" });
+    }
+  });
+  
   // Rutas para empresas - Solo administradores pueden crear/editar empresas
   app.get("/api/companies", isAuthenticated, async (req, res) => {
     try {

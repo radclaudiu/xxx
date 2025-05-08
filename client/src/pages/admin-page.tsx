@@ -91,6 +91,40 @@ export default function AdminPage() {
     queryFn: getQueryFn({ on401: "throw" }),
   });
   
+  // Mutación para eliminar usuario
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      const res = await apiRequest("DELETE", `/api/users/${userId}`);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Error al eliminar el usuario");
+      }
+      return userId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user-companies"] });
+      toast({
+        title: "Usuario eliminado",
+        description: "El usuario ha sido eliminado exitosamente",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error al eliminar usuario",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Confirmar y eliminar usuario
+  const handleDeleteUser = (userId: number, username: string) => {
+    if (confirm(`¿Está seguro que desea eliminar al usuario ${username}?`)) {
+      deleteUserMutation.mutate(userId);
+    }
+  };
+  
   // Definir tipo para las relaciones usuario-empresa expandidas
   interface UserCompanyExpanded {
     userId: number;
@@ -461,20 +495,39 @@ export default function AdminPage() {
                     <TableHead>Rol</TableHead>
                     <TableHead>Empresas</TableHead>
                     <TableHead>Creado</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map(user => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">{user.id}</TableCell>
-                      <TableCell>{user.fullName || user.username}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.role}</TableCell>
+                  {users.map(userItem => (
+                    <TableRow key={userItem.id}>
+                      <TableCell className="font-medium">{userItem.id}</TableCell>
+                      <TableCell>{userItem.fullName || userItem.username}</TableCell>
+                      <TableCell>{userItem.email}</TableCell>
+                      <TableCell>{userItem.role}</TableCell>
                       <TableCell>
-                        {userCompanies.filter(uc => uc.userId === user.id).length} empresas
+                        {userCompanies.filter(uc => uc.userId === userItem.id).length} empresas
                       </TableCell>
                       <TableCell>
-                        {new Date(user.createdAt || "").toLocaleDateString()}
+                        {new Date(userItem.createdAt || "").toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {/* No mostrar acciones para el usuario autenticado o para el admin principal */}
+                        {userItem.id !== user?.id && (userItem.username !== "admin" || userItem.role !== "admin") && (
+                          <Button 
+                            variant="destructive" 
+                            size="sm"
+                            className="h-8 px-2"
+                            onClick={() => handleDeleteUser(userItem.id, userItem.username)}
+                            disabled={deleteUserMutation.isPending}
+                          >
+                            {deleteUserMutation.isPending && deleteUserMutation.variables === userItem.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
