@@ -39,6 +39,7 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
   const [isOpen, setIsOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
   const weeklyScheduleRef = useRef<HTMLDivElement>(null);
+  const printTemplateRef = useRef<HTMLDivElement>(null);
   
   // Estado para controlar la semana seleccionada
   const [selectedWeekStart, setSelectedWeekStart] = useState(() => getStartOfWeek(currentDate));
@@ -96,15 +97,38 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
   // Días de la semana en español para encabezados
   const dayNames = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
   
-  // Función para generar y descargar el PDF del cuadrante semanal
+  // Función para generar y descargar el PDF del informe seleccionado
   const generateWeeklySchedulePDF = () => {
-    if (!weeklyScheduleRef.current) return;
+    // Determinar cuál referencia usar según el tipo de reporte
+    let element: HTMLDivElement | null = null;
     
-    const element = weeklyScheduleRef.current;
+    if (selectedReport === 'week-schedule') {
+      element = weeklyScheduleRef.current;
+    } else if (selectedReport === 'print-template') {
+      element = printTemplateRef.current;
+    }
+    
+    if (!element) {
+      console.error("No se encontró el elemento de referencia para el reporte:", selectedReport);
+      return;
+    }
+    
+    // Configurar nombre del archivo según el tipo de reporte
     const dateRange = weekRangeText.replace(/\//g, "-");
-    const filename = `cuadrante-semanal-${dateRange}.pdf`;
+    let filename = '';
     
-    const opt = {
+    if (selectedReport === 'week-schedule') {
+      filename = `cuadrante-semanal-${dateRange}.pdf`;
+    } else if (selectedReport === 'print-template') {
+      filename = `horarios-empleados-${dateRange}.pdf`;
+    } else {
+      filename = `informe-${dateRange}.pdf`;
+    }
+    
+    console.log("Generando PDF para:", selectedReport);
+    
+    // Definir opciones para el PDF según el tipo de reporte
+    let pdfOptions = {
       margin: [10, 10, 10, 10] as [number, number, number, number],
       filename: filename,
       image: { type: 'jpeg', quality: 0.98 },
@@ -116,36 +140,56 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
       jsPDF: { 
         unit: 'mm', 
         format: 'a4', 
-        orientation: 'landscape'
+        orientation: selectedReport === 'print-template' ? 'portrait' : 'landscape'
       },
       pagebreak: { mode: 'avoid-all' }
     };
     
-    // Ocultamos temporalmente los botones para la exportación
-    const buttons = element.querySelectorAll('button');
-    buttons.forEach(btn => btn.style.display = 'none');
+    // Crear una copia del elemento para modificarla sin afectar a la original
+    const elementClone = element.cloneNode(true) as HTMLElement;
+    document.body.appendChild(elementClone);
+    elementClone.style.position = 'absolute';
+    elementClone.style.left = '-9999px';
     
-    // Aseguramos que la tabla se expanda completamente
-    const tables = element.querySelectorAll('table');
-    tables.forEach(table => {
-      table.style.width = '100%';
-      table.style.fontSize = '9pt';
-    });
-    
-    html2pdf()
-      .set(opt)
-      .from(element)
-      .save()
-      .then(() => {
-        // Restauramos los botones después de generar el PDF
-        buttons.forEach(btn => btn.style.display = '');
-        
-        // Restauramos los estilos originales
-        tables.forEach(table => {
-          table.style.width = '';
-          table.style.fontSize = '';
-        });
+    // Ajustar estilos específicos para imprimir
+    if (selectedReport === 'print-template') {
+      // Para el reporte de horarios individuales
+      const gridContainers = elementClone.querySelectorAll('.grid');
+      gridContainers.forEach(grid => {
+        (grid as HTMLElement).style.display = 'grid';
+        (grid as HTMLElement).style.gridTemplateColumns = 'repeat(3, 1fr)';
+        (grid as HTMLElement).style.gap = '5px';
       });
+    } else {
+      // Para el cuadrante semanal
+      const tables = elementClone.querySelectorAll('table');
+      tables.forEach(table => {
+        table.style.width = '100%';
+        table.style.fontSize = '9pt';
+      });
+    }
+    
+    // Generar el PDF
+    try {
+      html2pdf()
+        .from(elementClone)
+        .set(pdfOptions)
+        .save()
+        .then(() => {
+          // Eliminar el clon una vez generado el PDF
+          document.body.removeChild(elementClone);
+          console.log("PDF generado con éxito");
+        })
+        .catch(error => {
+          document.body.removeChild(elementClone);
+          console.error("Error al generar el PDF:", error);
+          alert("Error al generar el PDF. Por favor, inténtelo de nuevo.");
+        });
+    } catch (error) {
+      console.error("Error al iniciar la generación del PDF:", error);
+      document.body.removeChild(elementClone);
+      alert("Error al generar el PDF. Por favor, inténtelo de nuevo.");
+    }
   };
 
   // Renderizar el informe seleccionado
@@ -298,21 +342,22 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
         );
       case 'print-template':
         return (
-          <div className="print-employee-schedule">
+          <div className="print-employee-schedule" ref={printTemplateRef}>
             <h2 className="text-lg font-medium mb-6 text-center">Horarios Individuales - Semana: {weekRangeText}</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 print:grid-cols-2">
+            {/* Vista compacta de una sola página */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print:grid-cols-3">
               {employees.map(employee => {
                 // Formatear el nombre del empleado (nombre + iniciales)
                 const formattedName = formatEmployeeName(employee.name);
                 
                 return (
-                <div key={employee.id} className="mb-6 print:break-inside-avoid">
-                  <div className="mb-3">
-                    <h3 className="text-xl font-bold text-center">{formattedName}</h3>
+                <div key={employee.id} className="mb-4 print:break-inside-avoid border p-2 rounded-sm">
+                  <div className="mb-2 border-b pb-1">
+                    <h3 className="text-base font-bold">{formattedName}</h3>
                   </div>
                   
-                  <div className="space-y-2 text-sm">
+                  <div className="text-xs space-y-1">
                     {weekDays.map((day, index) => {
                       // Buscar turnos para este empleado en este día
                       const dayShifts = getWeekShifts().filter(shift => {
@@ -331,8 +376,8 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                       );
                       
                       return (
-                        <div key={index} className="flex">
-                          <span className="font-medium mr-2">{dayNames[index]} {day.getDate()}</span>
+                        <div key={index} className="flex justify-between">
+                          <span className="font-medium">{dayNames[index].substring(0, 3)} {day.getDate()}</span>
                           <span>
                             {shiftsArray.length > 0 ? (
                               shiftsArray.join(", ")
