@@ -4,7 +4,25 @@ import { Button } from "@/components/ui/button";
 import { Employee, Shift } from "@shared/schema";
 import { Download, Calendar, FileText, ClipboardList, ChevronLeft, ChevronRight, BarChart2, Clock, Users, DollarSign } from "lucide-react";
 import { formatDate, getStartOfWeek, isInSameWeek, calculateHoursBetween, formatHours, formatDateForAPI } from "@/lib/date-helpers";
+
 import html2pdf from "html2pdf.js";
+
+// Función para formatear el nombre del empleado (nombre + iniciales apellidos)
+const formatEmployeeName = (fullName: string) => {
+  const parts = fullName.trim().split(' ');
+  
+  if (parts.length === 1) {
+    return parts[0]; // Solo hay un nombre
+  }
+  
+  // Extraer el primer nombre
+  const firstName = parts[0];
+  
+  // Obtener las iniciales de los apellidos
+  const initials = parts.slice(1).map(part => part.charAt(0)).join('');
+  
+  return `${firstName} ${initials}`;
+};
 
 interface ExportsModalProps {
   employees: Employee[];
@@ -281,61 +299,53 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
       case 'print-template':
         return (
           <div className="print-employee-schedule">
-            <h2 className="text-lg font-medium mb-4 text-center">Horarios Individuales - Semana: {weekRangeText}</h2>
+            <h2 className="text-lg font-medium mb-6 text-center">Horarios Individuales - Semana: {weekRangeText}</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:grid-cols-2">
-              {employees.map(employee => (
-                <div key={employee.id} className="border rounded-md p-3 print:break-inside-avoid">
-                  <div className="border-b-2 border-dashed border-gray-300 pb-2 mb-3">
-                    <h3 className="text-center font-bold text-lg">{employee.name}</h3>
-                    <p className="text-center text-xs text-gray-500">Semana: {weekRangeText}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 print:grid-cols-2">
+              {employees.map(employee => {
+                // Formatear el nombre del empleado (nombre + iniciales)
+                const formattedName = formatEmployeeName(employee.name);
+                
+                return (
+                <div key={employee.id} className="mb-6 print:break-inside-avoid">
+                  <div className="mb-3">
+                    <h3 className="text-xl font-bold text-center">{formattedName}</h3>
                   </div>
                   
-                  <table className="w-full text-xs">
-                    <tbody>
-                      {weekDays.map((day, index) => {
-                        // Buscar turnos para este empleado en este día
-                        const dayShifts = getWeekShifts().filter(shift => {
-                          const shiftDate = new Date(shift.date);
-                          return (
-                            shift.employeeId === employee.id && 
-                            shiftDate.getDate() === day.getDate() &&
-                            shiftDate.getMonth() === day.getMonth() &&
-                            shiftDate.getFullYear() === day.getFullYear()
-                          );
-                        });
-                        
-                        // Formatear horarios
-                        const shiftsArray = dayShifts.map(shift => 
-                          `${shift.startTime} - ${shift.endTime}`
-                        );
-                        
+                  <div className="space-y-2 text-sm">
+                    {weekDays.map((day, index) => {
+                      // Buscar turnos para este empleado en este día
+                      const dayShifts = getWeekShifts().filter(shift => {
+                        const shiftDate = new Date(shift.date);
                         return (
-                          <tr key={index} className={index % 2 === 0 ? "bg-gray-50" : ""}>
-                            <td className="py-1 px-2 font-medium w-1/2">{dayNames[index]} {day.getDate()}</td>
-                            <td className="py-1 px-2 w-1/2">
-                              {shiftsArray.length > 0 ? (
-                                <div className="flex flex-col gap-1">
-                                  {shiftsArray.map((shift, idx) => (
-                                    <div key={idx}>{shift}</div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <span className="text-gray-400 italic">Libre</span>
-                              )}
-                            </td>
-                          </tr>
+                          shift.employeeId === employee.id && 
+                          shiftDate.getDate() === day.getDate() &&
+                          shiftDate.getMonth() === day.getMonth() &&
+                          shiftDate.getFullYear() === day.getFullYear()
                         );
-                      })}
-                    </tbody>
-                  </table>
-                  
-                  {/* Línea de corte (punteada) */}
-                  <div className="border-t-2 border-dashed border-gray-300 mt-3 pt-1">
-                    <p className="text-center text-[0.6rem] text-gray-400">✂️ Cortar por la línea punteada ✂️</p>
+                      });
+                      
+                      // Formatear horarios
+                      const shiftsArray = dayShifts.map(shift => 
+                        `${shift.startTime} - ${shift.endTime}`
+                      );
+                      
+                      return (
+                        <div key={index} className="flex">
+                          <span className="font-medium mr-2">{dayNames[index]} {day.getDate()}</span>
+                          <span>
+                            {shiftsArray.length > 0 ? (
+                              shiftsArray.join(", ")
+                            ) : (
+                              "Libre"
+                            )}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           </div>
         );
