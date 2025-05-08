@@ -127,9 +127,12 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
     
     console.log("Generando PDF para:", selectedReport);
     
-    // Definir opciones para el PDF según el tipo de reporte
-    let pdfOptions = {
-      margin: [10, 10, 10, 10] as [number, number, number, number],
+    // Configurar márgenes para el PDF (en mm)
+    const pdfMargin = 10;
+    
+    // Opciones básicas para el PDF
+    let pdfOptions: any = {
+      margin: pdfMargin,
       filename: filename,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { 
@@ -141,8 +144,7 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
         unit: 'mm', 
         format: 'a4', 
         orientation: selectedReport === 'print-template' ? 'portrait' : 'landscape'
-      },
-      pagebreak: { mode: 'avoid-all' }
+      }
     };
     
     // Crear una copia del elemento para modificarla sin afectar a la original
@@ -214,27 +216,63 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
       });
     }
     
-    // Generar el PDF
-    try {
-      html2pdf()
-        .from(elementClone)
-        .set(pdfOptions)
-        .save()
-        .then(() => {
-          // Eliminar el clon una vez generado el PDF
-          document.body.removeChild(elementClone);
-          console.log("PDF generado con éxito");
-        })
-        .catch(error => {
-          document.body.removeChild(elementClone);
-          console.error("Error al generar el PDF:", error);
-          alert("Error al generar el PDF. Por favor, inténtelo de nuevo.");
-        });
-    } catch (error) {
-      console.error("Error al iniciar la generación del PDF:", error);
-      document.body.removeChild(elementClone);
-      alert("Error al generar el PDF. Por favor, inténtelo de nuevo.");
+    // Ajuste importante: dar estilos globales al elemento clonado
+    elementClone.style.width = selectedReport === 'print-template' ? '210mm' : '297mm'; // Ancho de hoja A4
+    elementClone.style.backgroundColor = 'white';
+    elementClone.style.padding = '15mm';
+    elementClone.style.boxSizing = 'border-box';
+    elementClone.style.fontFamily = 'Arial, sans-serif';
+    
+    // Corregir display específico para cada tipo de componente
+    if (selectedReport === 'print-template') {
+      // Corregir el grid contenedor para la vista de horarios individuales
+      const gridContainers = elementClone.querySelectorAll('.grid');
+      gridContainers.forEach(grid => {
+        (grid as HTMLElement).style.display = 'grid';
+      });
+      
+      // Corregir los elementos flex para la vista de horarios individuales
+      const flexItems = elementClone.querySelectorAll('.flex');
+      flexItems.forEach(flex => {
+        (flex as HTMLElement).style.display = 'flex';
+      });
+    } else {
+      // Para el resto de reportes, asegurar que todas las etiquetas div sean visibles
+      const allDivs = elementClone.querySelectorAll('div:not(.grid):not(.flex)');
+      allDivs.forEach(div => {
+        (div as HTMLElement).style.display = 'block';
+      });
     }
+    
+    // Esperar un momento para que los estilos se apliquen completamente
+    setTimeout(() => {
+      // Generar el PDF
+      try {
+        console.log("Iniciando generación de PDF después del timeout");
+        html2pdf()
+          .from(elementClone)
+          .set(pdfOptions)
+          .save()
+          .then(() => {
+            // Eliminar el clon una vez generado el PDF
+            document.body.removeChild(elementClone);
+            console.log("PDF generado con éxito");
+          })
+          .catch(error => {
+            if (elementClone.parentNode) {
+              document.body.removeChild(elementClone);
+            }
+            console.error("Error al generar el PDF:", error);
+            alert("Error al generar el PDF. Por favor, inténtelo de nuevo.");
+          });
+      } catch (error) {
+        console.error("Error al iniciar la generación del PDF:", error);
+        if (elementClone.parentNode) {
+          document.body.removeChild(elementClone);
+        }
+        alert("Error al generar el PDF. Por favor, inténtelo de nuevo.");
+      }
+    }, 300); // Dar tiempo para que los estilos se apliquen
   };
 
   // Renderizar el informe seleccionado
@@ -281,10 +319,18 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                         totalHours += calculateHoursBetween(shift.startTime, shift.endTime);
                       });
                       
-                      // Formatear los detalles de turnos como array
-                      const shiftsDetails = dayShifts.map(shift => 
-                        `${shift.startTime} - ${shift.endTime}`
-                      );
+                      // Formatear los detalles de turnos como array con indicador para turnos de medianoche
+                      const shiftsDetails = dayShifts.map(shift => {
+                        // Determinar si el turno cruza la medianoche
+                        const [startHour, startMinute] = shift.startTime.split(':').map(Number);
+                        const [endHour, endMinute] = shift.endTime.split(':').map(Number);
+                        const isMidnightCrossing = (endHour < startHour) || (endHour === 0 && endMinute === 0);
+                        
+                        // Formatear con indicador para turnos que cruzan medianoche
+                        return isMidnightCrossing
+                          ? `${shift.startTime} - ${shift.endTime} +1`
+                          : `${shift.startTime} - ${shift.endTime}`;
+                      });
                       
                       return { totalHours, shiftsDetails };
                     });
@@ -304,9 +350,20 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                           <td key={index} className="border p-2 text-center text-xs" style={{ height: "40px", minHeight: "40px" }}>
                             {day.shiftsDetails?.length > 0 ? (
                               <div className="flex flex-col gap-1 text-xs text-gray-700">
-                                {day.shiftsDetails.map((shift, idx) => (
-                                  <div key={idx}>{shift}</div>
-                                ))}
+                                {day.shiftsDetails.map((shift, idx) => {
+                                  const containsMidnightIndicator = shift.includes(' +1');
+                                  return (
+                                    <div 
+                                      key={idx} 
+                                      style={{ 
+                                        color: containsMidnightIndicator ? '#8a4df7' : 'inherit',
+                                        fontWeight: containsMidnightIndicator ? 'bold' : 'normal'
+                                      }}
+                                    >
+                                      {shift}
+                                    </div>
+                                  );
+                                })}
                               </div>
                             ) : (
                               <span className="text-gray-500 italic text-[0.6rem]">Libre</span>
@@ -387,22 +444,33 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
         );
       case 'print-template':
         return (
-          <div className="print-employee-schedule" ref={printTemplateRef}>
+          <div className="print-employee-schedule p-4 bg-white" ref={printTemplateRef}>
             <h2 className="text-lg font-medium mb-6 text-center">Horarios Individuales - Semana: {weekRangeText}</h2>
             
             {/* Vista compacta de una sola página */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print:grid-cols-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print:grid-cols-3"
+                 style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
               {employees.map(employee => {
                 // Formatear el nombre del empleado (nombre + iniciales)
                 const formattedName = formatEmployeeName(employee.name);
                 
                 return (
-                <div key={employee.id} className="mb-4 print:break-inside-avoid border border-gray-300 p-3 rounded-md shadow-sm bg-white">
-                  <div className="mb-2 border-b pb-1 border-gray-200">
-                    <h3 className="text-base font-bold text-gray-800">{formattedName}</h3>
+                <div key={employee.id} className="mb-4 print:break-inside-avoid border border-gray-300 p-3 rounded-md shadow-sm bg-white"
+                     style={{ 
+                       margin: '0 0 1rem 0', 
+                       padding: '0.75rem', 
+                       border: '1px solid #ccc', 
+                       borderRadius: '4px',
+                       backgroundColor: 'white',
+                       boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                     }}>
+                  <div className="mb-2 border-b pb-1 border-gray-200"
+                       style={{ marginBottom: '0.5rem', paddingBottom: '0.25rem', borderBottom: '1px solid #eee' }}>
+                    <h3 className="text-base font-bold text-gray-800"
+                        style={{ fontSize: '14px', fontWeight: 'bold', color: '#333' }}>{formattedName}</h3>
                   </div>
                   
-                  <div className="text-xs space-y-2">
+                  <div className="text-xs space-y-2" style={{ fontSize: '11px' }}>
                     {weekDays.map((day, index) => {
                       // Buscar turnos para este empleado en este día
                       const dayShifts = getWeekShifts().filter(shift => {
@@ -415,19 +483,37 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                         );
                       });
                       
-                      // Formatear horarios
-                      const shiftsArray = dayShifts.map(shift => 
-                        `${shift.startTime} - ${shift.endTime}`
-                      );
+                      // Formatear horarios, incluyendo indicador para turnos que cruzan medianoche
+                      const shiftsArray = dayShifts.map(shift => {
+                        // Determinar si el turno cruza la medianoche
+                        const [startHour, startMinute] = shift.startTime.split(':').map(Number);
+                        const [endHour, endMinute] = shift.endTime.split(':').map(Number);
+                        const isMidnightCrossing = (endHour < startHour) || (endHour === 0 && endMinute === 0);
+                        
+                        // Formatear con indicador para turnos que cruzan medianoche
+                        return isMidnightCrossing
+                          ? `${shift.startTime} - ${shift.endTime} +1`
+                          : `${shift.startTime} - ${shift.endTime}`;
+                      });
                       
                       return (
-                        <div key={index} className="flex justify-between items-center py-1">
-                          <span className="font-medium text-gray-700">{dayNames[index].substring(0, 3)} {day.getDate()}</span>
-                          <span className="text-gray-800">
+                        <div key={index} className="flex justify-between items-center py-1"
+                             style={{ 
+                               display: 'flex', 
+                               justifyContent: 'space-between', 
+                               alignItems: 'center',
+                               padding: '0.25rem 0',
+                               borderBottom: '1px dotted #eee'
+                             }}>
+                          <span className="font-medium text-gray-700"
+                                style={{ fontWeight: '600', minWidth: '50px' }}>
+                            {dayNames[index].substring(0, 3)} {day.getDate()}
+                          </span>
+                          <span className="text-gray-800" style={{ textAlign: 'right' }}>
                             {shiftsArray.length > 0 ? (
                               shiftsArray.join(", ")
                             ) : (
-                              <span className="text-gray-400 italic">Libre</span>
+                              <span className="text-gray-400 italic" style={{ color: '#aaa', fontStyle: 'italic' }}>Libre</span>
                             )}
                           </span>
                         </div>
