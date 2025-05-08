@@ -166,7 +166,7 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
         return;
       }
     } else if (selectedReport === 'print-template') {
-      // Para horarios individuales, generamos el PDF directamente
+      // Para horarios individuales, generamos el PDF directamente con un diseño minimalista
       try {
         // Crear un nuevo PDF
         const pdf = new jsPDF({
@@ -175,25 +175,26 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
           format: 'a4'
         });
         
-        // Título (reducido en tamaño y con texto más corto para evitar desbordamiento)
-        pdf.setFontSize(14);
-        pdf.text(`Horarios: ${weekRangeText}`, pdf.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+        // Título más pequeño para evitar desbordamiento
+        pdf.setFontSize(12);
+        const shortTitle = `Horarios: ${weekRangeText}`;
+        pdf.text(shortTitle, pdf.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
         
-        // Configurar disposición de tarjetas (sin bordes)
+        // Configurar disposición simple (sin bordes)
         const pageWidth = pdf.internal.pageSize.getWidth();
         const marginX = 10;
-        const marginY = 25; // Margen top después del título
+        const marginY = 20; // Margen reducido
         const cardsPerRow = 3;
         const cardWidth = (pageWidth - (marginX * 2)) / cardsPerRow;
-        const cardHeight = 40; // Altura reducida
-        const spacing = 5; // Espacio entre tarjetas
+        const cardHeight = 36; // Altura aún más reducida
+        const spacing = 4; // Menos espacio entre tarjetas
         
         // Inicializar posición
         let currentX = marginX;
         let currentY = marginY;
         let cardCount = 0;
         
-        // Para cada empleado, crear una tarjeta
+        // Para cada empleado, crear una sección simple sin bordes
         employees.forEach((employee, employeeIndex) => {
           // Verificar si necesitamos cambiar de fila
           if (cardCount > 0 && cardCount % cardsPerRow === 0) {
@@ -208,27 +209,25 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
             currentY = marginY;
           }
           
-          // Nombre del empleado (formateado) - sin borde alrededor
+          // Nombre del empleado (formateado) - sin borde
           const formattedName = formatEmployeeName(employee.name);
-          pdf.setFontSize(11);
+          pdf.setFontSize(9);
           pdf.setFont('helvetica', 'bold');
-          pdf.text(formattedName, currentX + 3, currentY + 6);
+          pdf.text(formattedName, currentX + 1, currentY + 5);
           
-          // Línea separadora sutil bajo el nombre
-          pdf.setDrawColor(240, 240, 240); // Gris muy claro, casi invisible
-          pdf.line(currentX + 1, currentY + 8, currentX + cardWidth - 1, currentY + 8);
+          // No dibujamos ninguna línea ni borde
           
           // Establecer fuente para los horarios
-          pdf.setFontSize(8);
+          pdf.setFontSize(7);
           pdf.setFont('helvetica', 'normal');
           
           // Mostrar horarios por día
-          let lineY = currentY + 12;
+          let lineY = currentY + 10;
           weekDays.forEach((day, dayIndex) => {
-            // Día de la semana
+            // Día de la semana (abreviado)
             const dayName = dayNames[dayIndex].substring(0, 3);
             pdf.setFont('helvetica', 'bold');
-            pdf.text(`${dayName} ${day.getDate()}:`, currentX + 3, lineY);
+            pdf.text(`${dayName}${day.getDate()}:`, currentX + 1, lineY);
             
             // Buscar turnos para este empleado en este día
             const dayShifts = getWeekShifts().filter(shift => {
@@ -241,7 +240,7 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
               );
             });
             
-            // Formatear horarios con indicador de medianoche
+            // Formatear horarios con formato super compacto
             let shiftsText = 'Libre';
             
             if (dayShifts.length > 0) {
@@ -250,37 +249,37 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                 const [endHour, endMinute] = shift.endTime.split(':').map(Number);
                 const isMidnightCrossing = (endHour < startHour) || (endHour === 0 && endMinute === 0);
                 
-                // Formato más compacto, sin ceros en las horas y sin espacios
+                // Formato extremadamente compacto
                 const compactStart = shift.startTime.replace(/^0/, '');
                 const compactEnd = shift.endTime.replace(/^0/, '');
                 return isMidnightCrossing
-                  ? `${compactStart}-${compactEnd}+1`
+                  ? `${compactStart}-${compactEnd}+`
                   : `${compactStart}-${compactEnd}`;
-              }).join(', ');
+              }).join(',');
               
               // Texto de turno
               pdf.setFont('helvetica', 'normal');
               
               // Colorear turnos de medianoche en morado
-              if (shiftsText.includes('+1')) {
+              if (shiftsText.includes('+')) {
                 pdf.setTextColor(138, 77, 247); // Morado para turnos de medianoche
               } else {
                 pdf.setTextColor(0, 0, 0); // Negro normal
               }
             } else {
-              pdf.setTextColor(150, 150, 150); // Gris para "Libre"
+              pdf.setTextColor(180, 180, 180); // Gris más claro para "Libre"
               pdf.setFont('helvetica', 'italic');
             }
             
-            // Alinear texto de turnos a la derecha
+            // Alinear texto de turnos a la derecha con menos margen
             const textWidth = pdf.getTextWidth(shiftsText);
-            pdf.text(shiftsText, currentX + cardWidth - 3 - textWidth, lineY);
+            pdf.text(shiftsText, currentX + cardWidth - 2 - textWidth, lineY);
             
             // Resetear color de texto
             pdf.setTextColor(0, 0, 0);
             
-            // Avanzar a la siguiente línea
-            lineY += 4;
+            // Avanzar a la siguiente línea (menos espacio)
+            lineY += 3.5;
           });
           
           // Actualizar posición para la siguiente tarjeta
@@ -399,7 +398,7 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                             {day.shiftsDetails?.length > 0 ? (
                               <div className="flex flex-col gap-1 text-xs text-gray-700">
                                 {day.shiftsDetails.map((shift, idx) => {
-                                  const containsMidnightIndicator = shift.includes(' +1');
+                                  const containsMidnightIndicator = shift.includes('+1');
                                   return (
                                     <div 
                                       key={idx} 
@@ -503,19 +502,16 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                 const formattedName = formatEmployeeName(employee.name);
                 
                 return (
-                <div key={employee.id} className="mb-4 print:break-inside-avoid border border-gray-300 p-3 rounded-md shadow-sm bg-white"
+                <div key={employee.id} className="mb-4 print:break-inside-avoid p-2 bg-white"
                      style={{ 
-                       margin: '0 0 1rem 0', 
-                       padding: '0.75rem', 
-                       border: '1px solid #ccc', 
-                       borderRadius: '4px',
-                       backgroundColor: 'white',
-                       boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                       margin: '0 0 0.5rem 0', 
+                       padding: '0.5rem', 
+                       backgroundColor: 'white'
                      }}>
-                  <div className="mb-2 border-b pb-1 border-gray-200"
-                       style={{ marginBottom: '0.5rem', paddingBottom: '0.25rem', borderBottom: '1px solid #eee' }}>
-                    <h3 className="text-base font-bold text-gray-800"
-                        style={{ fontSize: '14px', fontWeight: 'bold', color: '#333' }}>{formattedName}</h3>
+                  <div className="mb-1"
+                       style={{ marginBottom: '0.3rem' }}>
+                    <h3 className="text-sm font-bold text-gray-800"
+                        style={{ fontSize: '12px', fontWeight: 'bold', color: '#333' }}>{formattedName}</h3>
                   </div>
                   
                   <div className="text-xs space-y-2" style={{ fontSize: '11px' }}>
@@ -552,8 +548,7 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                                display: 'flex', 
                                justifyContent: 'space-between', 
                                alignItems: 'center',
-                               padding: '0.25rem 0',
-                               borderBottom: '1px dotted #eee'
+                               padding: '0.25rem 0'
                              }}>
                           <span className="font-medium text-gray-700"
                                 style={{ fontWeight: '600', minWidth: '50px' }}>
@@ -563,7 +558,7 @@ const ExportsModal = forwardRef<ExportsModalRef, ExportsModalProps>(({ employees
                             {shiftsArray.length > 0 ? (
                               <span>
                                 {shiftsArray.map((shift, i) => {
-                                  const containsMidnightIndicator = shift.includes(' +1');
+                                  const containsMidnightIndicator = shift.includes('+1');
                                   return (
                                     <span key={i}>
                                       {i > 0 && ", "}
