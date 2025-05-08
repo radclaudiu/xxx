@@ -45,9 +45,11 @@ import {
   Building, 
   Loader2, 
   Mail, 
+  TrendingUp,
   UserPlus, 
   Users 
 } from "lucide-react";
+import DailySalesCalendar from "@/components/daily-sales-calendar";
 
 // Esquema para el formulario de asignación de usuarios
 const assignUserSchema = z.object({
@@ -258,10 +260,14 @@ export default function CompanyAdminPage() {
               </h2>
               
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full md:w-[300px] grid-cols-1">
+                <TabsList className="grid w-full md:w-[600px] grid-cols-2">
                   <TabsTrigger value="users" className="flex items-center">
                     <Users className="mr-2 h-4 w-4" />
                     Gestión de Usuarios
+                  </TabsTrigger>
+                  <TabsTrigger value="daily-sales" className="flex items-center">
+                    <TrendingUp className="mr-2 h-4 w-4" />
+                    Ventas Diarias Estimadas
                   </TabsTrigger>
                 </TabsList>
               
@@ -413,6 +419,25 @@ export default function CompanyAdminPage() {
                             </div>
                           )}
                         </>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                <TabsContent value="daily-sales" className="space-y-6 pt-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5" />
+                        Ventas Diarias Estimadas
+                      </CardTitle>
+                      <CardDescription>
+                        Configure las ventas estimadas por día para optimizar la distribución de personal
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {currentCompanyId && (
+                        <DailySalesCalendar companyId={currentCompanyId} />
                       )}
                     </CardContent>
                   </Card>
