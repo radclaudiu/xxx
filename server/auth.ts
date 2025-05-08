@@ -2,7 +2,7 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import express, { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
-import { scrypt, randomBytes, timingSafeEqual, pbkdf2Sync } from "crypto";
+import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { db } from "./db";
 import { users, User as SelectUser } from "@shared/schema";
@@ -25,46 +25,8 @@ async function hashPassword(password: string) {
   return `${buf.toString("hex")}.${salt}`;
 }
 
-// Función para verificar contraseñas de Werkzeug (usado en Flask/Productiva)
-function verifyWerkzeugPassword(stored: string, supplied: string): boolean {
-  try {
-    // Werkzeug usa el formato: método$salt$hash
-    const parts = stored.split('$');
-    if (parts.length !== 3) return false;
-    
-    const [method, salt, hashVal] = parts;
-    
-    // Werkzeug generalmente usa pbkdf2:sha256 con 1000 iteraciones
-    if (method === 'pbkdf2:sha256') {
-      const iterations = 1000;
-      const keylen = 32; // 256 bits
-      
-      const calculatedHash = pbkdf2Sync(
-        supplied,
-        Buffer.from(salt, 'hex'),
-        iterations,
-        keylen,
-        'sha256'
-      ).toString('hex');
-      
-      return calculatedHash === hashVal;
-    }
-    
-    return false;
-  } catch (error) {
-    console.error("Error verificando contraseña Werkzeug:", error);
-    return false;
-  }
-}
-
 // Función para comparar contraseñas
 async function comparePasswords(supplied: string, stored: string) {
-  // Si la contraseña almacenada tiene el formato de Werkzeug (contiene $)
-  if (stored.includes('$')) {
-    return verifyWerkzeugPassword(stored, supplied);
-  }
-  
-  // Formato original de CreaTurno
   const [hashed, salt] = stored.split(".");
   const hashedBuf = Buffer.from(hashed, "hex");
   const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
