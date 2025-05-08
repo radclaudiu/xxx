@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp, boolean, date } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, boolean, date, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -192,6 +192,17 @@ export const shifts = pgTable("shifts", {
   updatedAt: timestamp("updated_at"),
 });
 
+// Tabla para almacenar la venta estimada diaria por empresa y día
+export const dailySales = pgTable("daily_sales", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  date: text("date").notNull(), // Format: YYYY-MM-DD
+  estimatedSales: numeric("estimated_sales"), // Venta estimada para ese día
+  hourlyEmployeeCost: numeric("hourly_employee_cost"), // Coste por empleado por hora
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
+});
+
 // Schema for schedules (for saving/loading entire schedules)
 export const schedules = pgTable("schedules", {
   id: serial("id").primaryKey(),
@@ -224,6 +235,7 @@ export const companiesRelations = relations(companies, ({ many, one }) => ({
   employees: many(employees),
   schedules: many(schedules),
   templates: many(scheduleTemplates),
+  dailySales: many(dailySales),
   creator: one(users, {
     fields: [companies.createdBy],
     references: [users.id],
@@ -286,6 +298,13 @@ export const shiftsRelations = relations(shifts, ({ one }) => ({
   schedule: one(schedules, {
     fields: [shifts.scheduleId],
     references: [schedules.id],
+  }),
+}));
+
+export const dailySalesRelations = relations(dailySales, ({ one }) => ({
+  company: one(companies, {
+    fields: [dailySales.companyId],
+    references: [companies.id],
   }),
 }));
 
@@ -391,6 +410,15 @@ export const insertEmployeeSkillSchema = createInsertSchema(employeeSkills).pick
   level: true,
 });
 
+export const insertDailySalesSchema = createInsertSchema(dailySales).pick({
+  companyId: true,
+  date: true,
+  estimatedSales: true,
+  hourlyEmployeeCost: true,
+}).partial({
+  hourlyEmployeeCost: true,
+});
+
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 export type Employee = typeof employees.$inferSelect;
 
@@ -405,3 +433,6 @@ export type Skill = typeof skills.$inferSelect;
 
 export type InsertEmployeeSkill = z.infer<typeof insertEmployeeSkillSchema>;
 export type EmployeeSkill = typeof employeeSkills.$inferSelect;
+
+export type InsertDailySales = z.infer<typeof insertDailySalesSchema>;
+export type DailySales = typeof dailySales.$inferSelect;

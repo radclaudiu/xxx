@@ -7,8 +7,9 @@ import {
   Company, InsertCompany,
   UserCompany, InsertUserCompany,
   ScheduleTemplate, InsertScheduleTemplate,
+  DailySales, InsertDailySales,
   employees, shifts, schedules, 
-  users, companies, userCompanies, scheduleTemplates
+  users, companies, userCompanies, scheduleTemplates, dailySales
 } from "@shared/schema";
 import { db } from "./db";
 
