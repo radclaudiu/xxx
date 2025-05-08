@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DailySales } from '@shared/schema';
+import { DailySales, Company } from '@shared/schema';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { formatDateForAPI } from '@/lib/date-helpers';
 import { toast } from '@/hooks/use-toast';
-import { CalendarIcon, Save, Loader2 } from 'lucide-react';
+import { CalendarIcon, Save, Loader2, InfoIcon } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -18,7 +18,6 @@ interface DailySalesCalendarProps {
 export default function DailySalesCalendar({ companyId }: DailySalesCalendarProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [estimatedSales, setEstimatedSales] = useState<string>('');
-  const [hourlyEmployeeCost, setHourlyEmployeeCost] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const queryClient = useQueryClient();
@@ -39,7 +38,7 @@ export default function DailySalesCalendar({ companyId }: DailySalesCalendarProp
 
   // Mutation para guardar/actualizar datos de ventas diarias
   const saveDailySalesMutation = useMutation({
-    mutationFn: async (data: { date: string; estimatedSales: number; hourlyEmployeeCost?: number }) => {
+    mutationFn: async (data: { date: string; estimatedSales: number }) => {
       const response = await apiRequest(
         'POST', 
         `/api/companies/${companyId}/daily-sales`, 
@@ -80,11 +79,9 @@ export default function DailySalesCalendar({ companyId }: DailySalesCalendarProp
     
     if (dailySale) {
       setEstimatedSales(dailySale.estimatedSales?.toString() || '');
-      setHourlyEmployeeCost(dailySale.hourlyEmployeeCost?.toString() || '');
     } else {
       // Si no hay datos para esta fecha, limpiar los campos
       setEstimatedSales('');
-      setHourlyEmployeeCost('');
     }
   }, [selectedDate, dailySales]);
 
@@ -111,8 +108,7 @@ export default function DailySalesCalendar({ companyId }: DailySalesCalendarProp
     
     saveDailySalesMutation.mutate({
       date: formatDateForAPI(selectedDate),
-      estimatedSales: parseFloat(estimatedSales),
-      hourlyEmployeeCost: hourlyEmployeeCost ? parseFloat(hourlyEmployeeCost) : undefined
+      estimatedSales: parseFloat(estimatedSales)
     });
   };
 
@@ -180,17 +176,9 @@ export default function DailySalesCalendar({ companyId }: DailySalesCalendarProp
                 step="0.01"
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="hourlyCost">Coste por empleado y hora</Label>
-              <Input
-                id="hourlyCost"
-                type="number"
-                placeholder="Ingresa el coste por hora"
-                value={hourlyEmployeeCost}
-                onChange={(e) => setHourlyEmployeeCost(e.target.value)}
-                min="0"
-                step="0.01"
-              />
+            <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-2">
+              <InfoIcon className="h-3.5 w-3.5" />
+              <span>El coste por empleado y hora se configura globalmente para toda la empresa</span>
             </div>
           </div>
         </CardContent>
