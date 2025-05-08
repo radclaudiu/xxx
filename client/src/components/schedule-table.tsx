@@ -1392,8 +1392,20 @@ export default function ScheduleTable({
                     
                     // Si es la primera celda de un turno, calculamos cuántas celdas debe ocupar
                     let colSpan = 1;
+                    // Determinar si este turno cruza la medianoche
+                    let isMidnightCrossing = false;
+                    
                     if (isFirstCell && shift) {
                       colSpan = getShiftCellSpan(employee.id, time);
+                      
+                      // Verificar si el turno cruza la medianoche
+                      const startMinutes = convertTimeToMinutes(shift.startTime);
+                      const endMinutes = convertTimeToMinutes(shift.endTime);
+                      
+                      // Si la hora de fin es menor o igual a la de inicio, cruza la medianoche
+                      // O si la hora de fin es 00:00 y la de inicio no lo es
+                      isMidnightCrossing = endMinutes <= startMinutes || 
+                        (shift.endTime === '00:00' && shift.startTime !== '00:00');
                       
                       // Marcar las siguientes celdas como "saltadas"
                       for (let i = 1; i < colSpan && timeIndex + i < timeSlots.length; i++) {
@@ -1410,7 +1422,7 @@ export default function ScheduleTable({
                           isAssigned ? 'assigned' : ''
                         } ${isSelected ? 'selected' : ''} ${
                           time.endsWith(':00') ? 'hour-marker' : ''
-                        }`}
+                        } ${isFirstCell && shift && isMidnightCrossing ? 'midnight-crossing' : ''}`}
                         style={{
                           width: `${cellSize * colSpan}px`, // Ancho dinámico basado en cellSize y colSpan
                           height: `${cellSize}px`, // Altura dinámica basada en cellSize
@@ -1418,7 +1430,7 @@ export default function ScheduleTable({
                           padding: "0", // Sin padding para mantener tamaño exacto
                           boxSizing: "border-box", // Incluir bordes en dimensiones
                           backgroundColor: isSelected ? 'rgba(76, 175, 80, 0.4)' : 
-                                          isAssigned ? 'rgba(25, 118, 210, 0.2)' : 
+                                          isAssigned ? (isMidnightCrossing ? 'rgba(156, 39, 176, 0.15)' : 'rgba(25, 118, 210, 0.2)') : 
                                           'transparent',
                           borderTop: isSelected ? '1px solid #4CAF50' : 
                                    isAssigned ? '1px solid #1976D2' : '1px solid #E0E0E0',
@@ -1571,13 +1583,20 @@ export default function ScheduleTable({
                             style={{
                               fontSize: "0.55rem",
                               fontWeight: "bold",
-                              color: "#1565C0",
+                              color: isMidnightCrossing ? "#9C27B0" : "#1565C0",
                               whiteSpace: "nowrap",
                               textOverflow: "ellipsis",
                               padding: "0 2px"
                             }}
                           >
-                            {`${shift.startTime} - ${shift.endTime}`}
+                            {isMidnightCrossing ? (
+                              <span className="flex items-center">
+                                <span>{shift.startTime} - {shift.endTime}</span>
+                                <span className="text-purple-600 ml-[1px]">+1</span>
+                              </span>
+                            ) : (
+                              <span>{shift.startTime} - {shift.endTime}</span>
+                            )}
                           </div>
                         )}
                       </td>
