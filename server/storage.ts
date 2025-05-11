@@ -81,6 +81,11 @@ export interface IStorage {
   isWeekLocked(companyId: number, weekStartDate: string): Promise<boolean>;
   lockWeek(companyId: number, weekStartDate: string, userId: number): Promise<LockedWeek>;
   unlockWeek(companyId: number, weekStartDate: string): Promise<boolean>;
+  
+  // Locked Week Employees operations
+  getLockedWeekEmployees(lockedWeekId: number): Promise<LockedWeekEmployee[]>;
+  saveLockedWeekEmployees(lockedWeekId: number, employees: Employee[]): Promise<LockedWeekEmployee[]>;
+  getEmployeesForLockedWeek(companyId: number, weekStartDate: string): Promise<Employee[]>;
 }
 
 export class MemStorage implements IStorage {
