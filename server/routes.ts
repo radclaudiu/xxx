@@ -4,7 +4,8 @@ import { storage } from "./storage";
 import { z } from "zod";
 import { 
   insertEmployeeSchema, insertShiftSchema, insertScheduleSchema, 
-  insertCompanySchema, insertScheduleTemplateSchema, insertDailySalesSchema 
+  insertCompanySchema, insertScheduleTemplateSchema, insertDailySalesSchema,
+  insertWeeklyEmployeeSchema
 } from "@shared/schema";
 import { setupAuth, isAuthenticated, isAdmin } from "./auth";
 
@@ -463,6 +464,157 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).end();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete employee" });
+    }
+  });
+
+  // Weekly Employees routes
+  app.get("/api/weekly-employees", isAuthenticated, async (req, res) => {
+    try {
+      // Extraer parámetros de consulta
+      const companyId = req.query.companyId ? parseInt(req.query.companyId as string) : undefined;
+      const weekStartDate = req.query.weekStartDate as string | undefined;
+      const weekEndDate = req.query.weekEndDate as string | undefined;
+      
+      if (!companyId) {
+        return res.status(400).json({ message: "Se requiere el parámetro companyId" });
+      }
+      
+      const weeklyEmployees = await storage.getWeeklyEmployees(companyId, weekStartDate, weekEndDate);
+      res.json(weeklyEmployees);
+    } catch (error) {
+      console.error("Error al obtener empleados semanales:", error);
+      res.status(500).json({ message: "Error al obtener empleados semanales" });
+    }
+  });
+  
+  app.get("/api/weekly-employees/employee/:employeeId", isAuthenticated, async (req, res) => {
+    try {
+      const employeeId = parseInt(req.params.employeeId);
+      const weeklyAssignments = await storage.getWeeklyEmployeesByEmployeeId(employeeId);
+      res.json(weeklyAssignments);
+    } catch (error) {
+      console.error("Error al obtener asignaciones del empleado:", error);
+      res.status(500).json({ message: "Error al obtener asignaciones del empleado" });
+    }
+  });
+  
+  app.get("/api/weekly-employees/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const weeklyEmployee = await storage.getWeeklyEmployee(id);
+      
+      if (!weeklyEmployee) {
+        return res.status(404).json({ message: "Asignación semanal no encontrada" });
+      }
+      
+      res.json(weeklyEmployee);
+    } catch (error) {
+      console.error("Error al obtener asignación semanal:", error);
+      res.status(500).json({ message: "Error al obtener asignación semanal" });
+    }
+  });
+  
+  app.post("/api/weekly-employees", isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertWeeklyEmployeeSchema.parse(req.body);
+      
+      // Verificar que el empleado existe
+      const employee = await storage.getEmployee(validatedData.employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: "Empleado no encontrado" });
+      }
+      
+      // Verificar que la compañía existe
+      const company = await storage.getCompany(validatedData.companyId);
+      if (!company) {
+        return res.status(404).json({ message: "Compañía no encontrada" });
+      }
+      
+      // Verificar que el usuario tiene permiso para esta compañía
+      if (req.user?.role !== "admin") {
+        const userCompanies = await storage.getUserCompanies(req.user!.id);
+        const userCompanyIds = userCompanies.map(uc => uc.companyId);
+        
+        if (!userCompanyIds.includes(validatedData.companyId)) {
+          return res.status(403).json({ message: "No tiene permisos para asignar empleados a esta compañía" });
+        }
+      }
+      
+      const weeklyEmployee = await storage.createWeeklyEmployee(validatedData);
+      res.status(201).json(weeklyEmployee);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Datos inválidos", errors: error.errors });
+      } else {
+        console.error("Error al crear asignación semanal:", error);
+        res.status(500).json({ message: "Error al crear asignación semanal" });
+      }
+    }
+  });
+  
+  app.put("/api/weekly-employees/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertWeeklyEmployeeSchema.partial().parse(req.body);
+      
+      // Verificar que la asignación existe
+      const weeklyEmployee = await storage.getWeeklyEmployee(id);
+      if (!weeklyEmployee) {
+        return res.status(404).json({ message: "Asignación semanal no encontrada" });
+      }
+      
+      // Verificar permisos
+      if (req.user?.role !== "admin") {
+        const userCompanies = await storage.getUserCompanies(req.user!.id);
+        const userCompanyIds = userCompanies.map(uc => uc.companyId);
+        
+        if (!userCompanyIds.includes(weeklyEmployee.companyId)) {
+          return res.status(403).json({ message: "No tiene permisos para modificar esta asignación" });
+        }
+      }
+      
+      const updatedWeeklyEmployee = await storage.updateWeeklyEmployee(id, validatedData);
+      res.json(updatedWeeklyEmployee);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Datos inválidos", errors: error.errors });
+      } else {
+        console.error("Error al actualizar asignación semanal:", error);
+        res.status(500).json({ message: "Error al actualizar asignación semanal" });
+      }
+    }
+  });
+  
+  app.delete("/api/weekly-employees/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Verificar que la asignación existe
+      const weeklyEmployee = await storage.getWeeklyEmployee(id);
+      if (!weeklyEmployee) {
+        return res.status(404).json({ message: "Asignación semanal no encontrada" });
+      }
+      
+      // Verificar permisos
+      if (req.user?.role !== "admin") {
+        const userCompanies = await storage.getUserCompanies(req.user!.id);
+        const userCompanyIds = userCompanies.map(uc => uc.companyId);
+        
+        if (!userCompanyIds.includes(weeklyEmployee.companyId)) {
+          return res.status(403).json({ message: "No tiene permisos para eliminar esta asignación" });
+        }
+      }
+      
+      const success = await storage.deleteWeeklyEmployee(id);
+      
+      if (!success) {
+        return res.status(500).json({ message: "No se pudo eliminar la asignación" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error al eliminar asignación semanal:", error);
+      res.status(500).json({ message: "Error al eliminar asignación semanal" });
     }
   });
 
