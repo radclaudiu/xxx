@@ -1610,6 +1610,8 @@ export default function ScheduleTable({
                           isAssigned ? 'assigned' : ''
                         } ${isSelected ? 'selected' : ''} ${
                           time.endsWith(':00') ? 'hour-marker' : ''
+                        } ${
+                          (time === '12:00' || time === '16:00' || time === '20:00') ? 'major-hour-marker' : ''
                         } ${isFirstCell && shift && isMidnightCrossing ? 'midnight-crossing' : ''}`}
                         style={{
                           width: `${cellSize * colSpan}px`, // Ancho dinámico basado en cellSize y colSpan
