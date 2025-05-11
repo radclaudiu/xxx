@@ -36,6 +36,7 @@ interface ScheduleTableProps {
   onSaveTimeRange?: (startHour: number, endHour: number) => void;
   isReadOnly?: boolean;
   onEditEmployee?: (employee: Employee) => void;
+  onReorderEmployees?: (newOrder: Employee[]) => void;
 }
 
 export default function ScheduleTable({ 
@@ -50,7 +51,8 @@ export default function ScheduleTable({
   endHour: initialEndHour = 22,
   onSaveTimeRange,
   isReadOnly = false,
-  onEditEmployee
+  onEditEmployee,
+  onReorderEmployees
 }: ScheduleTableProps) {
   const isMobile = useIsMobile();
   
@@ -1443,6 +1445,71 @@ export default function ScheduleTable({
                   }}
                 >
                   <div className="flex items-center h-full" style={{width: "100%"}}>
+                    {/* Botones para reordenar empleados */}
+                    {!isReadOnly && onReorderEmployees && (
+                      <div className="flex flex-col justify-between items-center px-1 h-full">
+                        <button 
+                          type="button"
+                          className="text-gray-400 hover:text-blue-500 transition-colors w-4 h-4 flex items-center justify-center"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            
+                            // Encontrar el índice actual del empleado
+                            const currentIndex = employees.findIndex(e => e.id === employee.id);
+                            
+                            // Si ya está al principio, no hacer nada
+                            if (currentIndex <= 0) return;
+                            
+                            // Crear una nueva lista con el orden actualizado
+                            const newEmployees = [...employees];
+                            
+                            // Intercambiar posiciones con el empleado anterior
+                            [newEmployees[currentIndex], newEmployees[currentIndex - 1]] = 
+                            [newEmployees[currentIndex - 1], newEmployees[currentIndex]];
+                            
+                            // Notificar el cambio
+                            onReorderEmployees(newEmployees);
+                          }}
+                          aria-label="Mover empleado hacia arriba"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                            <path fillRule="evenodd" d="M14.77 12.79a.75.75 0 01-1.06-.02L10 8.832 6.29 12.77a.75.75 0 11-1.08-1.04l4.25-4.5a.75.75 0 011.08 0l4.25 4.5a.75.75 0 01-.02 1.06z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                        
+                        <button 
+                          type="button"
+                          className="text-gray-400 hover:text-blue-500 transition-colors w-4 h-4 flex items-center justify-center"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            
+                            // Encontrar el índice actual del empleado
+                            const currentIndex = employees.findIndex(e => e.id === employee.id);
+                            
+                            // Si ya está al final, no hacer nada
+                            if (currentIndex >= employees.length - 1) return;
+                            
+                            // Crear una nueva lista con el orden actualizado
+                            const newEmployees = [...employees];
+                            
+                            // Intercambiar posiciones con el empleado siguiente
+                            [newEmployees[currentIndex], newEmployees[currentIndex + 1]] = 
+                            [newEmployees[currentIndex + 1], newEmployees[currentIndex]];
+                            
+                            // Notificar el cambio
+                            onReorderEmployees(newEmployees);
+                          }}
+                          aria-label="Mover empleado hacia abajo"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                            <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+                    
                     {/* Celda principal del empleado */}
                     <div className="flex justify-between items-center h-full px-1" 
                       style={{
