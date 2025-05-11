@@ -178,6 +178,13 @@ export default function Home() {
     }
   }, [dailySalesData]);
   
+  // Actualizar estado isWeekLocked cuando cambien los datos de semana bloqueada
+  useEffect(() => {
+    if (lockedWeekData) {
+      setIsWeekLocked(lockedWeekData.isLocked);
+    }
+  }, [lockedWeekData]);
+  
   // Fetch companies
   const {
     data: companies = [],
@@ -188,6 +195,10 @@ export default function Home() {
       return data;
     },
   });
+  
+  // Obtener el inicio de la semana actual
+  const weekStartDate = getStartOfWeek(currentDate);
+  const formattedWeekStartDate = formatDateForAPI(weekStartDate);
   
   // Actualizar los rangos horarios cuando se carguen las empresas
   useEffect(() => {
@@ -300,6 +311,74 @@ export default function Home() {
         variant: "destructive",
       });
     },
+  });
+  
+  // Mutación para bloquear una semana
+  const lockWeekMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentCompanyId || !user?.id) {
+        throw new Error("Se requiere ID de empresa y usuario");
+      }
+      
+      const lockData: InsertLockedWeek = {
+        companyId: currentCompanyId,
+        weekStartDate: formattedWeekStartDate,
+        lockedBy: user.id,
+      };
+      
+      const response = await apiRequest("POST", `/api/companies/${currentCompanyId}/locked-weeks`, lockData);
+      return response;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Semana bloqueada",
+        description: "La semana ha sido bloqueada correctamente",
+      });
+      
+      // Actualizar la consulta de semana bloqueada
+      refetchLockedWeek();
+      
+      // Cerrar el modal
+      setIsWeekLockModalOpen(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Error al bloquear semana: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Mutación para desbloquear una semana
+  const unlockWeekMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentCompanyId) {
+        throw new Error("Se requiere ID de empresa");
+      }
+      
+      const response = await apiRequest("DELETE", `/api/companies/${currentCompanyId}/locked-weeks?weekStartDate=${formattedWeekStartDate}`);
+      return response;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Semana desbloqueada",
+        description: "La semana ha sido desbloqueada correctamente",
+      });
+      
+      // Actualizar la consulta de semana bloqueada
+      refetchLockedWeek();
+      
+      // Cerrar el modal
+      setIsWeekLockModalOpen(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Error al desbloquear semana: ${error.message}`,
+        variant: "destructive",
+      });
+    }
   });
   
   // Handle saving selected shifts
