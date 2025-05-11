@@ -705,6 +705,15 @@ export default function Home() {
               setEmployeeToEdit(employee);
               setIsEmployeeModalOpen(true);
             }}
+            onReorderEmployees={(newEmployeeOrder) => {
+              // Actualizar el estado local con el nuevo orden
+              setEmployees(newEmployeeOrder);
+              
+              toast({
+                title: "Orden actualizado",
+                description: "El orden de los empleados ha sido actualizado.",
+              });
+            }}
           />
         </div>
       </main>
