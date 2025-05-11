@@ -35,6 +35,7 @@ import ScheduleTable from "@/components/schedule-table";
 import EmployeeModal from "@/components/employee-modal";
 import HelpModal from "@/components/help-modal";
 import ExportsModal, { ExportsModalRef } from "@/components/exports-modal";
+import WeeklyEmployeesModal from "@/components/weekly-employees-modal";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   formatDateForAPI, 
