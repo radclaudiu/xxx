@@ -227,3 +227,30 @@ export function isInSameWeek(date1: Date, date2: Date): boolean {
   const startOfWeek2 = getStartOfWeek(date2);
   return startOfWeek1.getTime() === startOfWeek2.getTime();
 }
+
+// Format a date as weekday range (e.g., "Lunes 01 - Domingo 07 Mayo 2023")
+export function formatWeekRange(date: Date): string {
+  const startDate = getStartOfWeek(date);
+  const endDate = new Date(startDate);
+  endDate.setDate(startDate.getDate() + 6); // Add 6 days to get to Sunday
+  
+  const options: Intl.DateTimeFormatOptions = {
+    weekday: 'long',
+    day: 'numeric'
+  };
+  
+  const monthYearOptions: Intl.DateTimeFormatOptions = {
+    month: 'long',
+    year: 'numeric'
+  };
+  
+  const startFormatted = startDate.toLocaleDateString('es-ES', options);
+  const endFormatted = endDate.toLocaleDateString('es-ES', options);
+  const monthYearFormatted = endDate.toLocaleDateString('es-ES', monthYearOptions);
+  
+  // Capitalize first letters
+  const startText = startFormatted.charAt(0).toUpperCase() + startFormatted.slice(1);
+  const endText = endFormatted.charAt(0).toUpperCase() + endFormatted.slice(1);
+  
+  return `${startText} - ${endText}, ${monthYearFormatted}`;
+}
