@@ -45,7 +45,7 @@ import {
   calculateHoursBetween
 } from "@/lib/date-helpers";
 import { useAuth } from '@/hooks/use-auth';
-import { Employee, InsertEmployee, InsertShift } from '@shared/schema';
+import { Employee, InsertEmployee, InsertShift, WeeklyEmployee } from '@shared/schema';
 
 export default function Home() {
   const { toast } = useToast();
@@ -72,7 +72,47 @@ export default function Home() {
   // Estado local para manejar el orden de los empleados
   const [orderedEmployees, setOrderedEmployees] = useState<Employee[]>([]);
   
-  // Fetch employees (filtrados por la empresa actual)
+  // Calcular las fechas de inicio y fin de la semana actual
+  const getWeekRange = (date: Date) => {
+    const day = date.getDay(); // 0-6, donde 0 es domingo
+    const diff = date.getDate() - day + (day === 0 ? -6 : 1); // Ajustar a lunes (primer día de la semana)
+    const weekStart = new Date(date);
+    weekStart.setDate(diff);
+    weekStart.setHours(0, 0, 0, 0);
+    
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6); // 7 días después (hasta el domingo)
+    weekEnd.setHours(23, 59, 59, 999);
+    
+    return {
+      start: weekStart,
+      end: weekEnd
+    };
+  };
+  
+  const weekRange = getWeekRange(currentDate);
+  const weekStartStr = `${weekRange.start.getFullYear()}-${String(weekRange.start.getMonth() + 1).padStart(2, '0')}-${String(weekRange.start.getDate()).padStart(2, '0')}`;
+  const weekEndStr = `${weekRange.end.getFullYear()}-${String(weekRange.end.getMonth() + 1).padStart(2, '0')}-${String(weekRange.end.getDate()).padStart(2, '0')}`;
+  
+  // Fetch weekly employees assigned for current week
+  const {
+    data: weeklyEmployees = [],
+    isLoading: isLoadingWeeklyEmployees,
+  } = useQuery<WeeklyEmployee[]>({
+    queryKey: ["/api/weekly-employees", currentCompanyId, weekStartStr, weekEndStr],
+    queryFn: async () => {
+      if (!currentCompanyId) return [];
+      const url = `/api/weekly-employees?companyId=${currentCompanyId}&weekStartDate=${weekStartStr}&weekEndDate=${weekEndStr}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("Error al cargar empleados semanales");
+      }
+      return response.json();
+    },
+    enabled: !!currentCompanyId
+  });
+  
+  // Fetch all employees (filtrados por la empresa actual)
   const {
     data: fetchedEmployees = [],
     isLoading: isLoadingEmployees,
@@ -145,10 +185,32 @@ export default function Home() {
   
   // Actualizar los empleados ordenados cuando cambian los datos de la API
   useEffect(() => {
-    if (fetchedEmployees.length > 0) {
+    // Si hay empleados asignados para esta semana, mostrar solo esos
+    if (weeklyEmployees.length > 0 && fetchedEmployees.length > 0) {
+      // Obtener los IDs de los empleados asignados a esta semana
+      const assignedEmployeeIds = weeklyEmployees.map(we => we.employeeId);
+      
+      // Filtrar los empleados para mostrar solo los asignados
+      const filteredEmployees = fetchedEmployees.filter(
+        emp => assignedEmployeeIds.includes(emp.id)
+      );
+      
+      // Si hay empleados filtrados, actualizar el estado
+      if (filteredEmployees.length > 0) {
+        setOrderedEmployees([...filteredEmployees]);
+      } else {
+        // Si no hay empleados asignados a esta semana, mostrar un mensaje
+        toast({
+          title: "Sin empleados para esta semana",
+          description: "No hay empleados asignados a esta semana. Use el botón 'Empleados por Semana' para asignarlos.",
+          duration: 5000
+        });
+      }
+    } else if (fetchedEmployees.length > 0) {
+      // Si no hay asignaciones semanales o hay algún error, usar todos los empleados
       setOrderedEmployees([...fetchedEmployees]);
     }
-  }, [fetchedEmployees]);
+  }, [fetchedEmployees, weeklyEmployees]);
 
   // Efecto para actualizar los valores cuando cambian los datos de venta diaria
   useEffect(() => {
