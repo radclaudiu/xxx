@@ -1003,7 +1003,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Verificar si una semana específica está bloqueada
+  // Verificar si una semana específica está bloqueada (endpoint para compatibilidad con frontend)
+  app.get("/api/companies/:companyId/locked-weeks/check", isAuthenticated, async (req, res) => {
+    try {
+      const companyId = parseInt(req.params.companyId);
+      const weekStartDate = req.query.weekStartDate as string;
+      
+      if (!weekStartDate) {
+        return res.status(400).json({ message: "Se requiere parámetro weekStartDate" });
+      }
+      
+      // Verificar que el usuario tenga acceso a esta empresa
+      const isAdminUser = req.user?.role === 'admin';
+      if (!isAdminUser) {
+        const userCompanies = await storage.getUserCompanies(req.user!.id);
+        const hasAccess = userCompanies.some(uc => uc.companyId === companyId);
+        
+        if (!hasAccess) {
+          return res.status(403).json({ 
+            message: "No tienes permisos para ver semanas bloqueadas de esta empresa" 
+          });
+        }
+      }
+      
+      const isLocked = await storage.isWeekLocked(companyId, weekStartDate);
+      console.log(`Verificando si la semana ${weekStartDate} está bloqueada para compañía ${companyId}: ${isLocked}`);
+      res.json({ isLocked });
+    } catch (error) {
+      console.error("Error al verificar semana bloqueada:", error);
+      res.status(500).json({ message: "Error al verificar si la semana está bloqueada" });
+    }
+  });
+  
+  // Verificar si una semana específica está bloqueada (usado internamente)
   app.get("/api/companies/:companyId/locked-weeks/:weekStartDate", isAuthenticated, async (req, res) => {
     try {
       const companyId = parseInt(req.params.companyId);
