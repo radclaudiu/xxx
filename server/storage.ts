@@ -9,8 +9,9 @@ import {
   ScheduleTemplate, InsertScheduleTemplate,
   DailySales, InsertDailySales,
   LockedWeek, InsertLockedWeek,
+  LockedWeekEmployee, InsertLockedWeekEmployee,
   employees, shifts, schedules, 
-  users, companies, userCompanies, scheduleTemplates, dailySales, lockedWeeks
+  users, companies, userCompanies, scheduleTemplates, dailySales, lockedWeeks, lockedWeekEmployees
 } from "@shared/schema";
 import { db } from "./db";
 
@@ -901,6 +902,80 @@ export class DatabaseStorage implements IStorage {
       .returning({ id: lockedWeeks.id });
     
     return !!result;
+  }
+  
+  // Métodos para gestionar empleados en semanas bloqueadas
+  async getLockedWeekEmployees(lockedWeekId: number): Promise<LockedWeekEmployee[]> {
+    return await db
+      .select()
+      .from(lockedWeekEmployees)
+      .where(eq(lockedWeekEmployees.lockedWeekId, lockedWeekId))
+      .orderBy(asc(lockedWeekEmployees.employeeOrder));
+  }
+  
+  async saveLockedWeekEmployees(lockedWeekId: number, employees: Employee[]): Promise<LockedWeekEmployee[]> {
+    // Primero eliminamos los empleados existentes para esta semana bloqueada
+    await db
+      .delete(lockedWeekEmployees)
+      .where(eq(lockedWeekEmployees.lockedWeekId, lockedWeekId));
+      
+    // Luego insertamos los nuevos empleados
+    const lockedEmployees: InsertLockedWeekEmployee[] = employees.map((employee, index) => ({
+      lockedWeekId,
+      employeeId: employee.id,
+      employeeName: employee.name,
+      employeeRole: employee.role,
+      employeeOrder: index
+    }));
+    
+    if (lockedEmployees.length === 0) {
+      return [];
+    }
+    
+    return await db
+      .insert(lockedWeekEmployees)
+      .values(lockedEmployees)
+      .returning();
+  }
+  
+  async getEmployeesForLockedWeek(companyId: number, weekStartDate: string): Promise<Employee[]> {
+    // Primero obtenemos el ID de la semana bloqueada
+    const [lockedWeek] = await db
+      .select()
+      .from(lockedWeeks)
+      .where(
+        and(
+          eq(lockedWeeks.companyId, companyId),
+          eq(lockedWeeks.weekStartDate, weekStartDate)
+        )
+      );
+      
+    if (!lockedWeek) {
+      return [];
+    }
+    
+    // Obtenemos los empleados guardados para esa semana
+    const lockedEmployees = await this.getLockedWeekEmployees(lockedWeek.id);
+    
+    // Convertimos los LockedWeekEmployee a Employee para mantener la interfaz
+    return lockedEmployees.map(le => ({
+      id: le.employeeId,
+      name: le.employeeName,
+      role: le.employeeRole,
+      companyId,
+      address: null,
+      phone: null,
+      email: null,
+      isActive: true,
+      color: null,
+      hoursPerWeek: null,
+      contractType: null,
+      position: null,
+      department: null,
+      notes: null,
+      createdAt: null,
+      updatedAt: null
+    }));
   }
 }
 
