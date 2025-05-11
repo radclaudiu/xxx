@@ -203,6 +203,18 @@ export const dailySales = pgTable("daily_sales", {
   updatedAt: timestamp("updated_at"),
 });
 
+// Tabla para asignar empleados a semanas específicas
+export const weeklyEmployees = pgTable("weekly_employees", {
+  id: serial("id").primaryKey(),
+  employeeId: integer("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  weekStartDate: text("week_start_date").notNull(), // Format: YYYY-MM-DD (Lunes de la semana)
+  weekEndDate: text("week_end_date").notNull(), // Format: YYYY-MM-DD (Domingo de la semana)
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
+});
+
 // Schema for schedules (for saving/loading entire schedules)
 export const schedules = pgTable("schedules", {
   id: serial("id").primaryKey(),
@@ -236,6 +248,7 @@ export const companiesRelations = relations(companies, ({ many, one }) => ({
   schedules: many(schedules),
   templates: many(scheduleTemplates),
   dailySales: many(dailySales),
+  weeklyEmployees: many(weeklyEmployees),
   creator: one(users, {
     fields: [companies.createdBy],
     references: [users.id],
@@ -269,6 +282,7 @@ export const scheduleTemplatesRelations = relations(scheduleTemplates, ({ many, 
 export const employeesRelations = relations(employees, ({ many, one }) => ({
   shifts: many(shifts),
   skills: many(employeeSkills),
+  weeklyAssignments: many(weeklyEmployees),
   company: one(companies, {
     fields: [employees.companyId],
     references: [companies.id],
