@@ -340,6 +340,53 @@ export class DatabaseStorage implements IStorage {
     return !!result;
   }
   
+  // Weekly Employees operations
+  async getWeeklyEmployees(companyId: number, weekStartDate?: string, weekEndDate?: string): Promise<WeeklyEmployee[]> {
+    let query = db.select().from(weeklyEmployees)
+      .where(eq(weeklyEmployees.companyId, companyId));
+    
+    if (weekStartDate) {
+      query = query.where(eq(weeklyEmployees.weekStartDate, weekStartDate));
+    }
+    
+    if (weekEndDate) {
+      query = query.where(eq(weeklyEmployees.weekEndDate, weekEndDate));
+    }
+    
+    return await query.orderBy(asc(weeklyEmployees.weekStartDate));
+  }
+  
+  async getWeeklyEmployee(id: number): Promise<WeeklyEmployee | undefined> {
+    const [weeklyEmployee] = await db.select().from(weeklyEmployees).where(eq(weeklyEmployees.id, id));
+    return weeklyEmployee;
+  }
+  
+  async getWeeklyEmployeesByEmployeeId(employeeId: number): Promise<WeeklyEmployee[]> {
+    return await db.select().from(weeklyEmployees)
+      .where(eq(weeklyEmployees.employeeId, employeeId))
+      .orderBy(asc(weeklyEmployees.weekStartDate));
+  }
+  
+  async createWeeklyEmployee(weeklyEmployee: InsertWeeklyEmployee): Promise<WeeklyEmployee> {
+    const [newWeeklyEmployee] = await db.insert(weeklyEmployees).values(weeklyEmployee).returning();
+    return newWeeklyEmployee;
+  }
+  
+  async updateWeeklyEmployee(id: number, weeklyEmployee: Partial<InsertWeeklyEmployee>): Promise<WeeklyEmployee | undefined> {
+    const [updatedWeeklyEmployee] = await db.update(weeklyEmployees)
+      .set(weeklyEmployee)
+      .where(eq(weeklyEmployees.id, id))
+      .returning();
+    return updatedWeeklyEmployee;
+  }
+  
+  async deleteWeeklyEmployee(id: number): Promise<boolean> {
+    const [result] = await db.delete(weeklyEmployees)
+      .where(eq(weeklyEmployees.id, id))
+      .returning({ id: weeklyEmployees.id });
+    return !!result;
+  }
+  
   // User operations
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
