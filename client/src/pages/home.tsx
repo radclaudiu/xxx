@@ -717,7 +717,7 @@ export default function Home() {
             }}
             onReorderEmployees={(newEmployeeOrder) => {
               // Actualizar el estado local con el nuevo orden
-              setEmployees(newEmployeeOrder);
+              setOrderedEmployees(newEmployeeOrder);
               
               toast({
                 title: "Orden actualizado",
@@ -754,7 +754,7 @@ export default function Home() {
       {/* Exportaciones Modal con referencia */}
       <ExportsModal 
         ref={exportsModalRef}
-        employees={employees}
+        employees={orderedEmployees}
         shifts={allShifts}
         currentDate={currentDate}
       />
