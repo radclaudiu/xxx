@@ -1041,11 +1041,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Usuario no autenticado" });
       }
       
+      // Primero obtenemos los empleados actuales de la empresa para guardarlos en el bloqueo
+      const employees = await storage.getEmployees(companyId);
+      
+      // Bloqueamos la semana
       const lockedWeek = await storage.lockWeek(
         companyId, 
         validatedData.weekStartDate,
         userId
       );
+      
+      // Guardamos los empleados actuales asociados a la semana bloqueada
+      if (employees.length > 0) {
+        await storage.saveLockedWeekEmployees(lockedWeek.id, employees);
+        console.log(`Guardados ${employees.length} empleados para la semana bloqueada ID: ${lockedWeek.id}`);
+      }
       
       res.status(201).json(lockedWeek);
     } catch (error) {
