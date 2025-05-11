@@ -511,10 +511,20 @@ export default function ScheduleTable({
         const minIdx = Math.min(startIndex, currentIndex);
         const maxIdx = Math.max(startIndex, currentIndex);
         
+        // Limpiar todas las selecciones previas que no estén en el rango actual
+        // Esto permite que el arrastre "reduzca" el rango al arrastrar en dirección contraria
+        selectedCells.forEach(timeSlot => {
+          const timeIndex = timeSlots.indexOf(timeSlot);
+          if (timeIndex < minIdx || timeIndex > maxIdx) {
+            selectedCells.delete(timeSlot);
+          }
+        });
+        
         // Bandera para detectar cambios
         let hasChanges = false;
         const previousSize = selectedCells.size;
         
+        // Añadir todas las celdas del rango seleccionado
         for (let i = minIdx; i <= maxIdx; i++) {
           const timeSlot = timeSlots[i];
           // Only add if the cell is not already assigned
@@ -637,10 +647,20 @@ export default function ScheduleTable({
                 const minIdx = Math.min(startIndex, currentIndex);
                 const maxIdx = Math.max(startIndex, currentIndex);
                 
+                // Limpiar todas las selecciones previas que no estén en el rango actual
+                // Esto permite que el arrastre "reduzca" el rango al arrastrar en dirección contraria
+                selectedCells.forEach(timeSlot => {
+                  const timeIndex = timeSlots.indexOf(timeSlot);
+                  if (timeIndex < minIdx || timeIndex > maxIdx) {
+                    selectedCells.delete(timeSlot);
+                  }
+                });
+                
                 // Bandera para detectar cambios
                 let hasChanges = false;
                 const previousSize = selectedCells.size;
                 
+                // Añadir todas las celdas del rango seleccionado
                 for (let i = minIdx; i <= maxIdx; i++) {
                   const timeSlot = timeSlots[i];
                   if (!isCellAssigned(activeEmployee.id, timeSlot) && !selectedCells.has(timeSlot)) {
