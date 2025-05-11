@@ -578,6 +578,25 @@ export default function Home() {
               </DropdownMenu>
             )}
             
+            {/* Botón para bloquear/desbloquear semana */}
+            {(user?.role === 'admin' || user?.role === 'manager') && (
+              <Button 
+                variant="secondary" 
+                className={`
+                  ${isWeekLocked 
+                    ? "bg-red-50 hover:bg-red-100 text-red-700 border-red-200" 
+                    : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                  } px-3 py-1 rounded flex items-center gap-1 text-sm font-medium
+                `}
+                onClick={() => setIsWeekLockModalOpen(true)}
+              >
+                {isWeekLocked 
+                  ? <Lock className="h-4 w-4" /> 
+                  : <Unlock className="h-4 w-4" />
+                }
+                {isWeekLocked ? "Semana Bloqueada" : "Bloquear Semana"}
+              </Button>
+            )}
             <Button 
               variant="secondary" 
               className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200 px-3 py-1 rounded flex items-center gap-1 text-sm font-medium ml-2"
@@ -874,6 +893,57 @@ export default function Home() {
         shifts={allShifts}
         currentDate={currentDate}
       />
+      
+      {/* Modal para bloquear/desbloquear semana */}
+      <Dialog open={isWeekLockModalOpen} onOpenChange={setIsWeekLockModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>
+              {isWeekLocked ? "Desbloquear Semana" : "Bloquear Semana"}
+            </DialogTitle>
+            <DialogDescription>
+              {isWeekLocked 
+                ? "Al desbloquear la semana, se permitirá realizar cambios en los turnos de esta semana."
+                : "Al bloquear la semana, no se permitirán cambios en los turnos y se preservarán incluso si se agregan o eliminan empleados."
+              }
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <p className="text-sm font-medium mb-2">Semana seleccionada:</p>
+            <div className="bg-muted p-2 rounded text-center">
+              {formatWeekRange(weekStartDate)}
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsWeekLockModalOpen(false)}
+            >
+              Cancelar
+            </Button>
+            
+            {isWeekLocked ? (
+              <Button 
+                variant="destructive"
+                onClick={() => unlockWeekMutation.mutate()}
+                disabled={unlockWeekMutation.isPending}
+              >
+                {unlockWeekMutation.isPending ? "Desbloqueando..." : "Desbloquear Semana"}
+              </Button>
+            ) : (
+              <Button 
+                className="bg-green-600 hover:bg-green-700"
+                onClick={() => lockWeekMutation.mutate()}
+                disabled={lockWeekMutation.isPending}
+              >
+                {lockWeekMutation.isPending ? "Bloqueando..." : "Bloquear Semana"}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
