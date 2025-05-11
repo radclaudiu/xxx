@@ -67,9 +67,12 @@ export default function Home() {
   // Refs
   const exportsModalRef = useRef<ExportsModalRef>(null);
   
+  // Estado local para manejar el orden de los empleados
+  const [orderedEmployees, setOrderedEmployees] = useState<Employee[]>([]);
+  
   // Fetch employees (filtrados por la empresa actual)
   const {
-    data: employees = [],
+    data: fetchedEmployees = [],
     isLoading: isLoadingEmployees,
   } = useQuery<Employee[]>({
     queryKey: ["/api/employees", currentCompanyId],
@@ -137,6 +140,13 @@ export default function Home() {
     },
     enabled: !!currentCompanyId
   });
+  
+  // Actualizar los empleados ordenados cuando cambian los datos de la API
+  useEffect(() => {
+    if (fetchedEmployees.length > 0) {
+      setOrderedEmployees([...fetchedEmployees]);
+    }
+  }, [fetchedEmployees]);
 
   // Efecto para actualizar los valores cuando cambian los datos de venta diaria
   useEffect(() => {
@@ -676,7 +686,7 @@ export default function Home() {
           
           {/* Schedule Table */}
           <ScheduleTable 
-            employees={employees} 
+            employees={orderedEmployees} 
             shifts={shifts} 
             date={currentDate}
             onSaveShifts={handleSaveShifts}
