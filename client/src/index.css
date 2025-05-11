@@ -146,6 +146,42 @@ html, body {
   padding: 0 !important;
   margin: 0 !important;
   line-height: 22px !important;
+  border-left: 1px solid #EEEEEE;
+}
+
+/* Líneas de hora normales */
+.hour-marker {
+  border-left: 1px solid #DDDDDD !important;
+}
+
+/* Líneas de hora destacadas (12:00, 16:00, 20:00) */
+.major-hour-marker {
+  border-left: 2px solid #000000 !important;
+}
+
+/* Cuando es celda TH (encabezado) */
+th.major-hour-marker {
+  border-left: 2px solid #000000 !important;
+  font-weight: bold;
+  color: #000;
+}
+
+/* Añadir línea vertical para todos los elementos con esta clase */
+tr td.major-hour-marker, 
+tr th.major-hour-marker {
+  position: relative;
+}
+
+tr td.major-hour-marker::before, 
+tr th.major-hour-marker::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background-color: #000000;
+  z-index: 5;
 }
 
 /* Para controlar la altura de las filas - será controlado por JavaScript */
