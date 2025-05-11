@@ -154,7 +154,12 @@ html, body {
   border-left: 1px solid #DDDDDD !important;
 }
 
-/* Líneas de hora destacadas (12:00, 16:00, 20:00) */
+/* Líneas de hora normales destacadas (solo en color negro - 12:00, 20:00) */
+.black-hour-marker {
+  border-left: 1px solid #000000 !important;
+}
+
+/* Línea de hora 16:00 (más gruesa) */
 .major-hour-marker {
   border-left: 2px solid #000000 !important;
 }
@@ -166,7 +171,12 @@ th.major-hour-marker {
   color: #000;
 }
 
-/* Añadir línea vertical para todos los elementos con esta clase */
+th.black-hour-marker {
+  border-left: 1px solid #000000 !important;
+  color: #000;
+}
+
+/* Añadir línea vertical para todos los elementos con estas clases */
 tr td.major-hour-marker, 
 tr th.major-hour-marker {
   position: relative;
@@ -180,6 +190,23 @@ tr th.major-hour-marker::before {
   bottom: 0;
   left: 0;
   width: 2px;
+  background-color: #000000;
+  z-index: 5;
+}
+
+tr td.black-hour-marker, 
+tr th.black-hour-marker {
+  position: relative;
+}
+
+tr td.black-hour-marker::before, 
+tr th.black-hour-marker::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 1px;
   background-color: #000000;
   z-index: 5;
 }
