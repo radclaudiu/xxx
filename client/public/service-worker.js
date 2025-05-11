@@ -12,9 +12,5 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// No interceptamos las solicitudes fetch para evitar problemas con la base de datos
-// Dejamos que todas las peticiones pasen directamente a la red
-self.addEventListener('fetch', event => {
-  // No hacer nada especial, simplemente dejar que la solicitud continúe normalmente
-  return;
-});
+// No registramos un manejador de fetch para evitar el aviso de 'no-op fetch handler'
+// Las solicitudes pasarán directamente a la red sin intervención del Service Worker
