@@ -154,9 +154,14 @@ html, body {
   border-left: 1px solid #DDDDDD !important;
 }
 
-/* Líneas de hora destacadas (12:00, 16:00, 20:00) */
+/* Líneas de hora destacadas (16:00) */
 .major-hour-marker {
   border-left: 2px solid #000000 !important;
+}
+
+/* Líneas de hora medias (12:00, 20:00) */
+.medium-hour-marker {
+  border-left: 1px solid #000000 !important;
 }
 
 /* Cuando es celda TH (encabezado) */
@@ -166,9 +171,20 @@ th.major-hour-marker {
   color: #000;
 }
 
+th.medium-hour-marker {
+  border-left: 1px solid #000000 !important;
+  font-weight: bold;
+  color: #000;
+}
+
 /* Añadir línea vertical para todos los elementos con esta clase */
 tr td.major-hour-marker, 
 tr th.major-hour-marker {
+  position: relative;
+}
+
+tr td.medium-hour-marker, 
+tr th.medium-hour-marker {
   position: relative;
 }
 
@@ -180,6 +196,18 @@ tr th.major-hour-marker::before {
   bottom: 0;
   left: 0;
   width: 2px;
+  background-color: #000000;
+  z-index: 5;
+}
+
+tr td.medium-hour-marker::before, 
+tr th.medium-hour-marker::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 1px;
   background-color: #000000;
   z-index: 5;
 }

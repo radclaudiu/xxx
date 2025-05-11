@@ -1264,7 +1264,8 @@ export default function ScheduleTable({
                     key={hour}
                     colSpan={4} // Abarca 4 celdas (00, 15, 30, 45)
                     className={`border-b border-neutral-200 p-0 text-center bg-neutral-50 ${
-                      hourValue === '12' || hourValue === '16' || hourValue === '20' ? 'major-hour-marker' : ''
+                      hourValue === '16' ? 'major-hour-marker' : 
+                      (hourValue === '12' || hourValue === '20') ? 'medium-hour-marker' : ''
                     }`}
                     style={{
                       position: 'sticky',
@@ -1351,7 +1352,8 @@ export default function ScheduleTable({
                     className={`border-b border-neutral-200 p-0 text-center ${
                       time.endsWith(':00') ? 'hour-marker' : ''
                     } ${
-                      (time === '12:00' || time === '16:00' || time === '20:00') ? 'major-hour-marker' : ''
+                      time === '16:00' ? 'major-hour-marker' : 
+                      (time === '12:00' || time === '20:00') ? 'medium-hour-marker' : ''
                     }`}
                     style={{
                       position: 'sticky',
@@ -1404,7 +1406,8 @@ export default function ScheduleTable({
                     className={`border-b border-neutral-200 p-0 text-center time-cell ${
                       time.endsWith(':00') ? 'hour-marker' : ''
                     } ${
-                      (time === '12:00' || time === '16:00' || time === '20:00') ? 'major-hour-marker' : ''
+                      time === '16:00' ? 'major-hour-marker' : 
+                      (time === '12:00' || time === '20:00') ? 'medium-hour-marker' : ''
                     }`}
                     style={{
                       position: 'sticky',
@@ -1617,7 +1620,8 @@ export default function ScheduleTable({
                         } ${isSelected ? 'selected' : ''} ${
                           time.endsWith(':00') ? 'hour-marker' : ''
                         } ${
-                          (time === '12:00' || time === '16:00' || time === '20:00') ? 'major-hour-marker' : ''
+                          time === '16:00' ? 'major-hour-marker' : 
+                          (time === '12:00' || time === '20:00') ? 'medium-hour-marker' : ''
                         } ${isFirstCell && shift && isMidnightCrossing ? 'midnight-crossing' : ''}`}
                         style={{
                           width: `${cellSize * colSpan}px`, // Ancho dinámico basado en cellSize y colSpan
