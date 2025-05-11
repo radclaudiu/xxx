@@ -85,6 +85,10 @@ export default function Home() {
   // Estado local para manejar el orden de los empleados
   const [orderedEmployees, setOrderedEmployees] = useState<Employee[]>([]);
   
+  // Calculamos el inicio de la semana para la fecha actual
+  const weekStartDate = getStartOfWeek(currentDate);
+  const formattedWeekStartDate = formatDateForAPI(weekStartDate);
+  
   // Fetch employees (filtrados por la empresa actual y potencialmente por semana bloqueada)
   const {
     data: fetchedEmployees = [],
@@ -213,9 +217,7 @@ export default function Home() {
     },
   });
   
-  // Obtener el inicio de la semana actual
-  const weekStartDate = getStartOfWeek(currentDate);
-  const formattedWeekStartDate = formatDateForAPI(weekStartDate);
+  // El inicio de la semana ya se calculó arriba
   
   // Actualizar los rangos horarios cuando se carguen las empresas
   useEffect(() => {
@@ -278,9 +280,17 @@ export default function Home() {
   // Actualizar estado isWeekLocked cuando cambien los datos de semana bloqueada
   useEffect(() => {
     if (lockedWeekData) {
-      setIsWeekLocked(lockedWeekData.isLocked);
+      // Si el estado de bloqueo ha cambiado, recargamos los empleados
+      if (isWeekLocked !== lockedWeekData.isLocked) {
+        console.log("Estado de bloqueo cambiado a:", lockedWeekData.isLocked);
+        setIsWeekLocked(lockedWeekData.isLocked);
+        // Recargar empleados para mostrar los correctos según el nuevo estado
+        refetchEmployees();
+      } else {
+        setIsWeekLocked(lockedWeekData.isLocked);
+      }
     }
-  }, [lockedWeekData]);
+  }, [lockedWeekData, isWeekLocked, refetchEmployees]);
   
   // Filter shifts for the current day (for the main schedule display)
   const currentDateFormatted = formatDateForAPI(currentDate);
