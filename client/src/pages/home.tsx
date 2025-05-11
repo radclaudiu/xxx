@@ -824,6 +824,7 @@ export default function Home() {
             employees={orderedEmployees} 
             shifts={shifts} 
             date={currentDate}
+            isWeekLocked={isWeekLocked}
             onSaveShifts={handleSaveShifts}
             onDeleteShift={handleDeleteShift}
             estimatedDailySales={parseFloat(estimatedDailySales) || 0}

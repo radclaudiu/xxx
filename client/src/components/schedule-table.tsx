@@ -27,6 +27,7 @@ interface ScheduleTableProps {
   employees: Employee[];
   shifts: Shift[];
   date: Date;
+  isWeekLocked: boolean;
   onSaveShifts: (selections: {employee: Employee, startTime: string, endTime: string}[]) => void;
   onDeleteShift?: (shiftId: number) => void;
   estimatedDailySales?: number;
@@ -413,8 +414,17 @@ export default function ScheduleTable({
   
   // Handler for starting an interaction (mouse or touch)
   const handleInteractionStart = (employee: Employee, time: string) => {
-    // Si el componente está en modo de solo lectura, no permitir interacción
-    if (isReadOnly) return;
+    // Si el componente está en modo de solo lectura o la semana está bloqueada, no permitir interacción
+    if (isReadOnly || isWeekLocked) {
+      if (isWeekLocked) {
+        toast({
+          title: "Semana bloqueada",
+          description: "No se pueden modificar los turnos en una semana bloqueada",
+          variant: "destructive"
+        });
+      }
+      return;
+    }
     
     // If cell is already assigned, don't allow selection
     if (isCellAssigned(employee.id, time)) return;
