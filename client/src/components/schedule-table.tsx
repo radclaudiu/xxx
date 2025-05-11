@@ -44,6 +44,7 @@ export default function ScheduleTable({
   employees, 
   shifts,
   date,
+  isWeekLocked,
   onSaveShifts,
   onDeleteShift,
   estimatedDailySales = 0,
