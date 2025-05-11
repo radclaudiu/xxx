@@ -148,7 +148,17 @@ CREATE TABLE shifts (
   updated_at TIMESTAMP
 );
 
+-- Tabla de sesiones (para gestión de sesiones en Express con connect-pg-simple)
+CREATE TABLE session (
+  sid VARCHAR PRIMARY KEY,
+  sess JSON NOT NULL,
+  expire TIMESTAMP(6) NOT NULL
+);
+
 -- Añadir índices para mejorar el rendimiento
+
+-- Índice para sesiones expiradas (para limpieza automática)
+CREATE INDEX "IDX_session_expire" ON session(expire);
 
 -- Índices para búsquedas frecuentes por empresa
 CREATE INDEX idx_employees_company ON employees(company_id);
