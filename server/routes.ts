@@ -953,6 +953,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== RUTAS PARA SEMANAS BLOQUEADAS =====
+  
+  // Obtener todas las semanas bloqueadas para una empresa
+  app.get("/api/companies/:companyId/locked-weeks", isAuthenticated, async (req, res) => {
+    try {
+      const companyId = parseInt(req.params.companyId);
+      
+      // Verificar que el usuario tenga acceso a esta empresa
+      const isAdminUser = req.user?.role === 'admin';
+      if (!isAdminUser) {
+        const userCompanies = await storage.getUserCompanies(req.user!.id);
+        const hasAccess = userCompanies.some(uc => uc.companyId === companyId);
+        
+        if (!hasAccess) {
+          return res.status(403).json({ 
+            message: "No tienes permisos para ver semanas bloqueadas de esta empresa" 
+          });
+        }
+      }
+      
+      const lockedWeeks = await storage.getLockedWeeks(companyId);
+      res.json(lockedWeeks);
+    } catch (error) {
+      console.error("Error al obtener semanas bloqueadas:", error);
+      res.status(500).json({ message: "Error al obtener semanas bloqueadas" });
+    }
+  });
+  
+  // Verificar si una semana específica está bloqueada
+  app.get("/api/companies/:companyId/locked-weeks/:weekStartDate", isAuthenticated, async (req, res) => {
+    try {
+      const companyId = parseInt(req.params.companyId);
+      const weekStartDate = req.params.weekStartDate;
+      
+      // Verificar que el usuario tenga acceso a esta empresa
+      const isAdminUser = req.user?.role === 'admin';
+      if (!isAdminUser) {
+        const userCompanies = await storage.getUserCompanies(req.user!.id);
+        const hasAccess = userCompanies.some(uc => uc.companyId === companyId);
+        
+        if (!hasAccess) {
+          return res.status(403).json({ 
+            message: "No tienes permisos para ver semanas bloqueadas de esta empresa" 
+          });
+        }
+      }
+      
+      const isLocked = await storage.isWeekLocked(companyId, weekStartDate);
+      res.json({ isLocked });
+    } catch (error) {
+      console.error("Error al verificar semana bloqueada:", error);
+      res.status(500).json({ message: "Error al verificar si la semana está bloqueada" });
+    }
+  });
+  
+  // Bloquear una semana
+  app.post("/api/companies/:companyId/locked-weeks", isAuthenticated, async (req, res) => {
+    try {
+      const companyId = parseInt(req.params.companyId);
+      
+      // Verificar que el usuario tenga acceso a esta empresa como gerente o admin
+      const isAdminUser = req.user?.role === 'admin';
+      if (!isAdminUser) {
+        const userCompanies = await storage.getUserCompanies(req.user!.id);
+        const hasManagerAccess = userCompanies.some(
+          uc => uc.companyId === companyId && (uc.role === 'manager' || uc.role === 'admin')
+        );
+        
+        if (!hasManagerAccess) {
+          return res.status(403).json({ 
+            message: "No tienes permisos para bloquear semanas en esta empresa" 
+          });
+        }
+      }
+      
+      // Validar datos de entrada
+      const schema = z.object({
+        weekStartDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de fecha inválido. Use YYYY-MM-DD"),
+      });
+      
+      const validatedData = schema.parse(req.body);
+      
+      // Obtener el usuario actual de la sesión
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "Usuario no autenticado" });
+      }
+      
+      const lockedWeek = await storage.lockWeek(
+        companyId, 
+        validatedData.weekStartDate,
+        userId
+      );
+      
+      res.status(201).json(lockedWeek);
+    } catch (error) {
+      console.error("Error al bloquear semana:", error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Datos inválidos", errors: error.errors });
+      }
+      
+      res.status(500).json({ message: "Error al bloquear semana" });
+    }
+  });
+  
+  // Desbloquear una semana
+  app.delete("/api/companies/:companyId/locked-weeks/:weekStartDate", isAuthenticated, async (req, res) => {
+    try {
+      const companyId = parseInt(req.params.companyId);
+      const weekStartDate = req.params.weekStartDate;
+      
+      // Verificar que el usuario tenga acceso a esta empresa como gerente o admin
+      const isAdminUser = req.user?.role === 'admin';
+      if (!isAdminUser) {
+        const userCompanies = await storage.getUserCompanies(req.user!.id);
+        const hasManagerAccess = userCompanies.some(
+          uc => uc.companyId === companyId && (uc.role === 'manager' || uc.role === 'admin')
+        );
+        
+        if (!hasManagerAccess) {
+          return res.status(403).json({ 
+            message: "No tienes permisos para desbloquear semanas en esta empresa" 
+          });
+        }
+      }
+      
+      const result = await storage.unlockWeek(companyId, weekStartDate);
+      
+      if (!result) {
+        return res.status(404).json({ message: "Semana bloqueada no encontrada" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error al desbloquear semana:", error);
+      res.status(500).json({ message: "Error al desbloquear semana" });
+    }
+  });
+  
   const httpServer = createServer(app);
   return httpServer;
 }
