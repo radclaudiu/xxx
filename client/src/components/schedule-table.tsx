@@ -1264,8 +1264,7 @@ export default function ScheduleTable({
                     key={hour}
                     colSpan={4} // Abarca 4 celdas (00, 15, 30, 45)
                     className={`border-b border-neutral-200 p-0 text-center bg-neutral-50 ${
-                      hourValue === '16' ? 'major-hour-marker' : 
-                      (hourValue === '12' || hourValue === '20') ? 'black-hour-marker' : ''
+                      hourValue === '12' || hourValue === '16' || hourValue === '20' ? 'major-hour-marker' : ''
                     }`}
                     style={{
                       position: 'sticky',
@@ -1276,7 +1275,8 @@ export default function ScheduleTable({
                       height: `${cellSize}px`,
                       width: `${cellSize * 4}px`, // 4 celdas de ancho (00, 15, 30, 45)
                       lineHeight: `${cellSize}px`,
-                      boxSizing: "border-box"
+                      boxSizing: "border-box",
+                      borderLeft: '2px solid #AAAAAA'
                     }}
                   >
                     <div className="flex justify-center items-center h-full">
@@ -1351,8 +1351,7 @@ export default function ScheduleTable({
                     className={`border-b border-neutral-200 p-0 text-center ${
                       time.endsWith(':00') ? 'hour-marker' : ''
                     } ${
-                      time === '16:00' ? 'major-hour-marker' : 
-                      (time === '12:00' || time === '20:00') ? 'black-hour-marker' : ''
+                      (time === '12:00' || time === '16:00' || time === '20:00') ? 'major-hour-marker' : ''
                     }`}
                     style={{
                       position: 'sticky',
@@ -1362,7 +1361,10 @@ export default function ScheduleTable({
                       width: `${cellSize}px`,
                       height: `${cellSize}px`,
                       lineHeight: `${cellSize}px`,
-                      boxSizing: "border-box"
+                      boxSizing: "border-box",
+                      borderLeft: time.endsWith(':00') ? '2px solid #AAAAAA' : 
+                                time.endsWith(':30') ? '1px solid #DDDDDD' : 
+                                '1px dashed #EEEEEE'
                     }}
                   >
                     {/* Mostrar contador cuando hay algún total */}
@@ -1402,8 +1404,7 @@ export default function ScheduleTable({
                     className={`border-b border-neutral-200 p-0 text-center time-cell ${
                       time.endsWith(':00') ? 'hour-marker' : ''
                     } ${
-                      time === '16:00' ? 'major-hour-marker' : 
-                      (time === '12:00' || time === '20:00') ? 'black-hour-marker' : ''
+                      (time === '12:00' || time === '16:00' || time === '20:00') ? 'major-hour-marker' : ''
                     }`}
                     style={{
                       position: 'sticky',
@@ -1413,7 +1414,10 @@ export default function ScheduleTable({
                       width: `${cellSize}px`, // Ancho dinámico basado en cellSize
                       height: `${cellSize}px`, // Altura dinámica basada en cellSize
                       lineHeight: `${cellSize}px`, // Garantizar altura exacta
-                      boxSizing: "border-box" // Incluir bordes en dimensiones
+                      boxSizing: "border-box", // Incluir bordes en dimensiones
+                      borderLeft: time.endsWith(':00') ? '2px solid #AAAAAA' : 
+                                time.endsWith(':30') ? '1px solid #DDDDDD' : 
+                                '1px dashed #EEEEEE'
                     }}
                   >
                     {/* Mostrar minuto para todos los intervalos */}
@@ -1613,8 +1617,7 @@ export default function ScheduleTable({
                         } ${isSelected ? 'selected' : ''} ${
                           time.endsWith(':00') ? 'hour-marker' : ''
                         } ${
-                          time === '16:00' ? 'major-hour-marker' : 
-                          (time === '12:00' || time === '20:00') ? 'black-hour-marker' : ''
+                          (time === '12:00' || time === '16:00' || time === '20:00') ? 'major-hour-marker' : ''
                         } ${isFirstCell && shift && isMidnightCrossing ? 'midnight-crossing' : ''}`}
                         style={{
                           width: `${cellSize * colSpan}px`, // Ancho dinámico basado en cellSize y colSpan
