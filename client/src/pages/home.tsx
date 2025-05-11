@@ -18,6 +18,8 @@ import {
   DollarSign,
   FileText,
   HelpCircle,
+  Lock,
+  Unlock,
   LogOut,
   Settings,
   UserPlus,
@@ -31,6 +33,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import ScheduleTable from "@/components/schedule-table";
 import EmployeeModal from "@/components/employee-modal";
 import HelpModal from "@/components/help-modal";
@@ -41,10 +52,12 @@ import {
   formatDate,
   getPreviousDay,
   getNextDay,
-  calculateHoursBetween
+  calculateHoursBetween,
+  getStartOfWeek,
+  formatWeekRange
 } from "@/lib/date-helpers";
 import { useAuth } from '@/hooks/use-auth';
-import { Employee, InsertEmployee, InsertShift } from '@shared/schema';
+import { Employee, InsertEmployee, InsertShift, LockedWeek, InsertLockedWeek } from '@shared/schema';
 
 export default function Home() {
   const { toast } = useToast();
@@ -54,6 +67,8 @@ export default function Home() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  const [isWeekLockModalOpen, setIsWeekLockModalOpen] = useState(false);
+  const [isWeekLocked, setIsWeekLocked] = useState(false);
   const [estimatedDailySales, setEstimatedDailySales] = useState("0");
   const [hourlyEmployeeCost, setHourlyEmployeeCost] = useState("0");
   // Estados para rangos horarios (con valores por defecto que se actualizarán desde la empresa)
