@@ -849,7 +849,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async isWeekLocked(companyId: number, weekStartDate: string): Promise<boolean> {
-    const [lockedWeek] = await db
+    console.log(`Verificando si la semana ${weekStartDate} está bloqueada para la compañía ${companyId}`);
+    
+    const result = await db
       .select()
       .from(lockedWeeks)
       .where(
@@ -858,7 +860,11 @@ export class DatabaseStorage implements IStorage {
           eq(lockedWeeks.weekStartDate, weekStartDate)
         )
       );
-    return !!lockedWeek;
+    
+    const isLocked = result.length > 0;
+    console.log(`Resultado de verificación de semana bloqueada: ${isLocked}`, result);
+    
+    return isLocked;
   }
 
   async lockWeek(companyId: number, weekStartDate: string, userId: number): Promise<LockedWeek> {
@@ -939,8 +945,10 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getEmployeesForLockedWeek(companyId: number, weekStartDate: string): Promise<Employee[]> {
+    console.log(`Obteniendo empleados para semana bloqueada ${weekStartDate}, compañía ${companyId}`);
+    
     // Primero obtenemos el ID de la semana bloqueada
-    const [lockedWeek] = await db
+    const lockedWeekResults = await db
       .select()
       .from(lockedWeeks)
       .where(
@@ -949,13 +957,20 @@ export class DatabaseStorage implements IStorage {
           eq(lockedWeeks.weekStartDate, weekStartDate)
         )
       );
+    
+    console.log(`Resultado de búsqueda de semana bloqueada:`, lockedWeekResults);
       
-    if (!lockedWeek) {
+    if (!lockedWeekResults.length) {
+      console.log(`No se encontró semana bloqueada para ${weekStartDate}, compañía ${companyId}`);
       return [];
     }
     
+    const lockedWeek = lockedWeekResults[0];
+    console.log(`Semana bloqueada encontrada, ID: ${lockedWeek.id}`);
+    
     // Obtenemos los empleados guardados para esa semana
     const lockedEmployees = await this.getLockedWeekEmployees(lockedWeek.id);
+    console.log(`Se encontraron ${lockedEmployees.length} empleados para la semana bloqueada`);
     
     // Convertimos los LockedWeekEmployee a Employee para mantener la interfaz
     return lockedEmployees.map(le => ({
