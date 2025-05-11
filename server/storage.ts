@@ -832,6 +832,71 @@ export class DatabaseStorage implements IStorage {
       shifts: scheduleShifts
     };
   }
+  
+  // Implementación de operaciones de semanas bloqueadas
+  async getLockedWeeks(companyId: number): Promise<LockedWeek[]> {
+    return await db
+      .select()
+      .from(lockedWeeks)
+      .where(eq(lockedWeeks.companyId, companyId))
+      .orderBy(desc(lockedWeeks.lockedAt));
+  }
+
+  async isWeekLocked(companyId: number, weekStartDate: string): Promise<boolean> {
+    const [lockedWeek] = await db
+      .select()
+      .from(lockedWeeks)
+      .where(
+        and(
+          eq(lockedWeeks.companyId, companyId),
+          eq(lockedWeeks.weekStartDate, weekStartDate)
+        )
+      );
+    return !!lockedWeek;
+  }
+
+  async lockWeek(companyId: number, weekStartDate: string, userId: number): Promise<LockedWeek> {
+    // Primero verificamos si ya está bloqueada
+    const [existingLock] = await db
+      .select()
+      .from(lockedWeeks)
+      .where(
+        and(
+          eq(lockedWeeks.companyId, companyId),
+          eq(lockedWeeks.weekStartDate, weekStartDate)
+        )
+      );
+    
+    if (existingLock) {
+      return existingLock; // Ya está bloqueada, devolvemos el registro existente
+    }
+
+    // Si no está bloqueada, creamos un nuevo registro
+    const [newLock] = await db
+      .insert(lockedWeeks)
+      .values({
+        companyId,
+        weekStartDate,
+        lockedBy: userId
+      })
+      .returning();
+    
+    return newLock;
+  }
+
+  async unlockWeek(companyId: number, weekStartDate: string): Promise<boolean> {
+    const [result] = await db
+      .delete(lockedWeeks)
+      .where(
+        and(
+          eq(lockedWeeks.companyId, companyId),
+          eq(lockedWeeks.weekStartDate, weekStartDate)
+        )
+      )
+      .returning({ id: lockedWeeks.id });
+    
+    return !!result;
+  }
 }
 
 // Cambiar el almacenamiento a la base de datos

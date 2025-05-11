@@ -4,7 +4,8 @@ import { storage } from "./storage";
 import { z } from "zod";
 import { 
   insertEmployeeSchema, insertShiftSchema, insertScheduleSchema, 
-  insertCompanySchema, insertScheduleTemplateSchema, insertDailySalesSchema 
+  insertCompanySchema, insertScheduleTemplateSchema, insertDailySalesSchema,
+  insertLockedWeekSchema
 } from "@shared/schema";
 import { setupAuth, isAuthenticated, isAdmin } from "./auth";
 
