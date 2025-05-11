@@ -178,12 +178,7 @@ export default function Home() {
     }
   }, [dailySalesData]);
   
-  // Actualizar estado isWeekLocked cuando cambien los datos de semana bloqueada
-  useEffect(() => {
-    if (lockedWeekData) {
-      setIsWeekLocked(lockedWeekData.isLocked);
-    }
-  }, [lockedWeekData]);
+
   
   // Fetch companies
   const {
@@ -238,6 +233,33 @@ export default function Home() {
     },
   });
 
+  // Verificar si la semana actual está bloqueada
+  const {
+    data: lockedWeekData,
+    isLoading: isLoadingLockedWeek,
+    refetch: refetchLockedWeek
+  } = useQuery<{ isLocked: boolean }>({
+    queryKey: ["/api/companies/locked-weeks/check", currentCompanyId, formattedWeekStartDate],
+    queryFn: async () => {
+      if (!currentCompanyId) return { isLocked: false };
+      
+      const url = `/api/companies/${currentCompanyId}/locked-weeks/check?weekStartDate=${formattedWeekStartDate}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("Error al verificar si la semana está bloqueada");
+      }
+      return response.json();
+    },
+    enabled: !!currentCompanyId,
+  });
+  
+  // Actualizar estado isWeekLocked cuando cambien los datos de semana bloqueada
+  useEffect(() => {
+    if (lockedWeekData) {
+      setIsWeekLocked(lockedWeekData.isLocked);
+    }
+  }, [lockedWeekData]);
+  
   // Filter shifts for the current day (for the main schedule display)
   const currentDateFormatted = formatDateForAPI(currentDate);
   console.log("Fecha actual formateada:", currentDateFormatted);
