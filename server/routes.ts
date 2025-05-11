@@ -1104,6 +1104,156 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ======== RUTAS PARA EMPLEADOS SEMANALES ========
+  
+  // Obtener empleados semanales (filtrados por empresa y semana)
+  app.get("/api/weekly-employees", isAuthenticated, async (req, res) => {
+    try {
+      let companyId: number | undefined = undefined;
+      let weekStartDate: string | undefined = undefined;
+      let weekEndDate: string | undefined = undefined;
+      
+      if (req.query.companyId) {
+        companyId = parseInt(req.query.companyId as string);
+      }
+      
+      if (req.query.weekStartDate) {
+        weekStartDate = req.query.weekStartDate as string;
+      }
+      
+      if (req.query.weekEndDate) {
+        weekEndDate = req.query.weekEndDate as string;
+      }
+      
+      if (!companyId) {
+        return res.status(400).json({ message: "Debe especificar el parámetro companyId" });
+      }
+      
+      // Verificar permisos del usuario
+      if (req.user?.role !== "admin") {
+        // Verificar si el usuario tiene acceso a esta empresa
+        const userCompanies = await storage.getUserCompanies(req.user!.id);
+        const hasAccess = userCompanies.some(uc => uc.companyId === companyId);
+        
+        if (!hasAccess) {
+          return res.status(403).json({ message: "No tienes acceso a esta empresa" });
+        }
+      }
+      
+      const weeklyEmployees = await storage.getWeeklyEmployees(companyId, weekStartDate, weekEndDate);
+      res.json(weeklyEmployees);
+    } catch (error) {
+      console.error("Error al obtener empleados semanales:", error);
+      res.status(500).json({ message: "Error al obtener empleados semanales" });
+    }
+  });
+  
+  // Obtener un empleado semanal específico
+  app.get("/api/weekly-employees/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const weeklyEmployee = await storage.getWeeklyEmployee(id);
+      
+      if (!weeklyEmployee) {
+        return res.status(404).json({ message: "Asignación semanal no encontrada" });
+      }
+      
+      // Verificar permisos del usuario
+      if (req.user?.role !== "admin") {
+        // Verificar si el usuario tiene acceso a esta empresa
+        const userCompanies = await storage.getUserCompanies(req.user!.id);
+        const hasAccess = userCompanies.some(uc => uc.companyId === weeklyEmployee.companyId);
+        
+        if (!hasAccess) {
+          return res.status(403).json({ message: "No tienes acceso a esta asignación" });
+        }
+      }
+      
+      res.json(weeklyEmployee);
+    } catch (error) {
+      console.error("Error al obtener asignación semanal:", error);
+      res.status(500).json({ message: "Error al obtener asignación semanal" });
+    }
+  });
+  
+  // Crear asignación semanal
+  app.post("/api/weekly-employees", isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertWeeklyEmployeeSchema.parse(req.body);
+      
+      // Verificar permisos del usuario
+      if (req.user?.role !== "admin") {
+        // Verificar si el usuario tiene acceso a esta empresa
+        const userCompanies = await storage.getUserCompanies(req.user!.id);
+        const hasAccess = userCompanies.some(uc => 
+          uc.companyId === validatedData.companyId && (uc.role === "manager" || uc.role === "admin")
+        );
+        
+        if (!hasAccess) {
+          return res.status(403).json({ message: "No tienes permisos para crear asignaciones en esta empresa" });
+        }
+      }
+      
+      // Verificar que el empleado existe
+      const employee = await storage.getEmployee(validatedData.employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: "Empleado no encontrado" });
+      }
+      
+      // Verificar que el empleado pertenece a la empresa especificada
+      if (employee.companyId !== validatedData.companyId) {
+        return res.status(400).json({ message: "El empleado no pertenece a la empresa especificada" });
+      }
+      
+      const weeklyEmployee = await storage.createWeeklyEmployee(validatedData);
+      res.status(201).json(weeklyEmployee);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Datos inválidos", errors: error.errors });
+      } else {
+        console.error("Error al crear asignación semanal:", error);
+        res.status(500).json({ message: "Error al crear asignación semanal" });
+      }
+    }
+  });
+  
+  // Eliminar asignación semanal
+  app.delete("/api/weekly-employees/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Verificar que la asignación semanal existe
+      const weeklyEmployee = await storage.getWeeklyEmployee(id);
+      if (!weeklyEmployee) {
+        return res.status(404).json({ message: "Asignación semanal no encontrada" });
+      }
+      
+      // Verificar permisos del usuario
+      if (req.user?.role !== "admin") {
+        // Verificar si el usuario tiene acceso a esta empresa
+        const userCompanies = await storage.getUserCompanies(req.user!.id);
+        const hasAccess = userCompanies.some(uc => 
+          uc.companyId === weeklyEmployee.companyId && (uc.role === "manager" || uc.role === "admin")
+        );
+        
+        if (!hasAccess) {
+          return res.status(403).json({ message: "No tienes permisos para eliminar asignaciones de esta empresa" });
+        }
+      }
+      
+      // Eliminar la asignación
+      const success = await storage.deleteWeeklyEmployee(id);
+      if (success) {
+        res.status(204).end();
+      } else {
+        res.status(500).json({ message: "Error al eliminar la asignación" });
+      }
+    } catch (error) {
+      console.error("Error al eliminar asignación semanal:", error);
+      res.status(500).json({ message: "Error al eliminar la asignación" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

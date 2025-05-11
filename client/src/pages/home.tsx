@@ -667,13 +667,22 @@ export default function Home() {
               </Button>
               {/* Botón de agregar empleado solo para administradores y gerentes */}
               {user?.role !== 'employee' && (
-                <Button
-                  className="bg-[#F57C00] text-white px-4 py-2 rounded flex items-center gap-1 text-sm font-medium hover:bg-opacity-90"
-                  onClick={() => setIsEmployeeModalOpen(true)}
-                >
-                  <UserPlus className="h-4 w-4" />
-                  Agregar Empleado
-                </Button>
+                <>
+                  <Button
+                    className="bg-[#F57C00] text-white px-4 py-2 rounded flex items-center gap-1 text-sm font-medium hover:bg-opacity-90"
+                    onClick={() => setIsEmployeeModalOpen(true)}
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    Agregar Empleado
+                  </Button>
+                  <Button
+                    className="bg-purple-600 text-white px-4 py-2 rounded flex items-center gap-1 text-sm font-medium hover:bg-opacity-90"
+                    onClick={() => setIsWeeklyEmployeesModalOpen(true)}
+                  >
+                    <Users className="h-4 w-4" />
+                    Empleados por Semana
+                  </Button>
+                </>
               )}
               <Button
                 variant="outline"
@@ -758,6 +767,14 @@ export default function Home() {
         ref={exportsModalRef}
         employees={orderedEmployees}
         shifts={allShifts}
+        currentDate={currentDate}
+      />
+      
+      {/* Modal de gestión de empleados por semana */}
+      <WeeklyEmployeesModal
+        isOpen={isWeeklyEmployeesModalOpen}
+        onClose={() => setIsWeeklyEmployeesModalOpen(false)}
+        currentCompanyId={currentCompanyId}
         currentDate={currentDate}
       />
     </div>
