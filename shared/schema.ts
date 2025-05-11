@@ -441,6 +441,12 @@ export const insertDailySalesSchema = createInsertSchema(dailySales, {
   hourlyEmployeeCost: true,
 });
 
+export const insertLockedWeekSchema = createInsertSchema(lockedWeeks).pick({
+  companyId: true,
+  weekStartDate: true,
+  lockedBy: true,
+});
+
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 export type Employee = typeof employees.$inferSelect;
 
@@ -458,3 +464,6 @@ export type EmployeeSkill = typeof employeeSkills.$inferSelect;
 
 export type InsertDailySales = z.infer<typeof insertDailySalesSchema>;
 export type DailySales = typeof dailySales.$inferSelect;
+
+export type InsertLockedWeek = z.infer<typeof insertLockedWeekSchema>;
+export type LockedWeek = typeof lockedWeeks.$inferSelect;

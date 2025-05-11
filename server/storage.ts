@@ -8,8 +8,9 @@ import {
   UserCompany, InsertUserCompany,
   ScheduleTemplate, InsertScheduleTemplate,
   DailySales, InsertDailySales,
+  LockedWeek, InsertLockedWeek,
   employees, shifts, schedules, 
-  users, companies, userCompanies, scheduleTemplates, dailySales
+  users, companies, userCompanies, scheduleTemplates, dailySales, lockedWeeks
 } from "@shared/schema";
 import { db } from "./db";
 
@@ -74,6 +75,12 @@ export interface IStorage {
   // Save and load entire schedule data
   saveScheduleData(scheduleId: number, employees: Employee[], shifts: Shift[]): Promise<boolean>;
   loadScheduleData(scheduleId: number): Promise<{ employees: Employee[], shifts: Shift[] } | undefined>;
+  
+  // Locked weeks operations
+  getLockedWeeks(companyId: number): Promise<LockedWeek[]>;
+  isWeekLocked(companyId: number, weekStartDate: string): Promise<boolean>;
+  lockWeek(companyId: number, weekStartDate: string, userId: number): Promise<LockedWeek>;
+  unlockWeek(companyId: number, weekStartDate: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
