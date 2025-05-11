@@ -507,35 +507,49 @@ export default function ScheduleTable({
       if (startIndex >= 0 && currentIndex >= 0) {
         const selectedCells = batch.get(employee.id) || new Set<string>();
         
-        // Handle selection in either direction (forward or backward)
-        const minIdx = Math.min(startIndex, currentIndex);
-        const maxIdx = Math.max(startIndex, currentIndex);
+        // Determinar la dirección actual del arrastre
+        const isDraggingForward = currentIndex >= startIndex;
+        const previousCellIndex = timeSlots.indexOf(Array.from(selectedCells).pop() || startTime);
         
-        // Limpiar todas las selecciones previas que no estén en el rango actual
-        // Esto permite que el arrastre "reduzca" el rango al arrastrar en dirección contraria
-        selectedCells.forEach(timeSlot => {
-          const timeIndex = timeSlots.indexOf(timeSlot);
-          if (timeIndex < minIdx || timeIndex > maxIdx) {
-            selectedCells.delete(timeSlot);
-          }
-        });
+        // Determinamos si estamos cambiando de dirección 
+        // (comparando con la última celda seleccionada)
+        const isChangingDirection = 
+          (isDraggingForward && currentIndex < previousCellIndex) || 
+          (!isDraggingForward && currentIndex > previousCellIndex);
         
-        // Bandera para detectar cambios
-        let hasChanges = false;
-        const previousSize = selectedCells.size;
+        // Crear un nuevo conjunto para las celdas que vamos a conservar
+        const newSelectedCells = new Set<string>();
         
-        // Añadir todas las celdas del rango seleccionado
-        for (let i = minIdx; i <= maxIdx; i++) {
+        // Al cambiar de dirección, necesitamos eliminar las celdas que ya no deberían estar seleccionadas
+        // y mantener solo las que están dentro del nuevo rango
+        
+        // Primero, siempre añadimos la celda inicial
+        if (startTime) {
+          newSelectedCells.add(startTime);
+        }
+        
+        // Luego añadimos todas las celdas en el rango entre la celda inicial y la actual
+        const rangeStart = Math.min(startIndex, currentIndex);
+        const rangeEnd = Math.max(startIndex, currentIndex);
+        
+        for (let i = rangeStart; i <= rangeEnd; i++) {
           const timeSlot = timeSlots[i];
-          // Only add if the cell is not already assigned
-          if (!isCellAssigned(employee.id, timeSlot) && !selectedCells.has(timeSlot)) {
-            selectedCells.add(timeSlot);
-            hasChanges = true;
+          if (!isCellAssigned(employee.id, timeSlot)) {
+            newSelectedCells.add(timeSlot);
           }
         }
         
+        // Actualizamos con el nuevo conjunto de celdas
+        const hasChanges = selectedCells.size !== newSelectedCells.size || 
+          Array.from(selectedCells).some(cell => !newSelectedCells.has(cell)) ||
+          Array.from(newSelectedCells).some(cell => !selectedCells.has(cell));
+          
+        // Reemplazamos el conjunto anterior con el nuevo
+        selectedCells.clear();
+        newSelectedCells.forEach(cell => selectedCells.add(cell));
+        
         // Si hay cambios, actualizar el estado
-        if (hasChanges || previousSize !== selectedCells.size) {
+        if (hasChanges) {
           // Update with the new selection
           if (selectedCells.size > 0) {
             batch.set(employee.id, selectedCells);
@@ -643,34 +657,49 @@ export default function ScheduleTable({
               if (startIndex >= 0 && currentIndex >= 0) {
                 const selectedCells = batch.get(activeEmployee.id) || new Set<string>();
                 
-                // Seleccionar rango
-                const minIdx = Math.min(startIndex, currentIndex);
-                const maxIdx = Math.max(startIndex, currentIndex);
+                // Determinar la dirección actual del arrastre
+                const isDraggingForward = currentIndex >= startIndex;
+                const previousCellIndex = timeSlots.indexOf(Array.from(selectedCells).pop() || startTime);
                 
-                // Limpiar todas las selecciones previas que no estén en el rango actual
-                // Esto permite que el arrastre "reduzca" el rango al arrastrar en dirección contraria
-                selectedCells.forEach(timeSlot => {
-                  const timeIndex = timeSlots.indexOf(timeSlot);
-                  if (timeIndex < minIdx || timeIndex > maxIdx) {
-                    selectedCells.delete(timeSlot);
-                  }
-                });
+                // Determinamos si estamos cambiando de dirección 
+                // (comparando con la última celda seleccionada)
+                const isChangingDirection = 
+                  (isDraggingForward && currentIndex < previousCellIndex) || 
+                  (!isDraggingForward && currentIndex > previousCellIndex);
                 
-                // Bandera para detectar cambios
-                let hasChanges = false;
-                const previousSize = selectedCells.size;
+                // Crear un nuevo conjunto para las celdas que vamos a conservar
+                const newSelectedCells = new Set<string>();
                 
-                // Añadir todas las celdas del rango seleccionado
-                for (let i = minIdx; i <= maxIdx; i++) {
+                // Al cambiar de dirección, necesitamos eliminar las celdas que ya no deberían estar seleccionadas
+                // y mantener solo las que están dentro del nuevo rango
+                
+                // Primero, siempre añadimos la celda inicial
+                if (startTime) {
+                  newSelectedCells.add(startTime);
+                }
+                
+                // Luego añadimos todas las celdas en el rango entre la celda inicial y la actual
+                const rangeStart = Math.min(startIndex, currentIndex);
+                const rangeEnd = Math.max(startIndex, currentIndex);
+                
+                for (let i = rangeStart; i <= rangeEnd; i++) {
                   const timeSlot = timeSlots[i];
-                  if (!isCellAssigned(activeEmployee.id, timeSlot) && !selectedCells.has(timeSlot)) {
-                    selectedCells.add(timeSlot);
-                    hasChanges = true;
+                  if (!isCellAssigned(activeEmployee.id, timeSlot)) {
+                    newSelectedCells.add(timeSlot);
                   }
                 }
                 
-                // Si hay cambios o el número de celdas cambió, actualizar
-                if (hasChanges || previousSize !== selectedCells.size) {
+                // Actualizamos con el nuevo conjunto de celdas
+                const hasChanges = selectedCells.size !== newSelectedCells.size || 
+                  Array.from(selectedCells).some(cell => !newSelectedCells.has(cell)) ||
+                  Array.from(newSelectedCells).some(cell => !selectedCells.has(cell));
+                  
+                // Reemplazamos el conjunto anterior con el nuevo
+                selectedCells.clear();
+                newSelectedCells.forEach(cell => selectedCells.add(cell));
+                
+                // Si hay cambios, actualizar el estado
+                if (hasChanges) {
                   batch.set(activeEmployee.id, selectedCells);
                   
                   // Actualizar inmediatamente para feedback visual en tiempo real
