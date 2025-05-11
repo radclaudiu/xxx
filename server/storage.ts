@@ -8,8 +8,9 @@ import {
   UserCompany, InsertUserCompany,
   ScheduleTemplate, InsertScheduleTemplate,
   DailySales, InsertDailySales,
+  WeeklyEmployee, InsertWeeklyEmployee,
   employees, shifts, schedules, 
-  users, companies, userCompanies, scheduleTemplates, dailySales
+  users, companies, userCompanies, scheduleTemplates, dailySales, weeklyEmployees
 } from "@shared/schema";
 import { db } from "./db";
 
@@ -70,6 +71,14 @@ export interface IStorage {
   createDailySale(dailySale: InsertDailySales): Promise<DailySales>;
   updateDailySale(id: number, dailySale: Partial<InsertDailySales>): Promise<DailySales | undefined>;
   deleteDailySale(id: number): Promise<boolean>;
+  
+  // Weekly Employees operations
+  getWeeklyEmployees(companyId: number, weekStartDate?: string, weekEndDate?: string): Promise<WeeklyEmployee[]>;
+  getWeeklyEmployee(id: number): Promise<WeeklyEmployee | undefined>;
+  getWeeklyEmployeesByEmployeeId(employeeId: number): Promise<WeeklyEmployee[]>;
+  createWeeklyEmployee(weeklyEmployee: InsertWeeklyEmployee): Promise<WeeklyEmployee>;
+  updateWeeklyEmployee(id: number, weeklyEmployee: Partial<InsertWeeklyEmployee>): Promise<WeeklyEmployee | undefined>;
+  deleteWeeklyEmployee(id: number): Promise<boolean>;
   
   // Save and load entire schedule data
   saveScheduleData(scheduleId: number, employees: Employee[], shifts: Shift[]): Promise<boolean>;

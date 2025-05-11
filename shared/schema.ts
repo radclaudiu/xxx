@@ -322,6 +322,17 @@ export const dailySalesRelations = relations(dailySales, ({ one }) => ({
   }),
 }));
 
+export const weeklyEmployeesRelations = relations(weeklyEmployees, ({ one }) => ({
+  employee: one(employees, {
+    fields: [weeklyEmployees.employeeId],
+    references: [employees.id],
+  }),
+  company: one(companies, {
+    fields: [weeklyEmployees.companyId],
+    references: [companies.id],
+  }),
+}));
+
 export const schedulesRelations = relations(schedules, ({ many, one }) => ({
   shifts: many(shifts),
   createdByUser: one(users, {
@@ -434,6 +445,16 @@ export const insertDailySalesSchema = createInsertSchema(dailySales, {
   hourlyEmployeeCost: true,
 });
 
+export const insertWeeklyEmployeeSchema = createInsertSchema(weeklyEmployees).pick({
+  employeeId: true,
+  companyId: true,
+  weekStartDate: true,
+  weekEndDate: true,
+  isActive: true,
+}).partial({
+  isActive: true,
+});
+
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 export type Employee = typeof employees.$inferSelect;
 
@@ -451,3 +472,6 @@ export type EmployeeSkill = typeof employeeSkills.$inferSelect;
 
 export type InsertDailySales = z.infer<typeof insertDailySalesSchema>;
 export type DailySales = typeof dailySales.$inferSelect;
+
+export type InsertWeeklyEmployee = z.infer<typeof insertWeeklyEmployeeSchema>;
+export type WeeklyEmployee = typeof weeklyEmployees.$inferSelect;
