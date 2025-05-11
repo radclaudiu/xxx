@@ -8,9 +8,8 @@ import {
   UserCompany, InsertUserCompany,
   ScheduleTemplate, InsertScheduleTemplate,
   DailySales, InsertDailySales,
-  WeeklyEmployee, InsertWeeklyEmployee,
   employees, shifts, schedules, 
-  users, companies, userCompanies, scheduleTemplates, dailySales, weeklyEmployees
+  users, companies, userCompanies, scheduleTemplates, dailySales
 } from "@shared/schema";
 import { db } from "./db";
 
@@ -71,14 +70,6 @@ export interface IStorage {
   createDailySale(dailySale: InsertDailySales): Promise<DailySales>;
   updateDailySale(id: number, dailySale: Partial<InsertDailySales>): Promise<DailySales | undefined>;
   deleteDailySale(id: number): Promise<boolean>;
-  
-  // Weekly Employees operations
-  getWeeklyEmployees(companyId: number, weekStartDate?: string, weekEndDate?: string): Promise<WeeklyEmployee[]>;
-  getWeeklyEmployee(id: number): Promise<WeeklyEmployee | undefined>;
-  getWeeklyEmployeesByEmployeeId(employeeId: number): Promise<WeeklyEmployee[]>;
-  createWeeklyEmployee(weeklyEmployee: InsertWeeklyEmployee): Promise<WeeklyEmployee>;
-  updateWeeklyEmployee(id: number, weeklyEmployee: Partial<InsertWeeklyEmployee>): Promise<WeeklyEmployee | undefined>;
-  deleteWeeklyEmployee(id: number): Promise<boolean>;
   
   // Save and load entire schedule data
   saveScheduleData(scheduleId: number, employees: Employee[], shifts: Shift[]): Promise<boolean>;
@@ -337,53 +328,6 @@ export class DatabaseStorage implements IStorage {
       .delete(dailySales)
       .where(eq(dailySales.id, id))
       .returning({ id: dailySales.id });
-    return !!result;
-  }
-  
-  // Weekly Employees operations
-  async getWeeklyEmployees(companyId: number, weekStartDate?: string, weekEndDate?: string): Promise<WeeklyEmployee[]> {
-    let query = db.select().from(weeklyEmployees)
-      .where(eq(weeklyEmployees.companyId, companyId));
-    
-    if (weekStartDate) {
-      query = query.where(eq(weeklyEmployees.weekStartDate, weekStartDate));
-    }
-    
-    if (weekEndDate) {
-      query = query.where(eq(weeklyEmployees.weekEndDate, weekEndDate));
-    }
-    
-    return await query.orderBy(asc(weeklyEmployees.weekStartDate));
-  }
-  
-  async getWeeklyEmployee(id: number): Promise<WeeklyEmployee | undefined> {
-    const [weeklyEmployee] = await db.select().from(weeklyEmployees).where(eq(weeklyEmployees.id, id));
-    return weeklyEmployee;
-  }
-  
-  async getWeeklyEmployeesByEmployeeId(employeeId: number): Promise<WeeklyEmployee[]> {
-    return await db.select().from(weeklyEmployees)
-      .where(eq(weeklyEmployees.employeeId, employeeId))
-      .orderBy(asc(weeklyEmployees.weekStartDate));
-  }
-  
-  async createWeeklyEmployee(weeklyEmployee: InsertWeeklyEmployee): Promise<WeeklyEmployee> {
-    const [newWeeklyEmployee] = await db.insert(weeklyEmployees).values(weeklyEmployee).returning();
-    return newWeeklyEmployee;
-  }
-  
-  async updateWeeklyEmployee(id: number, weeklyEmployee: Partial<InsertWeeklyEmployee>): Promise<WeeklyEmployee | undefined> {
-    const [updatedWeeklyEmployee] = await db.update(weeklyEmployees)
-      .set(weeklyEmployee)
-      .where(eq(weeklyEmployees.id, id))
-      .returning();
-    return updatedWeeklyEmployee;
-  }
-  
-  async deleteWeeklyEmployee(id: number): Promise<boolean> {
-    const [result] = await db.delete(weeklyEmployees)
-      .where(eq(weeklyEmployees.id, id))
-      .returning({ id: weeklyEmployees.id });
     return !!result;
   }
   

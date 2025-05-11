@@ -203,18 +203,6 @@ export const dailySales = pgTable("daily_sales", {
   updatedAt: timestamp("updated_at"),
 });
 
-// Tabla para asignar empleados a semanas específicas
-export const weeklyEmployees = pgTable("weekly_employees", {
-  id: serial("id").primaryKey(),
-  employeeId: integer("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
-  companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: 'cascade' }),
-  weekStartDate: text("week_start_date").notNull(), // Format: YYYY-MM-DD (Lunes de la semana)
-  weekEndDate: text("week_end_date").notNull(), // Format: YYYY-MM-DD (Domingo de la semana)
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at"),
-});
-
 // Schema for schedules (for saving/loading entire schedules)
 export const schedules = pgTable("schedules", {
   id: serial("id").primaryKey(),
@@ -248,7 +236,6 @@ export const companiesRelations = relations(companies, ({ many, one }) => ({
   schedules: many(schedules),
   templates: many(scheduleTemplates),
   dailySales: many(dailySales),
-  weeklyEmployees: many(weeklyEmployees),
   creator: one(users, {
     fields: [companies.createdBy],
     references: [users.id],
@@ -282,7 +269,6 @@ export const scheduleTemplatesRelations = relations(scheduleTemplates, ({ many, 
 export const employeesRelations = relations(employees, ({ many, one }) => ({
   shifts: many(shifts),
   skills: many(employeeSkills),
-  weeklyAssignments: many(weeklyEmployees),
   company: one(companies, {
     fields: [employees.companyId],
     references: [companies.id],
@@ -318,17 +304,6 @@ export const shiftsRelations = relations(shifts, ({ one }) => ({
 export const dailySalesRelations = relations(dailySales, ({ one }) => ({
   company: one(companies, {
     fields: [dailySales.companyId],
-    references: [companies.id],
-  }),
-}));
-
-export const weeklyEmployeesRelations = relations(weeklyEmployees, ({ one }) => ({
-  employee: one(employees, {
-    fields: [weeklyEmployees.employeeId],
-    references: [employees.id],
-  }),
-  company: one(companies, {
-    fields: [weeklyEmployees.companyId],
     references: [companies.id],
   }),
 }));
@@ -445,16 +420,6 @@ export const insertDailySalesSchema = createInsertSchema(dailySales, {
   hourlyEmployeeCost: true,
 });
 
-export const insertWeeklyEmployeeSchema = createInsertSchema(weeklyEmployees).pick({
-  employeeId: true,
-  companyId: true,
-  weekStartDate: true,
-  weekEndDate: true,
-  isActive: true,
-}).partial({
-  isActive: true,
-});
-
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 export type Employee = typeof employees.$inferSelect;
 
@@ -472,6 +437,3 @@ export type EmployeeSkill = typeof employeeSkills.$inferSelect;
 
 export type InsertDailySales = z.infer<typeof insertDailySalesSchema>;
 export type DailySales = typeof dailySales.$inferSelect;
-
-export type InsertWeeklyEmployee = z.infer<typeof insertWeeklyEmployeeSchema>;
-export type WeeklyEmployee = typeof weeklyEmployees.$inferSelect;
