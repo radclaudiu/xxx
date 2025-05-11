@@ -1276,8 +1276,7 @@ export default function ScheduleTable({
                       height: `${cellSize}px`,
                       width: `${cellSize * 4}px`, // 4 celdas de ancho (00, 15, 30, 45)
                       lineHeight: `${cellSize}px`,
-                      boxSizing: "border-box",
-                      borderLeft: '2px solid #AAAAAA'
+                      boxSizing: "border-box"
                     }}
                   >
                     <div className="flex justify-center items-center h-full">
@@ -1363,10 +1362,7 @@ export default function ScheduleTable({
                       width: `${cellSize}px`,
                       height: `${cellSize}px`,
                       lineHeight: `${cellSize}px`,
-                      boxSizing: "border-box",
-                      borderLeft: time.endsWith(':00') ? '2px solid #AAAAAA' : 
-                                time.endsWith(':30') ? '1px solid #DDDDDD' : 
-                                '1px dashed #EEEEEE'
+                      boxSizing: "border-box"
                     }}
                   >
                     {/* Mostrar contador cuando hay algún total */}
@@ -1417,10 +1413,7 @@ export default function ScheduleTable({
                       width: `${cellSize}px`, // Ancho dinámico basado en cellSize
                       height: `${cellSize}px`, // Altura dinámica basada en cellSize
                       lineHeight: `${cellSize}px`, // Garantizar altura exacta
-                      boxSizing: "border-box", // Incluir bordes en dimensiones
-                      borderLeft: time.endsWith(':00') ? '2px solid #AAAAAA' : 
-                                time.endsWith(':30') ? '1px solid #DDDDDD' : 
-                                '1px dashed #EEEEEE'
+                      boxSizing: "border-box" // Incluir bordes en dimensiones
                     }}
                   >
                     {/* Mostrar minuto para todos los intervalos */}

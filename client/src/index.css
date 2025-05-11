@@ -159,8 +159,18 @@ html, body {
   border-left: 1px solid #000000 !important;
 }
 
+/* Sobreescribir cualquier estilo en línea para encabezados */
+th.black-hour-marker {
+  border-left: 1px solid #000000 !important;
+}
+
 /* Línea de hora 16:00 (más gruesa) */
 .major-hour-marker {
+  border-left: 2px solid #000000 !important;
+}
+
+/* Asegurar que los encabezados de 16:00 tengan el estilo correcto */
+th.major-hour-marker {
   border-left: 2px solid #000000 !important;
 }
 
