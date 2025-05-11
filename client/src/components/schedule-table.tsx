@@ -1622,7 +1622,10 @@ export default function ScheduleTable({
                         } ${
                           time === '16:00' ? 'major-hour-marker' : 
                           (time === '12:00' || time === '20:00') ? 'medium-hour-marker' : ''
+                        } ${
+                          time.endsWith(':00') ? 'hour-number-background' : ''
                         } ${isFirstCell && shift && isMidnightCrossing ? 'midnight-crossing' : ''}`}
+                        data-hour={time.endsWith(':00') ? time.split(':')[0] : ''}
                         style={{
                           width: `${cellSize * colSpan}px`, // Ancho dinámico basado en cellSize y colSpan
                           height: `${cellSize}px`, // Altura dinámica basada en cellSize
