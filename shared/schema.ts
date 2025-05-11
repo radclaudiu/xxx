@@ -203,6 +203,15 @@ export const dailySales = pgTable("daily_sales", {
   updatedAt: timestamp("updated_at"),
 });
 
+// Tabla para registrar las semanas bloqueadas
+export const lockedWeeks = pgTable("locked_weeks", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  weekStartDate: text("week_start_date").notNull(), // Fecha de inicio de la semana (lunes) en formato YYYY-MM-DD
+  lockedAt: timestamp("locked_at").defaultNow(),
+  lockedBy: integer("locked_by").references(() => users.id),
+});
+
 // Schema for schedules (for saving/loading entire schedules)
 export const schedules = pgTable("schedules", {
   id: serial("id").primaryKey(),
@@ -236,6 +245,7 @@ export const companiesRelations = relations(companies, ({ many, one }) => ({
   schedules: many(schedules),
   templates: many(scheduleTemplates),
   dailySales: many(dailySales),
+  lockedWeeks: many(lockedWeeks),
   creator: one(users, {
     fields: [companies.createdBy],
     references: [users.id],
@@ -306,6 +316,17 @@ export const dailySalesRelations = relations(dailySales, ({ one }) => ({
     fields: [dailySales.companyId],
     references: [companies.id],
   }),
+}));
+
+export const lockedWeeksRelations = relations(lockedWeeks, ({ one }) => ({
+  company: one(companies, {
+    fields: [lockedWeeks.companyId],
+    references: [companies.id],
+  }),
+  user: one(users, {
+    fields: [lockedWeeks.lockedBy],
+    references: [users.id],
+  })
 }));
 
 export const schedulesRelations = relations(schedules, ({ many, one }) => ({
