@@ -212,6 +212,16 @@ export const lockedWeeks = pgTable("locked_weeks", {
   lockedBy: integer("locked_by").references(() => users.id),
 });
 
+// Tabla para almacenar empleados en semanas bloqueadas
+export const lockedWeekEmployees = pgTable("locked_week_employees", {
+  id: serial("id").primaryKey(),
+  lockedWeekId: integer("locked_week_id").notNull().references(() => lockedWeeks.id, { onDelete: 'cascade' }),
+  employeeId: integer("employee_id").notNull(),  // No tiene referencia para permitir empleados eliminados
+  employeeName: text("employee_name").notNull(), // Guardamos el nombre por si el empleado se eliminó
+  employeeRole: text("employee_role"),
+  employeeOrder: integer("employee_order").default(0), // Para mantener el orden de los empleados
+});
+
 // Schema for schedules (for saving/loading entire schedules)
 export const schedules = pgTable("schedules", {
   id: serial("id").primaryKey(),
@@ -318,7 +328,7 @@ export const dailySalesRelations = relations(dailySales, ({ one }) => ({
   }),
 }));
 
-export const lockedWeeksRelations = relations(lockedWeeks, ({ one }) => ({
+export const lockedWeeksRelations = relations(lockedWeeks, ({ one, many }) => ({
   company: one(companies, {
     fields: [lockedWeeks.companyId],
     references: [companies.id],
@@ -326,6 +336,14 @@ export const lockedWeeksRelations = relations(lockedWeeks, ({ one }) => ({
   user: one(users, {
     fields: [lockedWeeks.lockedBy],
     references: [users.id],
+  }),
+  employees: many(lockedWeekEmployees)
+}));
+
+export const lockedWeekEmployeesRelations = relations(lockedWeekEmployees, ({ one }) => ({
+  lockedWeek: one(lockedWeeks, {
+    fields: [lockedWeekEmployees.lockedWeekId],
+    references: [lockedWeeks.id]
   })
 }));
 
@@ -447,6 +465,17 @@ export const insertLockedWeekSchema = createInsertSchema(lockedWeeks).pick({
   lockedBy: true,
 });
 
+export const insertLockedWeekEmployeeSchema = createInsertSchema(lockedWeekEmployees).pick({
+  lockedWeekId: true,
+  employeeId: true,
+  employeeName: true,
+  employeeRole: true,
+  employeeOrder: true,
+}).partial({
+  employeeRole: true,
+  employeeOrder: true
+});
+
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 export type Employee = typeof employees.$inferSelect;
 
@@ -467,3 +496,6 @@ export type DailySales = typeof dailySales.$inferSelect;
 
 export type InsertLockedWeek = z.infer<typeof insertLockedWeekSchema>;
 export type LockedWeek = typeof lockedWeeks.$inferSelect;
+
+export type InsertLockedWeekEmployee = z.infer<typeof insertLockedWeekEmployeeSchema>;
+export type LockedWeekEmployee = typeof lockedWeekEmployees.$inferSelect;
