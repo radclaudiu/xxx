@@ -6,9 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { format, addDays, startOfWeek, endOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
-import { apiRequest } from "@/lib/query-client";
+import { apiRequest } from "@/lib/queryClient";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Employee, InsertWeeklyEmployee, WeeklyEmployee } from "../../shared/schema";
+import type { Employee, WeeklyEmployee, InsertWeeklyEmployee } from "@shared/schema";
 
 // Calcula fechas de inicio y fin de semana desde una fecha dada
 function getWeekRange(date: Date): { start: Date; end: Date } {

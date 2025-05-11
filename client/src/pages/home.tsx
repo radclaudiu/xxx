@@ -55,6 +55,7 @@ export default function Home() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  const [isWeeklyEmployeesModalOpen, setIsWeeklyEmployeesModalOpen] = useState(false);
   const [estimatedDailySales, setEstimatedDailySales] = useState("0");
   const [hourlyEmployeeCost, setHourlyEmployeeCost] = useState("0");
   // Estados para rangos horarios (con valores por defecto que se actualizarán desde la empresa)
