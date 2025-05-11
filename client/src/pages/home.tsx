@@ -85,14 +85,36 @@ export default function Home() {
   // Estado local para manejar el orden de los empleados
   const [orderedEmployees, setOrderedEmployees] = useState<Employee[]>([]);
   
-  // Fetch employees (filtrados por la empresa actual)
+  // Fetch employees (filtrados por la empresa actual y potencialmente por semana bloqueada)
   const {
     data: fetchedEmployees = [],
     isLoading: isLoadingEmployees,
+    refetch: refetchEmployees,
   } = useQuery<Employee[]>({
-    queryKey: ["/api/employees", currentCompanyId],
+    queryKey: ["/api/employees", currentCompanyId, formattedWeekStartDate, isWeekLocked],
     queryFn: async () => {
-      const url = currentCompanyId ? `/api/employees?companyId=${currentCompanyId}` : "/api/employees";
+      // Construir la URL base
+      let url = "/api/employees";
+      
+      // Añadir parámetros según lo que esté disponible
+      const params = new URLSearchParams();
+      if (currentCompanyId) {
+        params.append("companyId", currentCompanyId.toString());
+      }
+      
+      // Si la semana está bloqueada, incluir la fecha de inicio de la semana
+      if (isWeekLocked && formattedWeekStartDate) {
+        params.append("weekStartDate", formattedWeekStartDate);
+        console.log("Consultando empleados para semana bloqueada:", formattedWeekStartDate);
+      }
+      
+      // Añadir los parámetros a la URL si hay alguno
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+      
+      console.log("URL para consulta de empleados:", url);
+      
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error("Error al cargar empleados");

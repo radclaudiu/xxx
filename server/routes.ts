@@ -5,7 +5,7 @@ import { z } from "zod";
 import { 
   insertEmployeeSchema, insertShiftSchema, insertScheduleSchema, 
   insertCompanySchema, insertScheduleTemplateSchema, insertDailySalesSchema,
-  insertLockedWeekSchema
+  insertLockedWeekSchema, type Employee
 } from "@shared/schema";
 import { setupAuth, isAuthenticated, isAdmin } from "./auth";
 
@@ -386,7 +386,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Si pertenece a varias empresas, req.query.companyId debería especificar cuál
       }
       
-      const employees = await storage.getEmployees(companyId);
+      // Si se especifica una fecha de semana, verificar si está bloqueada y usar empleados de semana bloqueada
+      let employees: Employee[] = [];
+      
+      if (companyId && req.query.weekStartDate) {
+        const weekStartDate = req.query.weekStartDate as string;
+        
+        // Verificar si la semana está bloqueada
+        const isLocked = await storage.isWeekLocked(companyId, weekStartDate);
+        
+        if (isLocked) {
+          // Si está bloqueada, obtener los empleados guardados para esa semana
+          console.log(`Obteniendo empleados de semana bloqueada: ${weekStartDate} para compañía ${companyId}`);
+          employees = await storage.getEmployeesForLockedWeek(companyId, weekStartDate);
+          console.log(`Encontrados ${employees.length} empleados para semana bloqueada`);
+        } else {
+          // Si no está bloqueada, obtener empleados normales
+          employees = await storage.getEmployees(companyId);
+        }
+      } else {
+        // Sin fecha de semana, obtener empleados normales
+        employees = await storage.getEmployees(companyId);
+      }
+      
       res.json(employees);
     } catch (error) {
       console.error("Error fetching employees:", error);
