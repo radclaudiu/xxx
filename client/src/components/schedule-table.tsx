@@ -1010,16 +1010,76 @@ export default function ScheduleTable({
               );
             })()}
           </div>
+          
+          {/* Opción para editar turno manualmente */}
           <button
             onClick={(e) => {
               // Evitar propagación al overlay
               e.preventDefault();
               e.stopPropagation();
               
-              // Eliminar turno
+              // Implementar la lógica para editar el turno
+              // Aquí puedes mostrar un formulario o diálogo para editar
+              if (contextMenu.shift) {
+                // Por ahora eliminaremos el turno actual y crearemos uno nuevo
+                // En el futuro se puede implementar un modal para editar tiempos
+                const currentShift = contextMenu.shift;
+                const employee = employees.find(e => e.id === currentShift.employeeId);
+                
+                // Si se encontró el empleado, permitir la modificación
+                if (employee && onDeleteShift) {
+                  // Primero eliminar el turno actual
+                  onDeleteShift(currentShift.id);
+                  
+                  // Preparar selecciones para el nuevo turno
+                  // Por ahora seleccionamos las mismas celdas que tenía
+                  const startIndex = timeSlots.indexOf(currentShift.startTime);
+                  const endIndex = timeSlots.indexOf(currentShift.endTime) || (startIndex + 4); // Si no se encuentra, asumir 1 hora
+                  
+                  // Crear un conjunto de celdas seleccionadas
+                  const newSelectedCells = new Set<string>();
+                  
+                  // Añadir todas las celdas entre inicio y fin (sin incluir la celda de fin)
+                  for (let i = startIndex; i < endIndex; i++) {
+                    if (i >= 0 && i < timeSlots.length) {
+                      newSelectedCells.add(timeSlots[i]);
+                    }
+                  }
+                  
+                  // Actualizar el estado de selección
+                  const newSelectedCellsByEmployee = new Map(selectedCellsByEmployee);
+                  if (newSelectedCells.size > 0) {
+                    newSelectedCellsByEmployee.set(employee.id, newSelectedCells);
+                    setSelectedCellsByEmployee(newSelectedCellsByEmployee);
+                  }
+                }
+              }
+              
+              closeContextMenu();
+            }}
+            className="w-full text-left text-blue-600 hover:bg-blue-50 p-2 rounded-sm text-sm flex items-center gap-2 mb-2"
+          >
+            <span className="text-blue-500">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </span>
+            Modificar turno
+          </button>
+          
+          {/* Opción para eliminar turno */}
+          <button
+            onClick={(e) => {
+              // Evitar propagación al overlay
+              e.preventDefault();
+              e.stopPropagation();
+              
+              // Confirmar eliminación de turno
               if (contextMenu.shift && onDeleteShift) {
-                // Eliminar turno sin mostrar notificación
-                onDeleteShift(contextMenu.shift.id);
+                // En todos los dispositivos, mostrar confirmación
+                if (window.confirm(`¿Estás seguro de que quieres eliminar este turno?`)) {
+                  onDeleteShift(contextMenu.shift.id);
+                }
               }
               closeContextMenu();
             }}
@@ -1515,11 +1575,9 @@ export default function ScheduleTable({
                           if (!isAssigned) {
                             handleMouseDown(employee, time);
                           } else if (isFirstCell && shift && onDeleteShift) {
-                            // Mostrar opciones contextuales si es un turno existente
+                            // Mostrar menú contextual para todos los dispositivos
                             e.preventDefault();
-                            if (window.confirm(`¿Desea eliminar el turno de ${shift.startTime} a ${shift.endTime}?`)) {
-                              handleDeleteShift(shift);
-                            }
+                            handleOpenContextMenu(e, shift);
                           }
                         }}
                         onMouseEnter={() => {
